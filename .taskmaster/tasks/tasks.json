@@ -135,7 +135,7 @@
         "dependencies": [
           6
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -165,7 +165,7 @@
               1
             ],
             "details": "- 스키마 목록 뷰 컴포넌트\n- 드래그 앤 드롭 가능한 컬럼 편집기\n- 데이터 타입 선택 드롭다운\n- 제약조건 설정 UI (NOT NULL, UNIQUE, DEFAULT 등)\n- 실시간 스키마 미리보기\n- 컬럼 추가/삭제/수정 인터페이스\n- 스키마 임포트/익스포트 기능",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -177,7 +177,7 @@
               3
             ],
             "details": "- 버전 간 diff 알고리즘 구현\n- 변경사항 시각화 (추가/삭제/수정된 컬럼 하이라이트)\n- 변경 이력 타임라인 UI\n- 특정 버전으로 롤백 기능\n- 변경사항 요약 및 상세 보기\n- 버전 태그 및 코멘트 기능",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -204,8 +204,75 @@
         "dependencies": [
           7
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "맵핑 규칙 데이터 모델 및 API 구현",
+            "description": "데이터 맵핑 규칙을 저장하고 관리하기 위한 데이터베이스 스키마 설계 및 RESTful API 엔드포인트 구현",
+            "dependencies": [],
+            "details": "맵핑 규칙 테이블 설계, CRUD API 개발, 맵핑 히스토리 관리, 버전 관리 기능 포함",
+            "status": "in-progress",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "다양한 맵핑 관계(1:1, 1:N, N:1) 처리 로직 개발",
+            "description": "일대일, 일대다, 다대일 등 복잡한 데이터 관계를 처리할 수 있는 맵핑 엔진 핵심 로직 구현",
+            "dependencies": [
+              1
+            ],
+            "details": "관계 타입별 처리 알고리즘 개발, 중첩된 객체 처리, 배열 데이터 변환 로직 구현",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "변환 스크립트 실행 엔진 구현",
+            "description": "사용자 정의 변환 스크립트를 안전하게 실행할 수 있는 샌드박스 환경 및 실행 엔진 개발",
+            "dependencies": [
+              2
+            ],
+            "details": "JavaScript 샌드박스 구현, 실행 시간 제한, 메모리 사용량 제한, 보안 검증 로직 포함",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "드래그앤드롭 맵핑 UI 컴포넌트 개발",
+            "description": "소스와 타겟 스키마 간 시각적 맵핑을 위한 직관적인 드래그앤드롭 인터페이스 구현",
+            "dependencies": [
+              1
+            ],
+            "details": "React DnD 활용, 스키마 트리 뷰 구현, 연결선 시각화, 맵핑 상태 표시 기능",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "맵핑 검증 및 미리보기 기능 구현",
+            "description": "설정된 맵핑 규칙의 유효성 검증 및 실제 데이터 변환 결과를 미리 확인할 수 있는 기능 개발",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "데이터 타입 검증, 필수 필드 확인, 샘플 데이터 변환 미리보기, 오류 하이라이팅",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "변환 함수 라이브러리 구축",
+            "description": "자주 사용되는 데이터 변환 함수들을 모듈화하여 재사용 가능한 라이브러리로 구축",
+            "dependencies": [
+              3
+            ],
+            "details": "날짜 형식 변환, 문자열 처리, 숫자 포맷팅, 조건부 변환 등 기본 함수 세트 구현",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 9,
@@ -262,7 +329,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-11T20:25:24.906Z",
+      "updated": "2025-07-11T20:27:55.767Z",
       "description": "Tasks for master context"
     }
   }
