@@ -44,7 +44,8 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^5.0.0",
     "prettier": "^3.0.0",
-    "@types/jest": "^29.5.3"
+    "@types/jest": "^29.5.3",
+    "nock": "^13.3.2"
   },
   "jest": {
     "testEnvironment": "node",
