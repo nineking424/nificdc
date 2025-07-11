@@ -22,7 +22,7 @@ const routes = [
       {
         path: 'systems',
         name: 'Systems',
-        component: () => import('@/views/Systems.vue'),
+        component: () => import('@/views/SystemManagement.vue'),
         meta: { 
           requiresAuth: true,
           title: '시스템 관리',

@@ -107,6 +107,23 @@ export const useSystemsStore = defineStore('systems', () => {
   }))
   
   // 액션
+  const getSystems = async (params = {}) => {
+    try {
+      isLoading.value = true
+      
+      const response = await api.get('/systems', { params })
+      
+      // 백엔드 API 응답 구조에 맞춤
+      return response.data
+    } catch (error) {
+      console.error('Failed to fetch systems:', error)
+      toast.error('시스템 목록을 불러오는데 실패했습니다.')
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   const fetchSystems = async (options = {}) => {
     try {
       isLoading.value = true
@@ -123,14 +140,13 @@ export const useSystemsStore = defineStore('systems', () => {
       
       const response = await api.get('/systems', { params })
       
-      if (response.data.success) {
-        systems.value = response.data.systems
-        pagination.value = {
-          page: response.data.pagination.page,
-          limit: response.data.pagination.limit,
-          total: response.data.pagination.total,
-          totalPages: response.data.pagination.totalPages
-        }
+      // 백엔드 API 응답 구조에 맞춤
+      systems.value = response.data.systems
+      pagination.value = {
+        page: response.data.pagination.page,
+        limit: response.data.pagination.limit,
+        total: response.data.pagination.total,
+        totalPages: response.data.pagination.totalPages
       }
     } catch (error) {
       console.error('Failed to fetch systems:', error)
@@ -166,14 +182,15 @@ export const useSystemsStore = defineStore('systems', () => {
       
       const response = await api.post('/systems', systemData)
       
-      if (response.data.success) {
+      // 백엔드 API 응답 구조에 맞춤
+      if (response.data.system) {
         systems.value.push(response.data.system)
-        toast.success('시스템이 성공적으로 생성되었습니다.')
+        toast.success(response.data.message || '시스템이 성공적으로 생성되었습니다.')
         return response.data.system
       }
     } catch (error) {
       console.error('Failed to create system:', error)
-      const errorMessage = error.response?.data?.message || '시스템 생성에 실패했습니다.'
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || '시스템 생성에 실패했습니다.'
       toast.error(errorMessage)
       throw error
     } finally {
@@ -241,22 +258,21 @@ export const useSystemsStore = defineStore('systems', () => {
   
   const testConnection = async (id) => {
     try {
-      const response = await api.get(`/systems/${id}/test-connection`)
+      const response = await api.post(`/systems/${id}/test-connection`)
       
-      if (response.data.success) {
-        const result = response.data.result
-        
-        if (result.connected) {
-          toast.success('연결 테스트가 성공했습니다.')
-        } else {
-          toast.error('연결 테스트가 실패했습니다.')
-        }
-        
-        return result
+      // 백엔드 API 응답 구조에 맞춤
+      const result = response.data.result
+      
+      if (result.success) {
+        toast.success(response.data.message || '연결 테스트가 성공했습니다.')
+      } else {
+        toast.error(response.data.message || '연결 테스트가 실패했습니다.')
       }
+      
+      return result
     } catch (error) {
       console.error('Failed to test connection:', error)
-      const errorMessage = error.response?.data?.message || '연결 테스트에 실패했습니다.'
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || '연결 테스트에 실패했습니다.'
       toast.error(errorMessage)
       throw error
     }
@@ -320,6 +336,26 @@ export const useSystemsStore = defineStore('systems', () => {
     await fetchSystems()
   }
   
+  const validateConnection = async (type, connectionInfo) => {
+    try {
+      isLoading.value = true
+      
+      const response = await api.post('/systems/validate-connection', {
+        type,
+        connectionInfo
+      })
+      
+      return response.data
+    } catch (error) {
+      console.error('Failed to validate connection:', error)
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || '연결 정보 검증에 실패했습니다.'
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   const getSystemTypeInfo = (type) => {
     return systemTypes.value.find(t => t.value === type) || { 
       value: type, 
@@ -347,12 +383,14 @@ export const useSystemsStore = defineStore('systems', () => {
     systemStats,
     
     // 액션
+    getSystems,
     fetchSystems,
     fetchSystem,
     createSystem,
     updateSystem,
     deleteSystem,
     testConnection,
+    validateConnection,
     toggleSystemStatus,
     setFilters,
     setSorting,
