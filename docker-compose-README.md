@@ -25,7 +25,7 @@
 
 ### 1. 환경 변수 설정
 ```bash
-cp .env.example .env
+cp env.template .env
 # 필요시 .env 파일의 비밀번호 등을 수정
 ```
 
