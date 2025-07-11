@@ -102,7 +102,7 @@ const routes = [
       {
         path: 'monitoring',
         name: 'Monitoring',
-        component: () => import('@/views/Monitoring.vue'),
+        component: () => import('@/views/MonitoringDashboard.vue'),
         meta: { 
           requiresAuth: true,
           title: '모니터링',

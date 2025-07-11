@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
+const http = require('http');
 require('dotenv').config();
 
 const logger = require('./utils/logger');
@@ -12,8 +13,10 @@ const errorHandler = require('./middleware/errorHandler');
 const notFoundHandler = require('./middleware/notFoundHandler');
 const { connectDatabase } = require('./database/connection');
 const { connectRedis } = require('./utils/redis');
+const monitoringService = require('./services/monitoringService');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Rate limiting
@@ -52,6 +55,7 @@ app.use('/api/v1/systems', require('./routes/systems'));
 app.use('/api/v1/data', require('./routes/data'));
 app.use('/api/v1/mappings', require('./routes/mappings'));
 app.use('/api/v1/jobs', require('./routes/jobs'));
+app.use('/api/v1/monitoring', require('./routes/monitoring'));
 
 // Swagger documentation
 if (process.env.NODE_ENV !== 'production') {
@@ -90,9 +94,13 @@ const startServer = async () => {
     await connectDatabase();
     await connectRedis();
     
-    app.listen(PORT, () => {
+    // Initialize monitoring service
+    monitoringService.initialize(server);
+    
+    server.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`Monitoring WebSocket server initialized on /monitoring`);
       if (process.env.NODE_ENV !== 'production') {
         logger.info(`API Documentation: http://localhost:${PORT}/api-docs`);
       }
@@ -106,11 +114,13 @@ const startServer = async () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  monitoringService.shutdown();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
+  monitoringService.shutdown();
   process.exit(0);
 });
 
