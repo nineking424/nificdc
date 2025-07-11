@@ -6,7 +6,7 @@
 NiFiCDC - 웹 기반 Change Data Capture 서비스
 
 ### 1.2 작성일
-2024년 1월
+2025년 7월
 
 ### 1.3 버전
 v1.0
@@ -115,7 +115,7 @@ v1.0
 ## 7. 기술 요구사항
 
 ### 7.1 프론트엔드
-- React 또는 Vue.js 기반 SPA
+- Vue.js 기반 SPA
 - 반응형 디자인
 - 모던 UI 프레임워크 (Material-UI, Ant Design 등)
 
