@@ -26,4 +26,42 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# Build outputs
+dist/
+build/
+
+# Docker volumes (local development)
+docker/volumes/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# NiFi specific volumes
+nifi-conf/
+nifi-content/
+nifi-database/
+nifi-flowfile/
+nifi-provenance/
+nifi-state/
+nifi-logs/
+
+# Database
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Python (if any scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/ 

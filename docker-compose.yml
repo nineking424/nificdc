@@ -1,6 +1,66 @@
 version: '3.8'
 
 services:
+  # Frontend - Vue.js SPA
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nificdc-frontend
+    ports:
+      - "8080:80"
+    environment:
+      - VUE_APP_API_URL=http://localhost:3000
+    networks:
+      - nificdc-network
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend - RESTful API 서버
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nificdc-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=nificdc
+      - DB_USER=nificdc_user
+      - DB_PASSWORD=postgrespassword123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redispassword123
+      - NIFI_API_URL=https://nifi:8443/nifi-api
+      - NIFI_USERNAME=admin
+      - NIFI_PASSWORD=adminpassword123
+    networks:
+      - nificdc-network
+    depends_on:
+      - postgres
+      - redis
+      - nifi
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   # Apache NiFi - CDC 백엔드 엔진
   nifi:
     image: apache/nifi:latest

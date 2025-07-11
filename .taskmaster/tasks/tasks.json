@@ -9,7 +9,7 @@
         "testStrategy": "1. Docker Compose로 모든 서비스가 정상적으로 실행되는지 확인\n2. 각 서비스 간 네트워크 연결 테스트\n3. 개발 환경에서 hot-reload 기능 동작 확인\n4. Git 브랜치 전략에 따른 워크플로우 검증",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -160,7 +160,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-11T19:04:31.110Z",
+      "updated": "2025-07-11T19:18:00.699Z",
       "description": "Tasks for master context"
     }
   }

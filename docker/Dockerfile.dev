@@ -1,0 +1,13 @@
+# Development Dockerfile - Hot reload 지원
+FROM node:18-alpine
+
+WORKDIR /app
+
+# nodemon 글로벌 설치
+RUN npm install -g nodemon
+
+# 포트 노출
+EXPOSE 3000
+
+# 개발 모드 실행
+CMD ["nodemon", "src/index.js"]
