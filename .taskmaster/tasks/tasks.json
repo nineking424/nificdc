@@ -1,0 +1,167 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "프로젝트 초기 설정 및 개발 환경 구축",
+        "description": "NiFiCDC 프로젝트의 기본 구조를 설정하고 개발 환경을 구축합니다. Docker 기반 컨테이너화 환경과 마이크로서비스 아키텍처를 위한 기본 구조를 설정합니다.",
+        "details": "1. 프로젝트 디렉토리 구조 생성:\n```\nnificdc/\n├── frontend/          # Vue.js SPA\n├── backend/           # RESTful API 서버\n├── database/          # DB 스키마 및 마이그레이션\n├── docker/            # Docker 설정 파일\n├── docs/              # 프로젝트 문서\n└── scripts/           # 유틸리티 스크립트\n```\n\n2. Docker Compose 설정:\n```yaml\nversion: '3.8'\nservices:\n  frontend:\n    build: ./frontend\n    ports:\n      - \"8080:80\"\n  backend:\n    build: ./backend\n    ports:\n      - \"3000:3000\"\n    environment:\n      - DB_HOST=database\n      - REDIS_HOST=redis\n  database:\n    image: postgres:14\n    environment:\n      - POSTGRES_DB=nificdc\n      - POSTGRES_USER=admin\n      - POSTGRES_PASSWORD=secure_password\n  redis:\n    image: redis:7-alpine\n```\n\n3. Git 저장소 초기화 및 브랜치 전략 설정\n4. CI/CD 파이프라인 기본 설정",
+        "testStrategy": "1. Docker Compose로 모든 서비스가 정상적으로 실행되는지 확인\n2. 각 서비스 간 네트워크 연결 테스트\n3. 개발 환경에서 hot-reload 기능 동작 확인\n4. Git 브랜치 전략에 따른 워크플로우 검증",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "백엔드 API 서버 기본 구조 구현",
+        "description": "RESTful API 서버의 기본 구조를 구현하고, 인증/권한 관리, 에러 처리, 로깅 등의 공통 기능을 설정합니다.",
+        "details": "1. Express.js/Fastify (Node.js) 기반 API 서버 구축:\n```javascript\n// app.js\nconst express = require('express');\nconst helmet = require('helmet');\nconst cors = require('cors');\nconst morgan = require('morgan');\n\nconst app = express();\n\n// 미들웨어 설정\napp.use(helmet());\napp.use(cors());\napp.use(morgan('combined'));\napp.use(express.json());\n\n// 라우터 모듈화\napp.use('/api/v1/auth', require('./routes/auth'));\napp.use('/api/v1/systems', require('./routes/systems'));\napp.use('/api/v1/data', require('./routes/data'));\napp.use('/api/v1/mappings', require('./routes/mappings'));\napp.use('/api/v1/jobs', require('./routes/jobs'));\n\n// 에러 핸들링 미들웨어\napp.use((err, req, res, next) => {\n  logger.error(err.stack);\n  res.status(err.status || 500).json({\n    error: {\n      message: err.message,\n      code: err.code\n    }\n  });\n});\n```\n\n2. JWT 기반 인증 시스템 구현\n3. 역할 기반 접근 제어(RBAC) 구현\n4. Winston 로거 설정 및 감사 로그 구현\n5. API 문서화 (Swagger/OpenAPI)",
+        "testStrategy": "1. 각 API 엔드포인트에 대한 단위 테스트 작성 (Jest)\n2. 인증/권한 미들웨어 통합 테스트\n3. 에러 처리 시나리오별 테스트\n4. API 응답시간 1초 이내 성능 테스트\n5. Postman/Insomnia 컬렉션 작성",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "데이터베이스 스키마 설계 및 구현",
+        "description": "시스템, 데이터, 맵핑, 작업 정의서를 저장할 데이터베이스 스키마를 설계하고 마이그레이션을 구현합니다.",
+        "details": "1. PostgreSQL 스키마 설계:\n```sql\n-- 시스템 정의서\nCREATE TABLE systems (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(255) NOT NULL,\n  type VARCHAR(50) NOT NULL CHECK (type IN ('oracle', 'postgresql', 'sqlite', 'ftp', 'local_fs')),\n  connection_info JSONB NOT NULL, -- 암호화된 접속 정보\n  is_active BOOLEAN DEFAULT true,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 데이터 정의서\nCREATE TABLE data_schemas (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  system_id UUID REFERENCES systems(id),\n  name VARCHAR(255) NOT NULL,\n  version INTEGER DEFAULT 1,\n  schema_definition JSONB NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 맵핑 정의서\nCREATE TABLE mappings (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(255) NOT NULL,\n  source_schema_id UUID REFERENCES data_schemas(id),\n  target_schema_id UUID REFERENCES data_schemas(id),\n  mapping_rules JSONB NOT NULL,\n  transformation_script TEXT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 작업 정의서\nCREATE TABLE jobs (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(255) NOT NULL,\n  mapping_id UUID REFERENCES mappings(id),\n  schedule_config JSONB,\n  priority INTEGER DEFAULT 5,\n  is_active BOOLEAN DEFAULT true,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 작업 실행 이력\nCREATE TABLE job_executions (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  job_id UUID REFERENCES jobs(id),\n  status VARCHAR(50) NOT NULL,\n  started_at TIMESTAMP,\n  completed_at TIMESTAMP,\n  error_message TEXT,\n  metrics JSONB\n);\n```\n\n2. Sequelize/TypeORM 모델 구현\n3. 데이터베이스 마이그레이션 스크립트 작성\n4. 접속 정보 암호화/복호화 유틸리티 구현",
+        "testStrategy": "1. 스키마 무결성 검증 테스트\n2. 외래 키 제약조건 테스트\n3. 암호화/복호화 기능 단위 테스트\n4. 마이그레이션 롤백 테스트\n5. 동시성 처리 테스트",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "NiFi API 연동 모듈 개발",
+        "description": "외부 Apache NiFi 인스턴스와 통신하기 위한 API 클라이언트 모듈을 개발하고, 연결 상태 관리 기능을 구현합니다.",
+        "details": "1. NiFi API 클라이언트 구현:\n```javascript\n// nifiClient.js\nclass NiFiClient {\n  constructor(config) {\n    this.baseUrl = config.url;\n    this.username = config.username;\n    this.password = config.password;\n    this.token = null;\n  }\n\n  async authenticate() {\n    const response = await axios.post(`${this.baseUrl}/access/token`, {\n      username: this.username,\n      password: this.password\n    });\n    this.token = response.data.token;\n  }\n\n  async createProcessGroup(name, parentId) {\n    const response = await axios.post(\n      `${this.baseUrl}/process-groups/${parentId}/process-groups`,\n      {\n        revision: { version: 0 },\n        component: { name }\n      },\n      { headers: { Authorization: `Bearer ${this.token}` } }\n    );\n    return response.data;\n  }\n\n  async createProcessor(type, processGroupId, config) {\n    // Processor 생성 로직\n  }\n\n  async startProcessor(processorId) {\n    // Processor 시작 로직\n  }\n\n  async getProcessorStatus(processorId) {\n    // 상태 조회 로직\n  }\n}\n```\n\n2. 연결 풀 관리 구현\n3. 재시도 로직 및 Circuit Breaker 패턴 구현\n4. NiFi 버전별 API 호환성 레이어 구현\n5. 연결 상태 모니터링 및 헬스체크 기능",
+        "testStrategy": "1. Mock NiFi API 서버를 사용한 단위 테스트\n2. 연결 실패 시나리오 테스트 (타임아웃, 인증 실패 등)\n3. API 버전 호환성 테스트\n4. 동시 요청 처리 테스트\n5. 실제 NiFi 인스턴스와의 통합 테스트",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Vue.js 프론트엔드 기본 구조 및 라우팅 설정",
+        "description": "Vue.js 3 기반의 SPA 프론트엔드 애플리케이션 기본 구조를 설정하고, 라우팅 및 상태 관리를 구현합니다.",
+        "details": "1. Vue.js 프로젝트 구조:\n```javascript\n// main.js\nimport { createApp } from 'vue'\nimport { createPinia } from 'pinia'\nimport router from './router'\nimport App from './App.vue'\nimport vuetify from './plugins/vuetify'\nimport i18n from './plugins/i18n'\n\nconst app = createApp(App)\napp.use(createPinia())\napp.use(router)\napp.use(vuetify)\napp.use(i18n)\napp.mount('#app')\n```\n\n2. 라우터 설정:\n```javascript\n// router/index.js\nconst routes = [\n  {\n    path: '/',\n    component: () => import('@/layouts/MainLayout.vue'),\n    children: [\n      { path: '', redirect: '/dashboard' },\n      { path: 'dashboard', component: () => import('@/views/Dashboard.vue') },\n      { path: 'systems', component: () => import('@/views/Systems.vue') },\n      { path: 'data-schemas', component: () => import('@/views/DataSchemas.vue') },\n      { path: 'mappings', component: () => import('@/views/Mappings.vue') },\n      { path: 'jobs', component: () => import('@/views/Jobs.vue') },\n      { path: 'monitoring', component: () => import('@/views/Monitoring.vue') }\n    ],\n    meta: { requiresAuth: true }\n  },\n  {\n    path: '/login',\n    component: () => import('@/views/Login.vue')\n  }\n]\n```\n\n3. Pinia 스토어 구현 (시스템, 데이터, 맵핑, 작업 상태 관리)\n4. Axios 인터셉터 설정 (인증 토큰 자동 첨부)\n5. 반응형 레이아웃 구현",
+        "testStrategy": "1. 컴포넌트 단위 테스트 (Vue Test Utils)\n2. 라우터 네비게이션 가드 테스트\n3. 스토어 액션/뮤테이션 테스트\n4. 반응형 디자인 테스트 (다양한 화면 크기)\n5. 다국어 지원 테스트",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "시스템 정의서 CRUD 기능 구현",
+        "description": "시스템 정의서의 생성, 조회, 수정, 삭제 기능을 백엔드 API와 프론트엔드 UI 모두에서 구현합니다.",
+        "details": "1. 백엔드 API 구현:\n```javascript\n// routes/systems.js\nrouter.post('/', async (req, res) => {\n  const { name, type, connectionInfo } = req.body;\n  \n  // 접속 정보 암호화\n  const encryptedInfo = await encryptConnectionInfo(connectionInfo);\n  \n  const system = await System.create({\n    name,\n    type,\n    connectionInfo: encryptedInfo\n  });\n  \n  res.status(201).json(system);\n});\n\nrouter.get('/:id/test-connection', async (req, res) => {\n  const system = await System.findByPk(req.params.id);\n  const decryptedInfo = await decryptConnectionInfo(system.connectionInfo);\n  \n  try {\n    const isConnected = await testConnection(system.type, decryptedInfo);\n    res.json({ connected: isConnected });\n  } catch (error) {\n    res.status(400).json({ error: error.message });\n  }\n});\n```\n\n2. 프론트엔드 시스템 관리 화면:\n```vue\n<template>\n  <v-container>\n    <v-data-table\n      :headers=\"headers\"\n      :items=\"systems\"\n      :loading=\"loading\"\n    >\n      <template v-slot:top>\n        <v-toolbar flat>\n          <v-toolbar-title>시스템 관리</v-toolbar-title>\n          <v-spacer></v-spacer>\n          <v-btn color=\"primary\" @click=\"openDialog\">\n            <v-icon left>mdi-plus</v-icon>\n            시스템 추가\n          </v-btn>\n        </v-toolbar>\n      </template>\n      \n      <template v-slot:item.actions=\"{ item }\">\n        <v-icon small @click=\"testConnection(item)\">mdi-connection</v-icon>\n        <v-icon small @click=\"editItem(item)\">mdi-pencil</v-icon>\n        <v-icon small @click=\"deleteItem(item)\">mdi-delete</v-icon>\n      </template>\n    </v-data-table>\n    \n    <SystemDialog \n      v-model=\"dialog\" \n      :system=\"editedItem\"\n      @save=\"saveSystem\"\n    />\n  </v-container>\n</template>\n```\n\n3. 시스템 타입별 접속 정보 폼 구현\n4. 연결 테스트 기능 구현",
+        "testStrategy": "1. 각 시스템 타입별 CRUD 작업 테스트\n2. 접속 정보 암호화/복호화 검증\n3. 연결 테스트 기능 검증 (성공/실패 케이스)\n4. 권한별 접근 제어 테스트\n5. UI 폼 유효성 검사 테스트",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "데이터 정의서 및 스키마 관리 기능 구현",
+        "description": "데이터 정의서 CRUD 기능과 시스템 타입별 스키마 정의, 컬럼 정보 관리, 버전 관리 기능을 구현합니다.",
+        "details": "1. 스키마 정의 API:\n```javascript\n// routes/dataSchemas.js\nrouter.post('/', async (req, res) => {\n  const { systemId, name, schemaDefinition } = req.body;\n  \n  // 기존 스키마의 최신 버전 조회\n  const latestVersion = await DataSchema.findOne({\n    where: { systemId, name },\n    order: [['version', 'DESC']]\n  });\n  \n  const newSchema = await DataSchema.create({\n    systemId,\n    name,\n    version: latestVersion ? latestVersion.version + 1 : 1,\n    schemaDefinition\n  });\n  \n  res.status(201).json(newSchema);\n});\n\n// 스키마 자동 탐색 (DB 타입인 경우)\nrouter.get('/discover/:systemId', async (req, res) => {\n  const system = await System.findByPk(req.params.systemId);\n  \n  if (['oracle', 'postgresql', 'sqlite'].includes(system.type)) {\n    const schema = await discoverDatabaseSchema(system);\n    res.json(schema);\n  } else {\n    res.status(400).json({ error: 'Schema discovery not supported for this system type' });\n  }\n});\n```\n\n2. 스키마 정의 UI 컴포넌트:\n```vue\n<template>\n  <v-card>\n    <v-card-title>스키마 정의</v-card-title>\n    <v-card-text>\n      <v-btn v-if=\"canDiscover\" @click=\"discoverSchema\" color=\"info\">\n        <v-icon left>mdi-magnify</v-icon>\n        스키마 자동 탐색\n      </v-btn>\n      \n      <v-data-table\n        :headers=\"columnHeaders\"\n        :items=\"columns\"\n        dense\n      >\n        <template v-slot:item=\"{ item, index }\">\n          <tr>\n            <td>\n              <v-text-field\n                v-model=\"item.name\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-select\n                v-model=\"item.dataType\"\n                :items=\"dataTypes\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-checkbox\n                v-model=\"item.nullable\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-checkbox\n                v-model=\"item.primaryKey\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-icon small @click=\"removeColumn(index)\">\n                mdi-delete\n              </v-icon>\n            </td>\n          </tr>\n        </template>\n      </v-data-table>\n      \n      <v-btn @click=\"addColumn\" color=\"primary\" small>\n        <v-icon left>mdi-plus</v-icon>\n        컬럼 추가\n      </v-btn>\n    </v-card-text>\n  </v-card>\n</template>\n```\n\n3. 스키마 버전 비교 기능\n4. 스키마 유효성 검증",
+        "testStrategy": "1. 스키마 버전 관리 로직 테스트\n2. 데이터베이스 스키마 자동 탐색 테스트\n3. 다양한 데이터 타입 지원 테스트\n4. 스키마 변경 이력 추적 테스트\n5. UI에서 컬럼 추가/삭제/수정 테스트",
+        "priority": "medium",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "맵핑 정의서 관리 및 변환 규칙 구현",
+        "description": "소스-타겟 데이터 맵핑 기능과 컬럼 간 다양한 맵핑 관계(1:1, 1:N, N:1) 및 데이터 변환 규칙을 구현합니다.",
+        "details": "1. 맵핑 정의 API:\n```javascript\n// routes/mappings.js\nrouter.post('/', async (req, res) => {\n  const { name, sourceSchemaId, targetSchemaId, mappingRules, transformationScript } = req.body;\n  \n  // 맵핑 규칙 검증\n  const validationResult = await validateMappingRules(\n    sourceSchemaId, \n    targetSchemaId, \n    mappingRules\n  );\n  \n  if (!validationResult.valid) {\n    return res.status(400).json({ errors: validationResult.errors });\n  }\n  \n  const mapping = await Mapping.create({\n    name,\n    sourceSchemaId,\n    targetSchemaId,\n    mappingRules,\n    transformationScript\n  });\n  \n  res.status(201).json(mapping);\n});\n\n// 맵핑 미리보기\nrouter.post('/:id/preview', async (req, res) => {\n  const { sampleData } = req.body;\n  const mapping = await Mapping.findByPk(req.params.id);\n  \n  const transformedData = await applyMapping(mapping, sampleData);\n  res.json({ original: sampleData, transformed: transformedData });\n});\n```\n\n2. 맵핑 UI 컴포넌트:\n```vue\n<template>\n  <v-container>\n    <v-row>\n      <v-col cols=\"5\">\n        <v-card>\n          <v-card-title>소스 스키마</v-card-title>\n          <v-card-text>\n            <v-treeview\n              :items=\"sourceColumns\"\n              item-key=\"id\"\n              @update:active=\"selectSourceColumn\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n      \n      <v-col cols=\"2\" class=\"text-center\">\n        <v-btn @click=\"createMapping\" :disabled=\"!canCreateMapping\">\n          <v-icon>mdi-arrow-right</v-icon>\n        </v-btn>\n        \n        <div class=\"mt-4\">\n          <v-chip\n            v-for=\"mapping in activeMappings\"\n            :key=\"mapping.id\"\n            close\n            @click:close=\"removeMapping(mapping)\"\n          >\n            {{ mapping.label }}\n          </v-chip>\n        </div>\n      </v-col>\n      \n      <v-col cols=\"5\">\n        <v-card>\n          <v-card-title>타겟 스키마</v-card-title>\n          <v-card-text>\n            <v-treeview\n              :items=\"targetColumns\"\n              item-key=\"id\"\n              @update:active=\"selectTargetColumn\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n    </v-row>\n    \n    <v-row>\n      <v-col>\n        <v-card>\n          <v-card-title>변환 스크립트</v-card-title>\n          <v-card-text>\n            <MonacoEditor\n              v-model=\"transformationScript\"\n              language=\"javascript\"\n              :height=\"300\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n    </v-row>\n  </v-container>\n</template>\n```\n\n3. 변환 함수 라이브러리 구현\n4. 맵핑 검증 로직 구현",
+        "testStrategy": "1. 다양한 맵핑 관계 테스트 (1:1, 1:N, N:1)\n2. 변환 스크립트 실행 안전성 테스트\n3. 맵핑 규칙 검증 로직 테스트\n4. 데이터 타입 변환 테스트\n5. 맵핑 미리보기 기능 테스트",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "작업 정의서 및 스케줄링 기능 구현",
+        "description": "작업 정의서 CRUD 기능과 다양한 실행 스케줄 설정, 우선순위 관리, NiFi 프로세스 그룹 생성 및 실행을 구현합니다.",
+        "details": "1. 작업 스케줄링 API:\n```javascript\n// routes/jobs.js\nconst cron = require('node-cron');\nconst jobScheduler = new Map();\n\nrouter.post('/', async (req, res) => {\n  const { name, mappingId, scheduleConfig, priority } = req.body;\n  \n  const job = await Job.create({\n    name,\n    mappingId,\n    scheduleConfig,\n    priority,\n    isActive: true\n  });\n  \n  // NiFi 프로세스 그룹 생성\n  const processGroup = await createNiFiProcessGroup(job);\n  job.nifiProcessGroupId = processGroup.id;\n  await job.save();\n  \n  // 스케줄 등록\n  if (scheduleConfig.type === 'cron') {\n    scheduleJob(job);\n  }\n  \n  res.status(201).json(job);\n});\n\nfunction scheduleJob(job) {\n  const task = cron.schedule(job.scheduleConfig.expression, async () => {\n    await executeJob(job.id);\n  });\n  \n  jobScheduler.set(job.id, task);\n}\n\nasync function executeJob(jobId) {\n  const execution = await JobExecution.create({\n    jobId,\n    status: 'running',\n    startedAt: new Date()\n  });\n  \n  try {\n    const job = await Job.findByPk(jobId, {\n      include: [{ model: Mapping, include: [DataSchema] }]\n    });\n    \n    // NiFi 프로세스 실행\n    await nifiClient.startProcessor(job.nifiProcessGroupId);\n    \n    // 실행 모니터링\n    const result = await monitorExecution(job.nifiProcessGroupId);\n    \n    execution.status = 'completed';\n    execution.completedAt = new Date();\n    execution.metrics = result.metrics;\n  } catch (error) {\n    execution.status = 'failed';\n    execution.errorMessage = error.message;\n  }\n  \n  await execution.save();\n}\n```\n\n2. 스케줄 설정 UI:\n```vue\n<template>\n  <v-card>\n    <v-card-title>실행 스케줄 설정</v-card-title>\n    <v-card-text>\n      <v-radio-group v-model=\"scheduleType\">\n        <v-radio label=\"즉시 실행\" value=\"immediate\" />\n        <v-radio label=\"일회성 예약\" value=\"once\" />\n        <v-radio label=\"주기적 실행\" value=\"recurring\" />\n      </v-radio-group>\n      \n      <v-datetime-picker\n        v-if=\"scheduleType === 'once'\"\n        v-model=\"scheduleTime\"\n        label=\"실행 시간\"\n      />\n      \n      <div v-if=\"scheduleType === 'recurring'\">\n        <v-select\n          v-model=\"recurringType\"\n          :items=\"['분', '시간', '일', '주', '월']\"\n          label=\"반복 주기\"\n        />\n        \n        <v-text-field\n          v-model=\"interval\"\n          type=\"number\"\n          :label=\"`${recurringType} 간격`\"\n        />\n        \n        <v-text-field\n          v-model=\"cronExpression\"\n          label=\"Cron 표현식\"\n          hint=\"고급 사용자용\"\n          persistent-hint\n        />\n      </div>\n      \n      <v-slider\n        v-model=\"priority\"\n        :min=\"1\"\n        :max=\"10\"\n        label=\"우선순위\"\n        thumb-label\n      />\n    </v-card-text>\n  </v-card>\n</template>\n```\n\n3. 작업 큐 관리 시스템 구현\n4. NiFi 프로세스 그룹 자동 생성 로직",
+        "testStrategy": "1. 다양한 스케줄 타입 실행 테스트\n2. Cron 표현식 파싱 및 실행 테스트\n3. 우선순위 기반 작업 실행 순서 테스트\n4. 작업 활성화/비활성화 토글 테스트\n5. NiFi 프로세스 그룹 생성 및 실행 통합 테스트",
+        "priority": "medium",
+        "dependencies": [
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "모니터링 대시보드 및 실시간 상태 추적 구현",
+        "description": "작업 실행 이력, 실시간 상태 모니터링, 성능 메트릭, 에러 로그 분석 기능을 포함한 종합 모니터링 대시보드를 구현합니다.",
+        "details": "1. 실시간 모니터링 WebSocket 서버:\n```javascript\n// websocket/monitoring.js\nconst WebSocket = require('ws');\n\nfunction setupMonitoringWebSocket(server) {\n  const wss = new WebSocket.Server({ server });\n  \n  wss.on('connection', (ws) => {\n    console.log('Monitoring client connected');\n    \n    // 초기 상태 전송\n    sendCurrentStatus(ws);\n    \n    // 주기적 업데이트\n    const interval = setInterval(() => {\n      sendRealtimeMetrics(ws);\n    }, 1000);\n    \n    ws.on('close', () => {\n      clearInterval(interval);\n    });\n  });\n}\n\nasync function sendRealtimeMetrics(ws) {\n  const metrics = {\n    activeJobs: await getActiveJobsCount(),\n    throughput: await calculateThroughput(),\n    avgLatency: await calculateAverageLatency(),\n    errorRate: await calculateErrorRate(),\n    systemHealth: await checkSystemHealth()\n  };\n  \n  ws.send(JSON.stringify({ type: 'metrics', data: metrics }));\n}\n```\n\n2. 모니터링 대시보드 UI:\n```vue\n<template>\n  <v-container fluid>\n    <v-row>\n      <!-- 실시간 메트릭 카드 -->\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"활성 작업\"\n          :value=\"metrics.activeJobs\"\n          icon=\"mdi-play-circle\"\n          color=\"primary\"\n        />\n      </v-col>\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"처리량\"\n          :value=\"`${metrics.throughput}/s`\"\n          icon=\"mdi-speedometer\"\n          color=\"success\"\n        />\n      </v-col>\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"평균 지연시간\"\n          :value=\"`${metrics.avgLatency}ms`\"\n          icon=\"mdi-timer\"\n          color=\"warning\"\n        />\n      </v-col>\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"에러율\"\n          :value=\"`${metrics.errorRate}%`\"\n          icon=\"mdi-alert\"\n          :color=\"metrics.errorRate > 5 ? 'error' : 'success'\"\n        />\n      </v-col>\n    </v-row>\n    \n    <v-row>\n      <!-- 실행 이력 차트 -->\n      <v-col cols=\"8\">\n        <v-card>\n          <v-card-title>작업 실행 추이</v-card-title>\n          <v-card-text>\n            <ApexChart\n              type=\"area\"\n              :options=\"chartOptions\"\n              :series=\"executionSeries\"\n              height=\"350\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n      \n      <!-- 시스템 상태 -->\n      <v-col cols=\"4\">\n        <v-card>\n          <v-card-title>시스템 상태</v-card-title>\n          <v-card-text>\n            <v-list>\n              <v-list-item v-for=\"system in systems\" :key=\"system.id\">\n                <v-list-item-icon>\n                  <v-icon :color=\"system.status === 'healthy' ? 'success' : 'error'\">\n                    {{ system.status === 'healthy' ? 'mdi-check-circle' : 'mdi-alert-circle' }}\n                  </v-icon>\n                </v-list-item-icon>\n                <v-list-item-content>\n                  <v-list-item-title>{{ system.name }}</v-list-item-title>\n                  <v-list-item-subtitle>{{ system.type }}</v-list-item-subtitle>\n                </v-list-item-content>\n              </v-list-item>\n            </v-list>\n          </v-card-text>\n        </v-card>\n      </v-col>\n    </v-row>\n    \n    <!-- 에러 로그 테이블 -->\n    <v-row>\n      <v-col>\n        <ErrorLogTable :logs=\"errorLogs\" />\n      </v-col>\n    </v-row>\n  </v-container>\n</template>\n\n<script>\nexport default {\n  data() {\n    return {\n      ws: null,\n      metrics: {\n        activeJobs: 0,\n        throughput: 0,\n        avgLatency: 0,\n        errorRate: 0\n      }\n    }\n  },\n  \n  mounted() {\n    this.connectWebSocket();\n  },\n  \n  methods: {\n    connectWebSocket() {\n      this.ws = new WebSocket('ws://localhost:3000/monitoring');\n      \n      this.ws.onmessage = (event) => {\n        const message = JSON.parse(event.data);\n        if (message.type === 'metrics') {\n          this.metrics = message.data;\n        }\n      };\n    }\n  }\n}\n</script>\n```\n\n3. 성능 메트릭 수집 및 집계 로직\n4. 에러 분석 및 알림 시스템\n5. 대시보드 커스터마이징 기능",
+        "testStrategy": "1. WebSocket 연결 안정성 테스트\n2. 실시간 데이터 업데이트 정확성 검증\n3. 대용량 로그 데이터 처리 성능 테스트\n4. 차트 렌더링 성능 테스트\n5. 동시 다중 사용자 접속 테스트",
+        "priority": "medium",
+        "dependencies": [
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "보안 강화 및 감사 로그 구현",
+        "description": "SSL/TLS 암호화, 역할 기반 접근 제어(RBAC) 강화, 감사 로그 기록 및 보안 취약점 스캔 기능을 구현합니다.",
+        "details": "1. RBAC 미들웨어 강화:\n```javascript\n// middleware/rbac.js\nconst permissions = {\n  admin: ['*'],\n  operator: ['systems:read', 'systems:test', 'jobs:*', 'monitoring:*'],\n  viewer: ['*:read', 'monitoring:read']\n};\n\nfunction authorize(resource, action) {\n  return (req, res, next) => {\n    const userRole = req.user.role;\n    const permission = `${resource}:${action}`;\n    \n    const hasPermission = permissions[userRole].some(p => {\n      if (p === '*') return true;\n      if (p === `${resource}:*`) return true;\n      if (p === `*:${action}`) return true;\n      return p === permission;\n    });\n    \n    if (!hasPermission) {\n      // 감사 로그 기록\n      auditLogger.warn({\n        event: 'UNAUTHORIZED_ACCESS_ATTEMPT',\n        user: req.user.id,\n        resource,\n        action,\n        ip: req.ip\n      });\n      \n      return res.status(403).json({ error: 'Insufficient permissions' });\n    }\n    \n    next();\n  };\n}\n```\n\n2. 감사 로그 시스템:\n```javascript\n// services/auditLogger.js\nclass AuditLogger {\n  async log(event) {\n    const auditEntry = {\n      timestamp: new Date(),\n      eventType: event.type,\n      userId: event.userId,\n      userName: event.userName,\n      action: event.action,\n      resource: event.resource,\n      resourceId: event.resourceId,\n      changes: event.changes,\n      ipAddress: event.ip,\n      userAgent: event.userAgent,\n      result: event.result\n    };\n    \n    // DB에 저장\n    await AuditLog.create(auditEntry);\n    \n    // 중요 이벤트는 실시간 알림\n    if (this.isCriticalEvent(event.type)) {\n      await this.sendSecurityAlert(auditEntry);\n    }\n  }\n  \n  isCriticalEvent(eventType) {\n    const criticalEvents = [\n      'UNAUTHORIZED_ACCESS_ATTEMPT',\n      'MULTIPLE_LOGIN_FAILURES',\n      'PRIVILEGE_ESCALATION',\n      'DATA_EXPORT',\n      'SYSTEM_CONFIG_CHANGE'\n    ];\n    return criticalEvents.includes(eventType);\n  }\n}\n```\n\n3. SSL/TLS 설정:\n```javascript\n// server.js\nconst https = require('https');\nconst fs = require('fs');\n\nconst options = {\n  key: fs.readFileSync('private-key.pem'),\n  cert: fs.readFileSync('certificate.pem'),\n  // 보안 강화 옵션\n  secureOptions: crypto.constants.SSL_OP_NO_TLSv1 | crypto.constants.SSL_OP_NO_TLSv1_1,\n  ciphers: [\n    'ECDHE-RSA-AES128-GCM-SHA256',\n    'ECDHE-RSA-AES256-GCM-SHA384',\n    'ECDHE-RSA-AES128-SHA256',\n    'ECDHE-RSA-AES256-SHA384'\n  ].join(':')\n};\n\nhttps.createServer(options, app).listen(443);\n```\n\n4. 보안 헤더 설정 및 CORS 정책\n5. 정기적 보안 스캔 스케줄러",
+        "testStrategy": "1. 각 역할별 권한 테스트 (positive/negative)\n2. 감사 로그 기록 정확성 검증\n3. SSL/TLS 연결 보안 테스트\n4. SQL Injection, XSS 등 보안 취약점 테스트\n5. 브루트포스 공격 방어 테스트",
+        "priority": "high",
+        "dependencies": [
+          10
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "성능 최적화 및 캐싱 구현",
+        "description": "Redis를 활용한 캐싱 전략, 데이터베이스 쿼리 최적화, 프론트엔드 번들 최적화를 통해 전반적인 시스템 성능을 향상시킵니다.",
+        "details": "1. Redis 캐싱 레이어 구현:\n```javascript\n// services/cache.js\nconst Redis = require('ioredis');\nconst redis = new Redis({\n  host: process.env.REDIS_HOST,\n  port: process.env.REDIS_PORT,\n  retryStrategy: (times) => Math.min(times * 50, 2000)\n});\n\nclass CacheService {\n  async get(key) {\n    const value = await redis.get(key);\n    return value ? JSON.parse(value) : null;\n  }\n  \n  async set(key, value, ttl = 3600) {\n    await redis.setex(key, ttl, JSON.stringify(value));\n  }\n  \n  async invalidate(pattern) {\n    const keys = await redis.keys(pattern);\n    if (keys.length > 0) {\n      await redis.del(...keys);\n    }\n  }\n  \n  // 캐시 미들웨어\n  cacheMiddleware(keyGenerator, ttl = 300) {\n    return async (req, res, next) => {\n      const key = keyGenerator(req);\n      const cached = await this.get(key);\n      \n      if (cached) {\n        return res.json(cached);\n      }\n      \n      // 원본 응답 캐싱\n      const originalJson = res.json;\n      res.json = async (data) => {\n        await this.set(key, data, ttl);\n        originalJson.call(res, data);\n      };\n      \n      next();\n    };\n  }\n}\n```\n\n2. 데이터베이스 쿼리 최적화:\n```javascript\n// 인덱스 생성\nALTER TABLE job_executions ADD INDEX idx_job_status_date (job_id, status, started_at);\nALTER TABLE systems ADD INDEX idx_type_active (type, is_active);\n\n// 쿼리 최적화 예시\n// Before\nconst jobs = await Job.findAll({\n  include: [{\n    model: Mapping,\n    include: [{\n      model: DataSchema,\n      include: [System]\n    }]\n  }]\n});\n\n// After - 필요한 필드만 선택\nconst jobs = await Job.findAll({\n  attributes: ['id', 'name', 'isActive', 'scheduleConfig'],\n  include: [{\n    model: Mapping,\n    attributes: ['id', 'name'],\n    include: [{\n      model: DataSchema,\n      attributes: ['id', 'name', 'version'],\n      include: [{\n        model: System,\n        attributes: ['id', 'name', 'type']\n      }]\n    }]\n  }]\n});\n```\n\n3. 프론트엔드 최적화:\n```javascript\n// vite.config.js\nexport default {\n  build: {\n    rollupOptions: {\n      output: {\n        manualChunks: {\n          'vendor': ['vue', 'vue-router', 'pinia'],\n          'ui': ['vuetify'],\n          'charts': ['apexcharts', 'vue3-apexcharts'],\n          'editor': ['monaco-editor']\n        }\n      }\n    },\n    // 압축 설정\n    minify: 'terser',\n    terserOptions: {\n      compress: {\n        drop_console: true,\n        drop_debugger: true\n      }\n    }\n  }\n};\n\n// 컴포넌트 지연 로딩\nconst MonitoringDashboard = () => import(\n  /* webpackChunkName: \"monitoring\" */\n  '@/views/MonitoringDashboard.vue'\n);\n```\n\n4. API 응답 압축 및 페이지네이션\n5. 이미지 및 정적 자원 최적화",
+        "testStrategy": "1. 캐시 히트율 측정 및 최적화\n2. API 응답시간 1초 이내 달성 검증\n3. 페이지 로딩 시간 3초 이내 검증\n4. 동시 사용자 100명 부하 테스트\n5. 메모리 누수 및 리소스 사용량 모니터링",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-11T19:04:31.110Z",
+      "updated": "2025-07-11T19:04:31.110Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

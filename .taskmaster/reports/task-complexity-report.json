@@ -1,0 +1,109 @@
+{
+	"meta": {
+		"generatedAt": "2025-07-11T19:08:59.911Z",
+		"tasksAnalyzed": 12,
+		"totalTasks": 12,
+		"analysisCount": 12,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "프로젝트 초기 설정 및 개발 환경 구축",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Docker 기반 마이크로서비스 환경 구축을 위해 다음 하위 작업으로 분해하세요: 1) 프로젝트 디렉토리 구조 생성 및 Git 초기화, 2) Docker 및 Docker Compose 설정 파일 작성, 3) 개발/운영 환경별 환경변수 설정, 4) CI/CD 파이프라인 기본 구성, 5) 개발 가이드 문서 작성",
+			"reasoning": "여러 서비스(프론트엔드, 백엔드, DB, Redis)의 컨테이너화와 환경 설정이 필요하며, CI/CD 파이프라인 구성까지 포함되어 중간 정도의 복잡도를 가집니다."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "백엔드 API 서버 기본 구조 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "RESTful API 서버 구현을 위해 다음 하위 작업으로 분해하세요: 1) Express.js 기본 설정 및 미들웨어 구성, 2) JWT 기반 인증 시스템 구현, 3) RBAC 권한 관리 시스템 구현, 4) 에러 처리 및 로깅 시스템 구축, 5) API 라우터 모듈화 및 구조화, 6) Swagger/OpenAPI 문서화 설정",
+			"reasoning": "인증, 권한 관리, 에러 처리, 로깅 등 여러 핵심 기능을 포함하고 있으며, 보안과 확장성을 고려한 설계가 필요하여 복잡도가 높습니다."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "데이터베이스 스키마 설계 및 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "데이터베이스 설계 및 구현을 위해 다음 하위 작업으로 분해하세요: 1) PostgreSQL 스키마 설계 및 ERD 작성, 2) Sequelize/TypeORM 모델 정의 및 관계 설정, 3) 마이그레이션 스크립트 작성 및 버전 관리, 4) 접속 정보 암호화/복호화 유틸리티 구현, 5) 시드 데이터 및 테스트 데이터 생성 스크립트 작성",
+			"reasoning": "복잡한 관계형 데이터 모델 설계, 암호화 처리, 마이그레이션 관리 등이 포함되어 있고, 시스템의 핵심 데이터 구조를 정의하는 중요한 작업입니다."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "NiFi API 연동 모듈 개발",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "NiFi API 통합을 위해 다음 하위 작업으로 분해하세요: 1) NiFi REST API 클라이언트 기본 구조 구현, 2) 인증 및 토큰 관리 시스템 구현, 3) 프로세스 그룹 및 프로세서 CRUD 기능 구현, 4) 연결 풀 및 재시도 로직 구현, 5) Circuit Breaker 패턴 적용, 6) NiFi 버전별 호환성 레이어 구현",
+			"reasoning": "외부 시스템과의 통합, 에러 처리, 버전 호환성, 연결 관리 등 복잡한 요구사항이 있으며, 안정적인 통신을 위한 고급 패턴 구현이 필요합니다."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Vue.js 프론트엔드 기본 구조 및 라우팅 설정",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Vue.js SPA 구축을 위해 다음 하위 작업으로 분해하세요: 1) Vue 3 프로젝트 초기화 및 Vuetify UI 프레임워크 설정, 2) Vue Router 설정 및 네비게이션 가드 구현, 3) Pinia 상태 관리 스토어 구조 설계, 4) Axios 인터셉터 및 API 통신 모듈 구현, 5) 반응형 레이아웃 및 다국어 지원 설정",
+			"reasoning": "프론트엔드 아키텍처 설계, 상태 관리, 라우팅, API 통신 등 여러 측면을 다루지만, 표준적인 Vue.js 패턴을 따르므로 중간 정도의 복잡도입니다."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "시스템 정의서 CRUD 기능 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "시스템 관리 기능을 위해 다음 하위 작업으로 분해하세요: 1) 백엔드 시스템 CRUD API 엔드포인트 구현, 2) 시스템 타입별 접속 정보 검증 로직 구현, 3) 프론트엔드 시스템 관리 UI 컴포넌트 개발, 4) 연결 테스트 기능 구현 및 에러 처리",
+			"reasoning": "기본적인 CRUD 작업이지만 시스템 타입별 처리, 암호화된 접속 정보 관리, 연결 테스트 등의 추가 기능이 필요합니다."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "데이터 정의서 및 스키마 관리 기능 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "스키마 관리 기능을 위해 다음 하위 작업으로 분해하세요: 1) 스키마 CRUD API 및 버전 관리 로직 구현, 2) 데이터베이스 스키마 자동 탐색 기능 개발, 3) 스키마 정의 UI 컴포넌트 및 컬럼 편집기 구현, 4) 스키마 버전 비교 및 변경 이력 추적 기능, 5) 스키마 유효성 검증 로직 구현",
+			"reasoning": "스키마 버전 관리, 자동 탐색, 다양한 데이터 타입 지원 등 복잡한 기능이 포함되어 있으며, UI/UX 측면에서도 정교한 구현이 필요합니다."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "맵핑 정의서 관리 및 변환 규칙 구현",
+			"complexityScore": 9,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "데이터 맵핑 기능을 위해 다음 하위 작업으로 분해하세요: 1) 맵핑 규칙 데이터 모델 및 API 구현, 2) 다양한 맵핑 관계(1:1, 1:N, N:1) 처리 로직 개발, 3) 변환 스크립트 실행 엔진 구현, 4) 드래그앤드롭 맵핑 UI 컴포넌트 개발, 5) 맵핑 검증 및 미리보기 기능 구현, 6) 변환 함수 라이브러리 구축",
+			"reasoning": "복잡한 데이터 변환 로직, 다양한 맵핑 관계 처리, 스크립트 실행 보안, 직관적인 UI 구현 등 기술적으로 가장 도전적인 작업 중 하나입니다."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "작업 정의서 및 스케줄링 기능 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "작업 스케줄링 시스템을 위해 다음 하위 작업으로 분해하세요: 1) 작업 정의 CRUD API 구현, 2) Cron 기반 스케줄러 엔진 개발, 3) 작업 큐 및 우선순위 관리 시스템 구현, 4) NiFi 프로세스 그룹 자동 생성 및 실행 로직, 5) 작업 실행 모니터링 및 상태 추적, 6) 스케줄 설정 UI 컴포넌트 개발",
+			"reasoning": "스케줄링 엔진, 작업 큐 관리, NiFi 통합, 실행 모니터링 등 여러 복잡한 시스템이 연동되어야 하며, 안정성과 확장성이 중요합니다."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "모니터링 대시보드 및 실시간 상태 추적 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "실시간 모니터링 시스템을 위해 다음 하위 작업으로 분해하세요: 1) WebSocket 서버 구현 및 실시간 데이터 스트리밍, 2) 성능 메트릭 수집 및 집계 서비스 개발, 3) 대시보드 UI 컴포넌트 및 차트 구현, 4) 에러 로그 분석 및 알림 시스템 구축, 5) 대시보드 커스터마이징 기능 개발",
+			"reasoning": "실시간 데이터 처리, WebSocket 통신, 복잡한 차트 렌더링, 대용량 로그 처리 등 성능과 사용성 측면에서 도전적인 작업입니다."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "보안 강화 및 감사 로그 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "보안 시스템 강화를 위해 다음 하위 작업으로 분해하세요: 1) RBAC 권한 시스템 고도화 및 세밀한 권한 제어, 2) 감사 로그 시스템 구현 및 중요 이벤트 알림, 3) SSL/TLS 설정 및 보안 헤더 구성, 4) 보안 취약점 스캔 자동화 도구 통합, 5) 브루트포스 방어 및 Rate Limiting 구현",
+			"reasoning": "보안은 시스템 전반에 걸쳐 영향을 미치며, 다양한 공격 벡터를 고려한 포괄적인 방어 전략이 필요하여 복잡도가 높습니다."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "성능 최적화 및 캐싱 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "시스템 성능 최적화를 위해 다음 하위 작업으로 분해하세요: 1) Redis 캐싱 레이어 구현 및 캐시 전략 수립, 2) 데이터베이스 쿼리 최적화 및 인덱스 설계, 3) 프론트엔드 번들 최적화 및 코드 스플리팅, 4) API 응답 압축 및 페이지네이션 구현, 5) 성능 모니터링 및 병목 지점 분석 도구 통합",
+			"reasoning": "전체 시스템의 성능을 향상시키기 위해 백엔드, 프론트엔드, 데이터베이스 등 모든 레이어에서 최적화가 필요하며, 측정과 개선의 반복이 필요합니다."
+		}
+	]
+}
