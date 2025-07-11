@@ -1,0 +1,275 @@
+// 색상 변수
+$primary: #1976d2;
+$secondary: #424242;
+$accent: #82b1ff;
+$error: #ff5252;
+$info: #2196f3;
+$success: #4caf50;
+$warning: #ffc107;
+
+// NiFi 관련 색상
+$nifi: #1976d2;
+$nifi-light: #42a5f5;
+$nifi-dark: #1565c0;
+
+// 상태 색상
+$running: #4caf50;
+$stopped: #f44336;
+$disabled: #9e9e9e;
+$invalid: #ff5722;
+$validating: #ff9800;
+
+// 데이터 타입 색상
+$string: #2196f3;
+$number: #4caf50;
+$boolean: #ff9800;
+$date: #9c27b0;
+$object: #607d8b;
+
+// 간격 변수
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// 그림자 변수
+$shadow-light: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+$shadow-medium: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+$shadow-heavy: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+
+// 경계선 반지름
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-xl: 16px;
+
+// 폰트 크기
+$font-size-xs: 0.75rem;   // 12px
+$font-size-sm: 0.875rem;  // 14px
+$font-size-md: 1rem;      // 16px
+$font-size-lg: 1.125rem;  // 18px
+$font-size-xl: 1.25rem;   // 20px
+$font-size-xxl: 1.5rem;   // 24px
+
+// 폰트 두께
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+
+// 줄 높이
+$line-height-tight: 1.25;
+$line-height-normal: 1.5;
+$line-height-relaxed: 1.75;
+
+// Z-인덱스
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// 브레이크포인트
+$breakpoint-xs: 0px;
+$breakpoint-sm: 600px;
+$breakpoint-md: 960px;
+$breakpoint-lg: 1280px;
+$breakpoint-xl: 1920px;
+$breakpoint-xxl: 2560px;
+
+// 트랜지션
+$transition-fast: 0.15s ease;
+$transition-normal: 0.3s ease;
+$transition-slow: 0.5s ease;
+
+// 애니메이션 커브
+$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+$ease-out: cubic-bezier(0, 0, 0.2, 1);
+$ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+// 믹스인
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin text-clamp($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@mixin card-shadow {
+  box-shadow: $shadow-light;
+  transition: box-shadow $transition-normal;
+  
+  &:hover {
+    box-shadow: $shadow-medium;
+  }
+}
+
+@mixin button-hover {
+  transition: all $transition-fast;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: $shadow-medium;
+  }
+}
+
+@mixin responsive-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 $spacing-md;
+  
+  @media (max-width: $breakpoint-sm) {
+    padding: 0 $spacing-sm;
+  }
+}
+
+@mixin loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// 유틸리티 클래스
+.u-text-truncate {
+  @include text-truncate;
+}
+
+.u-flex-center {
+  @include flex-center;
+}
+
+.u-flex-between {
+  @include flex-between;
+}
+
+.u-card-shadow {
+  @include card-shadow;
+}
+
+.u-button-hover {
+  @include button-hover;
+}
+
+// 컴포넌트별 스타일
+.nifi-status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: $spacing-xs;
+  
+  &.running {
+    background-color: $running;
+  }
+  
+  &.stopped {
+    background-color: $stopped;
+  }
+  
+  &.disabled {
+    background-color: $disabled;
+  }
+  
+  &.invalid {
+    background-color: $invalid;
+  }
+  
+  &.validating {
+    background-color: $validating;
+    animation: pulse 1.5s infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// 데이터 타입 칩
+.data-type-chip {
+  &.string {
+    background-color: lighten($string, 40%);
+    color: darken($string, 20%);
+  }
+  
+  &.number {
+    background-color: lighten($number, 40%);
+    color: darken($number, 20%);
+  }
+  
+  &.boolean {
+    background-color: lighten($boolean, 40%);
+    color: darken($boolean, 20%);
+  }
+  
+  &.date {
+    background-color: lighten($date, 40%);
+    color: darken($date, 20%);
+  }
+  
+  &.object {
+    background-color: lighten($object, 40%);
+    color: darken($object, 20%);
+  }
+}
+
+// 커스텀 스크롤바
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: $border-radius-sm;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: $border-radius-sm;
+    
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+}
