@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # Apache NiFi - CDC 백엔드 엔진
+  nifi:
+    image: apache/nifi:latest
+    container_name: nificdc-nifi
+    ports:
+      - "8443:8443"  # HTTPS 웹 UI
+    environment:
+      # 단일 인스턴스 모드
+      - NIFI_WEB_HTTPS_PORT=8443
+      - SINGLE_USER_CREDENTIALS_USERNAME=admin
+      - SINGLE_USER_CREDENTIALS_PASSWORD=adminpassword123
+      # 메모리 설정
+      - NIFI_JVM_HEAP_INIT=2g
+      - NIFI_JVM_HEAP_MAX=4g
+    volumes:
+      # NiFi 상태 및 설정 영속화
+      - nifi-conf:/opt/nifi/nifi-current/conf
+      - nifi-content:/opt/nifi/nifi-current/content_repository
+      - nifi-database:/opt/nifi/nifi-current/database_repository
+      - nifi-flowfile:/opt/nifi/nifi-current/flowfile_repository
+      - nifi-provenance:/opt/nifi/nifi-current/provenance_repository
+      - nifi-state:/opt/nifi/nifi-current/state
+      - nifi-logs:/opt/nifi/nifi-current/logs
+    networks:
+      - nificdc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8443/nifi"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Redis - 캐싱용
+  redis:
+    image: redis:7-alpine
+    container_name: nificdc-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redispassword123
+    volumes:
+      - redis-data:/data
+    networks:
+      - nificdc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "-a", "redispassword123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - 메타데이터 저장용
+  postgres:
+    image: postgres:15-alpine
+    container_name: nificdc-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=nificdc
+      - POSTGRES_USER=nificdc_user
+      - POSTGRES_PASSWORD=postgrespassword123
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d  # 초기화 스크립트용 (옵션)
+    networks:
+      - nificdc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nificdc_user -d nificdc"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin - PostgreSQL 관리 도구 (옵션)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nificdc-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@nificdc.local
+      - PGADMIN_DEFAULT_PASSWORD=pgadminpassword123
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - nificdc-network
+    depends_on:
+      - postgres
+
+# 볼륨 정의
+volumes:
+  # NiFi 볼륨
+  nifi-conf:
+    driver: local
+  nifi-content:
+    driver: local
+  nifi-database:
+    driver: local
+  nifi-flowfile:
+    driver: local
+  nifi-provenance:
+    driver: local
+  nifi-state:
+    driver: local
+  nifi-logs:
+    driver: local
+  # Redis 볼륨
+  redis-data:
+    driver: local
+  # PostgreSQL 볼륨
+  postgres-data:
+    driver: local
+  # pgAdmin 볼륨
+  pgadmin-data:
+    driver: local
+
+# 네트워크 정의
+networks:
+  nificdc-network:
+    driver: bridge
+    name: nificdc-network 
