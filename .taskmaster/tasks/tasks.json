@@ -297,7 +297,7 @@
         "dependencies": [
           9
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -326,7 +326,7 @@
               2
             ],
             "details": "React/Vue.js 기반 대시보드 프레임워크 구축, D3.js 또는 Chart.js를 활용한 실시간 차트 구현, 반응형 레이아웃 및 다크모드 지원, 실시간 데이터 업데이트 최적화",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -348,7 +348,7 @@
               3
             ],
             "details": "드래그 앤 드롭 위젯 배치 기능, 사용자별 대시보드 설정 저장/불러오기, 위젯 크기 조절 및 템플릿 관리, 커스텀 위젯 생성 인터페이스",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -382,7 +382,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-12T15:16:18.534Z",
+      "updated": "2025-07-12T15:34:04.281Z",
       "description": "Tasks for master context"
     }
   }
