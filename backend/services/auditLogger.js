@@ -37,6 +37,25 @@ class AuditLogger {
     
     this.initializeAlertChannels();
     this.startBufferFlush();
+    
+    // Alert Manager 연동 지연 로딩 (순환 의존성 방지)
+    this.alertManager = null;
+    this.initializeAlertManager();
+  }
+
+  /**
+   * Alert Manager 초기화 (지연 로딩)
+   */
+  async initializeAlertManager() {
+    // 순환 의존성을 방지하기 위해 지연 로딩
+    setTimeout(() => {
+      try {
+        this.alertManager = require('./alertManager');
+        logger.info('Alert Manager 연동 완료');
+      } catch (error) {
+        logger.warn('Alert Manager 연동 실패:', error.message);
+      }
+    }, 1000);
   }
 
   /**
@@ -449,6 +468,17 @@ class AuditLogger {
 
       await AuditLog.bulkCreate(logs);
       logger.debug(`감사 로그 ${logs.length}개 저장 완료`);
+      
+      // Alert Manager로 이벤트 전송 (비동기)
+      if (this.alertManager) {
+        logs.forEach(log => {
+          setImmediate(() => {
+            this.alertManager.processEvent(log).catch(error => {
+              logger.error('Alert Manager 이벤트 처리 실패:', error);
+            });
+          });
+        });
+      }
     } catch (error) {
       logger.error('감사 로그 저장 실패:', error);
       // 실패한 로그는 다시 버퍼에 추가

@@ -53,6 +53,8 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', require('../routes/api/auth'));
 app.use('/api/v1/users', require('../routes/api/users'));
 app.use('/api/v1/systems', require('../routes/api/systems'));
+app.use('/api/v1/audit', require('../routes/api/audit'));
+app.use('/api/v1/alerts', require('../routes/api/alerts'));
 app.use('/api/v1/data', require('./routes/data'));
 app.use('/api/v1/mappings', require('./routes/mappings'));
 app.use('/api/v1/jobs', require('./routes/jobs'));

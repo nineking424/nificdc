@@ -26,9 +26,13 @@ router.use('/systems', systemRoutes);
 // const monitoringRoutes = require('./monitoring');
 // router.use('/monitoring', monitoringRoutes);
 
-// 감사 로그 라우터 (추후 구현)
-// const auditRoutes = require('./audit');
-// router.use('/audit', auditRoutes);
+// 감사 로그 라우터
+const auditRoutes = require('./audit');
+router.use('/audit', auditRoutes);
+
+// 알림 관리 라우터
+const alertRoutes = require('./alerts');
+router.use('/alerts', alertRoutes);
 
 // API 루트 정보
 router.get('/', (req, res) => {
@@ -40,9 +44,10 @@ router.get('/', (req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       systems: '/api/systems',
+      audit: '/api/audit',
+      alerts: '/api/alerts'
       // jobs: '/api/jobs',
-      // monitoring: '/api/monitoring',
-      // audit: '/api/audit'
+      // monitoring: '/api/monitoring'
     },
     timestamp: new Date().toISOString()
   });
