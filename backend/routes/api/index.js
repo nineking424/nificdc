@@ -34,6 +34,10 @@ router.use('/audit', auditRoutes);
 const alertRoutes = require('./alerts');
 router.use('/alerts', alertRoutes);
 
+// 보안 설정 라우터
+const securityRoutes = require('./security');
+router.use('/security', securityRoutes);
+
 // API 루트 정보
 router.get('/', (req, res) => {
   res.json({
@@ -45,7 +49,8 @@ router.get('/', (req, res) => {
       users: '/api/users',
       systems: '/api/systems',
       audit: '/api/audit',
-      alerts: '/api/alerts'
+      alerts: '/api/alerts',
+      security: '/api/security'
       // jobs: '/api/jobs',
       // monitoring: '/api/monitoring'
     },
