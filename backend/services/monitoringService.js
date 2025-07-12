@@ -1,6 +1,8 @@
 const WebSocket = require('ws');
+const os = require('os');
 const { Job, JobExecution, System, Mapping } = require('../models');
 const { Op } = require('sequelize');
+const logger = require('../utils/logger');
 
 /**
  * 실시간 모니터링 서비스
@@ -8,61 +10,218 @@ const { Op } = require('sequelize');
  */
 class MonitoringService {
   constructor() {
-    this.clients = new Set();
+    this.clients = new Map(); // Changed to Map for better client management
     this.wss = null;
     this.metricsInterval = null;
     this.healthCheckInterval = null;
+    this.heartbeatInterval = null;
     this.currentMetrics = {};
     
-    // 메트릭 업데이트 주기 (밀리초)
-    this.METRICS_UPDATE_INTERVAL = 2000; // 2초
-    this.HEALTH_CHECK_INTERVAL = 10000; // 10초
+    // 설정값
+    this.config = {
+      maxClients: 100,
+      metricsUpdateInterval: 2000, // 2초
+      healthCheckInterval: 10000, // 10초
+      heartbeatInterval: 30000, // 30초
+      compressionEnabled: true,
+      maxMessageSize: 1024 * 1024 // 1MB
+    };
+    
+    // 메트릭 캐시
+    this.metricsCache = {
+      lastUpdate: null,
+      data: null,
+      ttl: 5000 // 5초
+    };
+    
+    // 시작 시간
+    this.startTime = new Date();
   }
 
   /**
    * WebSocket 서버 초기화
    */
   initialize(server) {
-    this.wss = new WebSocket.Server({ 
-      server,
-      path: '/monitoring'
+    try {
+      this.wss = new WebSocket.Server({
+        server,
+        path: '/monitoring',
+        clientTracking: true,
+        maxPayload: this.config.maxMessageSize,
+        perMessageDeflate: this.config.compressionEnabled
+      });
+
+      this.setupEventHandlers();
+      this.startMetricsCollection();
+      this.startHeartbeat();
+      
+      logger.info('모니터링 WebSocket 서버가 시작되었습니다.');
+    } catch (error) {
+      logger.error('WebSocket 서버 초기화 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 이벤트 핸들러 설정
+   */
+  setupEventHandlers() {
+    this.wss.on('connection', (ws, request) => {
+      this.handleConnection(ws, request);
     });
 
-    this.wss.on('connection', (ws, req) => {
-      console.log('Monitoring client connected:', req.socket.remoteAddress);
+    this.wss.on('error', (error) => {
+      logger.error('WebSocket 서버 오류:', error);
+    });
+
+    // 서버 종료 시 정리
+    process.on('SIGTERM', () => this.shutdown());
+    process.on('SIGINT', () => this.shutdown());
+  }
+
+  /**
+   * 클라이언트 연결 처리
+   */
+  handleConnection(ws, request) {
+    // 연결 제한 확인
+    if (this.clients.size >= this.config.maxClients) {
+      ws.close(1013, '최대 연결 수 초과');
+      return;
+    }
+
+    const clientId = this.generateClientId();
+    const clientInfo = {
+      id: clientId,
+      ws: ws,
+      ip: this.getClientIP(request),
+      userAgent: request.headers['user-agent'],
+      connectedAt: new Date(),
+      lastHeartbeat: new Date(),
+      subscriptions: new Set(['metrics', 'alerts']) // 기본 구독
+    };
+
+    this.clients.set(clientId, clientInfo);
+    
+    logger.info(`클라이언트 연결: ${clientId} (${clientInfo.ip})`);
+
+    // 연결 즉시 현재 상태 전송
+    this.sendInitialState(ws);
+
+    // 메시지 핸들러 설정
+    ws.on('message', (message) => {
+      this.handleClientMessage(clientId, message);
+    });
+
+    ws.on('close', (code, reason) => {
+      this.handleDisconnection(clientId, code, reason);
+    });
+
+    ws.on('error', (error) => {
+      logger.error(`클라이언트 ${clientId} 오류:`, error);
+      this.clients.delete(clientId);
+    });
+
+    ws.on('pong', () => {
+      const client = this.clients.get(clientId);
+      if (client) {
+        client.lastHeartbeat = new Date();
+      }
+    });
+  }
+
+  /**
+   * 클라이언트 메시지 처리 (개선됨)
+   */
+  handleClientMessage(clientId, message) {
+    try {
+      const client = this.clients.get(clientId);
+      if (!client) return;
+
+      const data = JSON.parse(message.toString());
       
-      this.clients.add(ws);
-      
-      // 클라이언트에 초기 상태 전송
-      this.sendInitialState(ws);
-      
-      // 클라이언트 메시지 처리
-      ws.on('message', (message) => {
-        try {
-          const data = JSON.parse(message);
-          this.handleClientMessage(ws, data);
-        } catch (error) {
-          console.error('클라이언트 메시지 파싱 오류:', error);
+      switch (data.type) {
+        case 'subscribe':
+          this.handleSubscription(clientId, data);
+          break;
+          
+        case 'unsubscribe':
+          this.handleUnsubscription(clientId, data);
+          break;
+          
+        case 'get_metrics':
+          this.sendMetrics(client.ws, data.filter);
+          break;
+          
+        case 'get_logs':
+          this.sendLogs(client.ws, data.query);
+          break;
+          
+        case 'get_job_details':
+          this.sendJobDetails(client.ws, data.jobId);
+          break;
+          
+        case 'get_execution_logs':
+          this.sendExecutionLogs(client.ws, data.executionId);
+          break;
+          
+        case 'heartbeat':
+          client.lastHeartbeat = new Date();
+          break;
+          
+        case 'ping':
+          if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(JSON.stringify({ type: 'pong', timestamp: new Date().toISOString() }));
+          }
+          break;
+          
+        default:
+          logger.warn(`알 수 없는 메시지 타입: ${data.type}`);
+      }
+    } catch (error) {
+      logger.error(`메시지 처리 오류 (클라이언트 ${clientId}):`, error);
+    }
+  }
+
+  /**
+   * 구독 처리 (개선됨)
+   */
+  handleSubscription(clientId, data) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    const { channels } = data;
+    if (Array.isArray(channels)) {
+      channels.forEach(channel => {
+        if (this.isValidChannel(channel)) {
+          client.subscriptions.add(channel);
         }
       });
-      
-      // 연결 종료 처리
-      ws.on('close', () => {
-        console.log('Monitoring client disconnected');
-        this.clients.delete(ws);
-      });
-      
-      // 에러 처리
-      ws.on('error', (error) => {
-        console.error('WebSocket 에러:', error);
-        this.clients.delete(ws);
-      });
-    });
+    }
 
-    // 정기적 메트릭 업데이트 시작
-    this.startMetricsCollection();
-    
-    console.log('Monitoring WebSocket server initialized');
+    logger.debug(`클라이언트 ${clientId} 구독 업데이트:`, Array.from(client.subscriptions));
+  }
+
+  /**
+   * 구독 해제 처리
+   */
+  handleUnsubscription(clientId, data) {
+    const client = this.clients.get(clientId);
+    if (!client) return;
+
+    const { channels } = data;
+    if (Array.isArray(channels)) {
+      channels.forEach(channel => {
+        client.subscriptions.delete(channel);
+      });
+    }
+  }
+
+  /**
+   * 클라이언트 연결 해제 처리
+   */
+  handleDisconnection(clientId, code, reason) {
+    this.clients.delete(clientId);
+    logger.info(`클라이언트 연결 해제: ${clientId} (코드: ${code}, 이유: ${reason})`);
   }
 
   /**
@@ -74,29 +233,29 @@ class MonitoringService {
       try {
         const metrics = await this.collectRealTimeMetrics();
         this.currentMetrics = metrics;
-        this.broadcastToClients({
+        this.broadcastToSubscribers('metrics', {
           type: 'metrics',
           data: metrics,
           timestamp: new Date().toISOString()
         });
       } catch (error) {
-        console.error('메트릭 수집 오류:', error);
+        logger.error('메트릭 수집 오류:', error);
       }
-    }, this.METRICS_UPDATE_INTERVAL);
+    }, this.config.metricsUpdateInterval);
 
     // 시스템 상태 체크
     this.healthCheckInterval = setInterval(async () => {
       try {
         const healthStatus = await this.checkSystemHealth();
-        this.broadcastToClients({
+        this.broadcastToSubscribers('alerts', {
           type: 'health',
           data: healthStatus,
           timestamp: new Date().toISOString()
         });
       } catch (error) {
-        console.error('시스템 상태 체크 오류:', error);
+        logger.error('시스템 상태 체크 오류:', error);
       }
-    }, this.HEALTH_CHECK_INTERVAL);
+    }, this.config.healthCheckInterval);
   }
 
   /**
@@ -141,7 +300,7 @@ class MonitoringService {
         ws.send(JSON.stringify(initialState));
       }
     } catch (error) {
-      console.error('초기 상태 전송 실패:', error);
+      logger.error('초기 상태 전송 실패:', error);
     }
   }
 
@@ -171,7 +330,7 @@ class MonitoringService {
         break;
         
       default:
-        console.warn('알 수 없는 메시지 타입:', type);
+        logger.warn('알 수 없는 메시지 타입:', type);
     }
   }
 
@@ -182,7 +341,7 @@ class MonitoringService {
     // 클라이언트별 구독 정보 저장 (필요시 확장)
     ws.subscriptions = subscriptionData;
     
-    console.log('클라이언트 구독 설정:', subscriptionData);
+    logger.debug('클라이언트 구독 설정:', subscriptionData);
   }
 
   /**
@@ -247,6 +406,9 @@ class MonitoringService {
     // 상위 작업 통계
     const topJobs = await this.getTopPerformingJobs(10);
 
+    // 시스템 리소스 정보 추가
+    const systemResources = await this.getSystemResources();
+
     return {
       summary: {
         totalJobs,
@@ -264,6 +426,7 @@ class MonitoringService {
         totalRecordsProcessed,
         totalExecutions: recentExecutions.length
       },
+      system: systemResources,
       trends: {
         hourlyStats,
         recentExecutions: recentExecutions.slice(0, 20)
@@ -310,7 +473,7 @@ class MonitoringService {
         lastChecked: new Date().toISOString()
       };
     } catch (error) {
-      console.error('시스템 상태 체크 실패:', error);
+      logger.error('시스템 상태 체크 실패:', error);
       return {
         overall: { status: 'error', message: error.message },
         components: {},
@@ -493,7 +656,7 @@ class MonitoringService {
         };
       }).sort((a, b) => b.executionCount - a.executionCount);
     } catch (error) {
-      console.error('상위 성능 작업 조회 실패:', error);
+      logger.error('상위 성능 작업 조회 실패:', error);
       return [];
     }
   }
@@ -516,7 +679,7 @@ class MonitoringService {
         attributes: ['id', 'status', 'startedAt', 'completedAt', 'duration', 'triggerType']
       });
     } catch (error) {
-      console.error('최근 실행 내역 조회 실패:', error);
+      logger.error('최근 실행 내역 조회 실패:', error);
       return [];
     }
   }
@@ -544,7 +707,7 @@ class MonitoringService {
         }
       };
     } catch (error) {
-      console.error('시스템 통계 조회 실패:', error);
+      logger.error('시스템 통계 조회 실패:', error);
       return {};
     }
   }
@@ -578,7 +741,7 @@ class MonitoringService {
         }));
       }
     } catch (error) {
-      console.error('작업 상세 정보 전송 실패:', error);
+      logger.error('작업 상세 정보 전송 실패:', error);
     }
   }
 
@@ -599,7 +762,7 @@ class MonitoringService {
         }));
       }
     } catch (error) {
-      console.error('실행 로그 전송 실패:', error);
+      logger.error('실행 로그 전송 실패:', error);
     }
   }
 
@@ -663,19 +826,352 @@ class MonitoringService {
   }
 
   /**
+   * 시스템 리소스 정보 수집
+   */
+  async getSystemResources() {
+    try {
+      const cpuUsage = await this.getEnhancedCPUUsage();
+      const memoryUsage = this.getMemoryUsage();
+      const networkUsage = this.getNetworkUsage();
+
+      return {
+        cpu: {
+          usage: cpuUsage,
+          cores: os.cpus().length,
+          model: os.cpus()[0]?.model || 'Unknown',
+          loadAverage: os.loadavg()
+        },
+        memory: {
+          total: memoryUsage.total,
+          used: memoryUsage.used,
+          free: memoryUsage.free,
+          usage: memoryUsage.usage
+        },
+        network: networkUsage,
+        os: {
+          platform: os.platform(),
+          release: os.release(),
+          arch: os.arch(),
+          hostname: os.hostname(),
+          uptime: Math.round(os.uptime())
+        },
+        process: {
+          uptime: Math.round(process.uptime()),
+          pid: process.pid,
+          memory: process.memoryUsage()
+        }
+      };
+    } catch (error) {
+      logger.error('시스템 리소스 수집 실패:', error);
+      return {};
+    }
+  }
+
+  /**
+   * 향상된 CPU 사용률 계산
+   */
+  getEnhancedCPUUsage() {
+    return new Promise((resolve) => {
+      const startMeasure = this.cpuAverage();
+      
+      setTimeout(() => {
+        const endMeasure = this.cpuAverage();
+        const idleDifference = endMeasure.idle - startMeasure.idle;
+        const totalDifference = endMeasure.total - startMeasure.total;
+        const usage = 100 - ~~(100 * idleDifference / totalDifference);
+        
+        resolve(Math.max(0, Math.min(100, usage)));
+      }, 100);
+    });
+  }
+
+  /**
+   * CPU 평균 계산 헬퍼
+   */
+  cpuAverage() {
+    const cpus = os.cpus();
+    let user = 0, nice = 0, sys = 0, idle = 0, irq = 0;
+    
+    for (const cpu of cpus) {
+      user += cpu.times.user;
+      nice += cpu.times.nice;
+      sys += cpu.times.sys;
+      idle += cpu.times.idle;
+      irq += cpu.times.irq;
+    }
+    
+    const total = user + nice + sys + idle + irq;
+    
+    return { idle, total };
+  }
+
+  /**
+   * 메모리 사용 정보
+   */
+  getMemoryUsage() {
+    const total = os.totalmem();
+    const free = os.freemem();
+    const used = total - free;
+    const usage = Math.round((used / total) * 100 * 100) / 100;
+
+    return {
+      total: Math.round(total / 1024 / 1024), // MB
+      used: Math.round(used / 1024 / 1024),   // MB
+      free: Math.round(free / 1024 / 1024),   // MB
+      usage
+    };
+  }
+
+  /**
+   * 네트워크 사용 정보
+   */
+  getNetworkUsage() {
+    try {
+      const interfaces = os.networkInterfaces();
+      const stats = {
+        interfaces: Object.keys(interfaces).length,
+        active: 0,
+        details: {}
+      };
+
+      // 활성 인터페이스 계산
+      for (const [name, addrs] of Object.entries(interfaces)) {
+        const activeAddrs = addrs.filter(addr => !addr.internal);
+        if (activeAddrs.length > 0) {
+          stats.active++;
+          stats.details[name] = activeAddrs.map(addr => ({
+            address: addr.address,
+            family: addr.family,
+            mac: addr.mac
+          }));
+        }
+      }
+
+      return stats;
+    } catch (error) {
+      return {
+        interfaces: 0,
+        active: 0,
+        details: {}
+      };
+    }
+  }
+
+  /**
+   * 구독자들에게 브로드캐스트
+   */
+  broadcastToSubscribers(channel, message) {
+    this.clients.forEach((client, clientId) => {
+      if (client.subscriptions.has(channel)) {
+        this.sendMessage(client.ws, message);
+      }
+    });
+  }
+
+  /**
+   * 메시지 전송
+   */
+  sendMessage(ws, message) {
+    if (ws.readyState === WebSocket.OPEN) {
+      try {
+        const data = JSON.stringify(message);
+        ws.send(data);
+      } catch (error) {
+        logger.error('메시지 전송 실패:', error);
+      }
+    }
+  }
+
+  /**
+   * 메트릭 데이터 전송
+   */
+  async sendMetrics(ws, filter = {}) {
+    try {
+      const metrics = await this.getMetrics(filter);
+      this.sendMessage(ws, {
+        type: 'metrics_response',
+        data: metrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('메트릭 데이터 전송 실패:', error);
+    }
+  }
+
+  /**
+   * 로그 데이터 전송
+   */
+  async sendLogs(ws, query = {}) {
+    try {
+      const logs = await this.getLogs(query);
+      this.sendMessage(ws, {
+        type: 'logs_response',
+        data: logs,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('로그 데이터 전송 실패:', error);
+    }
+  }
+
+  /**
+   * 메트릭 데이터 반환 (필터 적용)
+   */
+  async getMetrics(filter = {}) {
+    try {
+      const { timeRange, type, limit } = filter;
+      
+      if (type === 'current') {
+        return this.currentMetrics;
+      } else {
+        return await this.collectRealTimeMetrics();
+      }
+    } catch (error) {
+      logger.error('메트릭 데이터 조회 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 로그 데이터 반환
+   */
+  async getLogs(query = {}) {
+    try {
+      const { level, limit = 100, search } = query;
+      
+      // 실제 구현에서는 로그 파일이나 데이터베이스에서 조회
+      // 여기서는 예시 데이터 반환
+      const logs = [
+        {
+          id: 1,
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          message: '시스템이 정상적으로 시작되었습니다.',
+          source: 'system'
+        },
+        {
+          id: 2,
+          timestamp: new Date(Date.now() - 60000).toISOString(),
+          level: 'warn',
+          message: 'CPU 사용률이 높습니다.',
+          source: 'monitoring'
+        }
+      ];
+
+      // 필터 적용
+      let filteredLogs = logs;
+      
+      if (level) {
+        filteredLogs = filteredLogs.filter(log => log.level === level);
+      }
+      
+      if (search) {
+        filteredLogs = filteredLogs.filter(log => 
+          log.message.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
+      return filteredLogs.slice(0, limit);
+    } catch (error) {
+      logger.error('로그 데이터 조회 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 하트비트 시작
+   */
+  startHeartbeat() {
+    this.heartbeatInterval = setInterval(() => {
+      const now = new Date();
+      
+      this.clients.forEach((client, clientId) => {
+        // 하트비트 확인
+        const timeSinceLastHeartbeat = now - client.lastHeartbeat;
+        
+        if (timeSinceLastHeartbeat > this.config.heartbeatInterval * 2) {
+          // 응답하지 않는 클라이언트 제거
+          logger.warn(`클라이언트 ${clientId} 하트비트 타임아웃`);
+          client.ws.terminate();
+          this.clients.delete(clientId);
+        } else if (client.ws.readyState === WebSocket.OPEN) {
+          // 핑 전송
+          client.ws.ping();
+        }
+      });
+    }, this.config.heartbeatInterval);
+  }
+
+  /**
+   * 클라이언트 ID 생성
+   */
+  generateClientId() {
+    return `client_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
+
+  /**
+   * 클라이언트 IP 주소 획득
+   */
+  getClientIP(request) {
+    return request.headers['x-forwarded-for'] || 
+           request.headers['x-real-ip'] || 
+           request.connection.remoteAddress ||
+           request.socket.remoteAddress ||
+           (request.connection.socket ? request.connection.socket.remoteAddress : null) ||
+           '127.0.0.1';
+  }
+
+  /**
+   * 유효한 채널인지 확인
+   */
+  isValidChannel(channel) {
+    const validChannels = ['metrics', 'alerts', 'logs', 'jobs', 'system'];
+    return validChannels.includes(channel);
+  }
+
+  /**
+   * 현재 연결된 클라이언트 정보 반환
+   */
+  getClientInfo() {
+    return {
+      totalClients: this.clients.size,
+      maxClients: this.config.maxClients,
+      clients: Array.from(this.clients.values()).map(client => ({
+        id: client.id,
+        ip: client.ip,
+        connectedAt: client.connectedAt,
+        subscriptions: Array.from(client.subscriptions)
+      }))
+    };
+  }
+
+  /**
    * 서비스 종료
    */
   shutdown() {
-    console.log('Monitoring service shutting down...');
-    
+    logger.info('모니터링 서비스를 종료합니다...');
+
+    // 타이머 정리
     this.stopMetricsCollection();
     
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
+    // 모든 클라이언트 연결 종료
+    this.clients.forEach((client, clientId) => {
+      client.ws.close(1001, '서버 종료');
+    });
+
+    // WebSocket 서버 종료
     if (this.wss) {
-      this.wss.close();
+      this.wss.close(() => {
+        logger.info('모니터링 WebSocket 서버가 종료되었습니다.');
+      });
     }
     
     this.clients.clear();
-    console.log('Monitoring service shutdown complete');
+    logger.info('모니터링 서비스 종료 완료');
   }
 }
 
