@@ -49,9 +49,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/v1/auth', require('./routes/auth'));
-app.use('/api/v1/systems', require('./routes/systems'));
+// API Routes with RBAC integration
+app.use('/api/v1/auth', require('../routes/api/auth'));
+app.use('/api/v1/users', require('../routes/api/users'));
+app.use('/api/v1/systems', require('../routes/api/systems'));
 app.use('/api/v1/data', require('./routes/data'));
 app.use('/api/v1/mappings', require('./routes/mappings'));
 app.use('/api/v1/jobs', require('./routes/jobs'));
