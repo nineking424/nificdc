@@ -34,12 +34,26 @@ app.set('trust proxy', 1);
 
 // CORS 설정
 app.use(cors({
-  origin: [
-    'http://localhost:8080',
-    'http://localhost:3000',
-    'http://frontend:8080',
-    'http://127.0.0.1:8080'
-  ],
+  origin: function (origin, callback) {
+    // 개발 환경에서는 모든 origin 허용 (null 포함)
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // 프로덕션에서는 특정 origin만 허용
+    const allowedOrigins = [
+      'http://localhost:8080',
+      'http://localhost:3000',
+      'http://frontend:8080',
+      'http://127.0.0.1:8080'
+    ];
+    
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'Accept-Language']

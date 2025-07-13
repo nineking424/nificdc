@@ -1,95 +1,216 @@
 <template>
-  <AppLayout>
-    <v-container fluid>
-      <!-- 페이지 헤더 -->
-      <div class="d-flex justify-space-between align-center mb-6">
-        <div>
-          <h1 class="text-h4 font-weight-bold">{{ $t('systems.title') }}</h1>
-          <p class="text-body-1 text-medium-emphasis mt-2">
-            시스템 연결 정보를 관리하고 상태를 모니터링합니다.
+  <div class="system-management-container">
+    <!-- 모던 헤더 -->
+    <header class="page-header">
+      <div class="header-content">
+        <div class="header-info">
+          <h1 class="page-title">
+            <v-icon size="32" color="primary" class="mr-3">mdi-server-network</v-icon>
+            {{ $t('systems.title') }}
+          </h1>
+          <p class="page-subtitle">
+            시스템 연결 정보를 관리하고 실시간 상태를 모니터링합니다.
           </p>
+          <div class="header-stats">
+            <div class="stat-item">
+              <div class="stat-number">{{ systems.length }}</div>
+              <div class="stat-label">총 시스템</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ activeSystemCount }}</div>
+              <div class="stat-label">활성 시스템</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ healthySystemCount }}</div>
+              <div class="stat-label">정상 상태</div>
+            </div>
+          </div>
         </div>
-        <v-btn
-          color="primary"
-          size="large"
-          prepend-icon="mdi-plus"
-          @click="openCreateDialog"
-        >
-          {{ $t('systems.add') }}
-        </v-btn>
+        
+        <div class="header-actions">
+          <button
+            class="action-button primary"
+            @click="openCreateDialog"
+          >
+            <v-icon size="20" class="mr-2">mdi-plus</v-icon>
+            새 시스템 추가
+          </button>
+        </div>
       </div>
+    </header>
 
-      <!-- 필터 및 검색 -->
-      <v-card class="mb-6">
-        <v-card-text>
-          <v-row>
-            <v-col cols="12" md="4">
-              <v-text-field
-                v-model="filters.search"
-                prepend-inner-icon="mdi-magnify"
-                :label="$t('common.search')"
-                hide-details
-                variant="outlined"
-                density="compact"
-                @keyup.enter="loadSystems"
-              />
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-select
-                v-model="filters.type"
-                :items="systemTypeOptions"
-                :label="$t('systems.type')"
-                hide-details
-                variant="outlined"
-                density="compact"
-                clearable
-                @update:model-value="loadSystems"
-              />
-            </v-col>
-            <v-col cols="12" md="2">
-              <v-select
-                v-model="filters.isActive"
-                :items="statusOptions"
-                :label="$t('systems.isActive')"
-                hide-details
-                variant="outlined"
-                density="compact"
-                clearable
-                @update:model-value="loadSystems"
-              />
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="d-flex gap-2">
-                <v-btn
-                  color="primary"
-                  variant="flat"
-                  @click="loadSystems"
-                >
-                  {{ $t('common.search') }}
-                </v-btn>
-                <v-btn
-                  variant="outlined"
-                  @click="resetFilters"
-                >
-                  {{ $t('common.reset') }}
-                </v-btn>
+    <!-- 메인 콘텐츠 -->
+    <main class="main-content">
+
+      <!-- 모던 필터 섹션 -->
+      <section class="filter-section">
+        <div class="filter-card">
+          <div class="filter-header">
+            <h2 class="filter-title">
+              <v-icon size="20" class="mr-2">mdi-filter-variant</v-icon>
+              필터 & 검색
+            </h2>
+          </div>
+          
+          <div class="filter-content">
+            <div class="search-group">
+              <div class="modern-search-field">
+                <input
+                  v-model="filters.search"
+                  type="text"
+                  placeholder=" "
+                  class="search-input"
+                  @keyup.enter="loadSystems"
+                />
+                <label class="search-label">시스템명 또는 설명 검색</label>
+                <div class="search-icon">
+                  <v-icon size="20" color="gray-400">mdi-magnify</v-icon>
+                </div>
               </div>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
+            </div>
+            
+            <div class="filter-group">
+              <div class="filter-field">
+                <v-select
+                  v-model="filters.type"
+                  :items="systemTypeOptions"
+                  label="시스템 타입"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  @update:model-value="loadSystems"
+                />
+              </div>
+              
+              <div class="filter-field">
+                <v-select
+                  v-model="filters.isActive"
+                  :items="statusOptions"
+                  label="활성 상태"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  @update:model-value="loadSystems"
+                />
+              </div>
+            </div>
+            
+            <div class="filter-actions">
+              <button class="filter-button primary" @click="loadSystems">
+                <v-icon size="18" class="mr-2">mdi-magnify</v-icon>
+                검색
+              </button>
+              <button class="filter-button secondary" @click="resetFilters">
+                <v-icon size="18" class="mr-2">mdi-refresh</v-icon>
+                초기화
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <!-- 시스템 목록 테이블 -->
-      <v-card>
-        <v-data-table
-          :headers="headers"
-          :items="systems"
-          :loading="loading"
-          :items-per-page="itemsPerPage"
-          :page="currentPage"
-          :server-items-length="totalItems"
-          @update:options="onTableOptionsUpdate"
-        >
+      <!-- 모던 시스템 카드 그리드 -->
+      <section class="systems-section">
+        <div class="systems-header">
+          <h2 class="section-title">시스템 목록</h2>
+          <div class="view-toggle">
+            <button 
+              class="toggle-btn"
+              :class="{ active: viewMode === 'grid' }"
+              @click="viewMode = 'grid'"
+            >
+              <v-icon size="20">mdi-view-grid</v-icon>
+            </button>
+            <button 
+              class="toggle-btn"
+              :class="{ active: viewMode === 'table' }"
+              @click="viewMode = 'table'"
+            >
+              <v-icon size="20">mdi-table</v-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- 그리드 뷰 -->
+        <div v-if="viewMode === 'grid'" class="systems-grid">
+          <div
+            v-for="system in systems"
+            :key="system.id"
+            class="system-card"
+            @click="openEditDialog(system)"
+          >
+            <div class="card-header">
+              <div class="system-info">
+                <div class="system-icon">
+                  <v-icon size="24" :color="getSystemTypeColor(system.type)">{{ getSystemTypeIcon(system.type) }}</v-icon>
+                </div>
+                <div class="system-details">
+                  <h3 class="system-name">{{ system.name }}</h3>
+                  <p class="system-type">{{ getSystemTypeLabel(system.type) }}</p>
+                </div>
+              </div>
+              
+              <div class="system-status">
+                <div class="status-indicator" :class="getConnectionStatusClass(system.lastConnectionStatus)">
+                  <v-icon size="16">{{ getConnectionStatusIcon(system.lastConnectionStatus) }}</v-icon>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-content">
+              <p class="system-description">{{ system.description || '설명 없음' }}</p>
+              
+              <div class="system-metrics">
+                <div class="metric-item">
+                  <span class="metric-label">상태</span>
+                  <span class="metric-value" :class="system.isActive ? 'text-success' : 'text-warning'">
+                    {{ system.isActive ? '활성' : '비활성' }}
+                  </span>
+                </div>
+                <div class="metric-item" v-if="system.lastConnectionTest">
+                  <span class="metric-label">마지막 테스트</span>
+                  <span class="metric-value">{{ formatDateTime(system.lastConnectionTest) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-actions" @click.stop>
+              <button
+                class="action-btn test"
+                :class="{ loading: system.testing }"
+                @click="testConnection(system)"
+              >
+                <v-icon size="16">mdi-connection</v-icon>
+              </button>
+              <button
+                class="action-btn edit"
+                @click="openEditDialog(system)"
+              >
+                <v-icon size="16">mdi-pencil</v-icon>
+              </button>
+              <button
+                class="action-btn delete"
+                @click="confirmDelete(system)"
+              >
+                <v-icon size="16">mdi-delete</v-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 테이블 뷰 -->
+        <div v-else class="systems-table-container">
+          <v-card class="modern-table-card">
+            <v-data-table
+              :headers="headers"
+              :items="systems"
+              :loading="loading"
+              :items-per-page="itemsPerPage"
+              :page="currentPage"
+              :server-items-length="totalItems"
+              class="modern-data-table"
+              @update:options="onTableOptionsUpdate"
+            >
           <!-- 시스템 타입 -->
           <template #item.type="{ item }">
             <v-chip
@@ -184,30 +305,43 @@
             </div>
           </template>
 
-          <!-- 데이터 없음 -->
-          <template #no-data>
-            <div class="text-center py-8">
-              <v-icon size="64" color="grey-lighten-1">mdi-database-off</v-icon>
-              <div class="text-h6 mt-4">{{ $t('table.noData') }}</div>
-              <div class="text-body-2 text-medium-emphasis mt-2">
-                새로운 시스템을 추가하여 시작하세요.
-              </div>
-            </div>
-          </template>
-        </v-data-table>
-      </v-card>
+              <!-- 데이터 없음 -->
+              <template #no-data>
+                <div class="empty-state">
+                  <div class="empty-icon">
+                    <v-icon size="80" color="gray-300">mdi-server-network-off</v-icon>
+                  </div>
+                  <h3 class="empty-title">시스템이 없습니다</h3>
+                  <p class="empty-description">새로운 시스템을 추가하여 데이터 동기화를 시작하세요.</p>
+                  <button class="action-button primary" @click="openCreateDialog">
+                    <v-icon size="20" class="mr-2">mdi-plus</v-icon>
+                    첫 번째 시스템 추가
+                  </button>
+                </div>
+              </template>
+            </v-data-table>
+          </v-card>
+        </div>
+      </section>
+    </main>
 
-      <!-- 시스템 생성/편집 다이얼로그 -->
-      <v-dialog
-        v-model="showDialog"
-        max-width="600"
-        persistent
-        @keydown.esc="closeDialog"
-      >
-        <v-card>
-          <v-card-title class="text-h6">
-            {{ dialogMode === 'create' ? '새 시스템 추가' : '시스템 편집' }}
-          </v-card-title>
+    <!-- 모던 시스템 생성/편집 다이얼로그 -->
+    <v-dialog
+      v-model="showDialog"
+      max-width="700"
+      persistent
+      @keydown.esc="closeDialog"
+    >
+      <v-card class="modern-dialog">
+        <div class="dialog-header">
+          <div class="dialog-title">
+            <v-icon size="24" color="primary" class="mr-3">{{ dialogMode === 'create' ? 'mdi-plus-circle' : 'mdi-pencil-circle' }}</v-icon>
+            <h2>{{ dialogMode === 'create' ? '새 시스템 추가' : '시스템 편집' }}</h2>
+          </div>
+          <button class="close-button" @click="closeDialog">
+            <v-icon size="20">mdi-close</v-icon>
+          </button>
+        </div>
           <v-form ref="systemFormRef" v-model="formValid" @submit.prevent="saveSystem">
             <v-card-text>
               <v-row>
@@ -337,73 +471,84 @@
                 </v-col>
               </v-row>
             </v-card-text>
-            <v-card-actions>
-              <v-btn
-                color="success"
-                variant="outlined"
-                prepend-icon="mdi-connection"
-                :loading="testingConnection"
+            <div class="dialog-actions">
+              <button
+                class="action-button test"
+                :class="{ loading: testingConnection }"
                 :disabled="!formValid || saving"
                 @click="testConnectionInDialog"
               >
-                연결 테스트
-              </v-btn>
-              <v-spacer />
-              <v-btn
-                variant="text"
-                @click="closeDialog"
-              >
-                취소
-              </v-btn>
-              <v-btn
-                color="primary"
-                variant="flat"
-                :loading="saving"
-                :disabled="!formValid"
-                type="submit"
-              >
-                {{ dialogMode === 'create' ? '생성' : '수정' }}
-              </v-btn>
-            </v-card-actions>
+                <v-icon size="18" class="mr-2">mdi-connection</v-icon>
+                <span v-if="!testingConnection">연결 테스트</span>
+                <span v-else>테스트 중...</span>
+              </button>
+              
+              <div class="action-group">
+                <button
+                  class="action-button secondary"
+                  @click="closeDialog"
+                >
+                  취소
+                </button>
+                <button
+                  class="action-button primary"
+                  :class="{ loading: saving }"
+                  :disabled="!formValid"
+                  type="submit"
+                >
+                  <span v-if="!saving">{{ dialogMode === 'create' ? '생성' : '수정' }}</span>
+                  <span v-else>{{ dialogMode === 'create' ? '생성 중...' : '수정 중...' }}</span>
+                </button>
+              </div>
+            </div>
           </v-form>
         </v-card>
       </v-dialog>
 
-      <!-- 삭제 확인 다이얼로그 -->
-      <v-dialog
-        v-model="showDeleteDialog"
-        max-width="400"
-      >
-        <v-card>
-          <v-card-title class="text-h6">
-            시스템 삭제 확인
-          </v-card-title>
-          <v-card-text>
-            정말로 '{{ systemToDelete?.name }}' 시스템을 삭제하시겠습니까?
-            <br>
-            <span class="text-error">이 작업은 되돌릴 수 없습니다.</span>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn
-              variant="text"
-              @click="showDeleteDialog = false"
-            >
-              {{ $t('common.cancel') }}
-            </v-btn>
-            <v-btn
-              color="error"
-              variant="flat"
-              :loading="deleting"
-              @click="deleteSystem"
-            >
-              {{ $t('common.delete') }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-    </v-container>
-  </AppLayout>
+    <!-- 모던 삭제 확인 다이얼로그 -->
+    <v-dialog
+      v-model="showDeleteDialog"
+      max-width="500"
+    >
+      <v-card class="modern-dialog delete-dialog">
+        <div class="dialog-header danger">
+          <div class="dialog-title">
+            <v-icon size="24" color="error" class="mr-3">mdi-alert-circle</v-icon>
+            <h2>시스템 삭제 확인</h2>
+          </div>
+        </div>
+        
+        <div class="dialog-content">
+          <div class="warning-content">
+            <p class="warning-text">
+              정말로 <strong>'{{ systemToDelete?.name }}'</strong> 시스템을 삭제하시겠습니까?
+            </p>
+            <div class="warning-notice">
+              <v-icon size="20" color="warning" class="mr-2">mdi-alert</v-icon>
+              <span>이 작업은 되돌릴 수 없습니다.</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="dialog-actions">
+          <button
+            class="action-button secondary"
+            @click="showDeleteDialog = false"
+          >
+            취소
+          </button>
+          <button
+            class="action-button danger"
+            :class="{ loading: deleting }"
+            @click="deleteSystem"
+          >
+            <span v-if="!deleting">삭제</span>
+            <span v-else>삭제 중...</span>
+          </button>
+        </div>
+      </v-card>
+    </v-dialog>
+  </div>
 </template>
 
 <script setup>
@@ -448,6 +593,7 @@ const showDeleteDialog = ref(false)
 const selectedSystem = ref(null)
 const systemToDelete = ref(null)
 const dialogMode = ref('create')
+const viewMode = ref('grid') // 'grid' or 'table'
 // 폼 초기값
 const getInitialFormData = () => ({
   name: '',
@@ -551,6 +697,15 @@ const statusOptions = computed(() => [
   { title: '활성', value: 'true' },
   { title: '비활성', value: 'false' }
 ])
+
+// 시스템 통계 computed 속성들
+const activeSystemCount = computed(() => {
+  return systems.value.filter(system => system.isActive).length
+})
+
+const healthySystemCount = computed(() => {
+  return systems.value.filter(system => system.lastConnectionStatus === 'success').length
+})
 
 // 폼 관련 computed 속성들
 const isDatabaseType = computed(() => {
@@ -920,6 +1075,40 @@ const getConnectionStatusText = (status) => {
   return texts[status] || '알 수 없음'
 }
 
+const getConnectionStatusClass = (status) => {
+  const classes = {
+    success: 'success',
+    failed: 'error',
+    pending: 'warning'
+  }
+  return classes[status] || 'neutral'
+}
+
+const getSystemTypeIcon = (type) => {
+  const icons = {
+    postgresql: 'mdi-elephant',
+    mysql: 'mdi-database',
+    oracle: 'mdi-database-outline',
+    mongodb: 'mdi-leaf',
+    redis: 'mdi-database-cog',
+    sqlite: 'mdi-database-sync',
+    ftp: 'mdi-folder-network',
+    sftp: 'mdi-folder-lock',
+    local_fs: 'mdi-harddisk',
+    aws_s3: 'mdi-aws',
+    azure_blob: 'mdi-microsoft-azure',
+    api: 'mdi-api',
+    api_rest: 'mdi-web',
+    kafka: 'mdi-transit-connection-variant'
+  }
+  return icons[type] || 'mdi-server'
+}
+
+const getSystemTypeLabel = (type) => {
+  const option = systemTypeOptions.value.find(opt => opt.value === type)
+  return option ? option.title : type
+}
+
 const formatDateTime = (dateString) => {
   return formatDistanceToNow(new Date(dateString), {
     addSuffix: true,
@@ -934,31 +1123,805 @@ watch(() => systemForm.value.type, (newType) => {
   }
 })
 
+// 뷰 모드 전환 시 로컬 스토리지에 저장
+watch(viewMode, (newMode) => {
+  localStorage.setItem('systemManagementViewMode', newMode)
+})
+
 // 라이프사이클
 onMounted(() => {
   systemForm.value = getInitialFormData()
+  // 저장된 뷰 모드 복원
+  const savedViewMode = localStorage.getItem('systemManagementViewMode')
+  if (savedViewMode && ['grid', 'table'].includes(savedViewMode)) {
+    viewMode.value = savedViewMode
+  }
   loadSystems()
 })
 </script>
 
 <style scoped>
-.system-management {
+/* 시스템 관리 메인 컨테이너 */
+.system-management-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--primary-50) 100%);
   padding: 0;
 }
 
-.v-data-table {
-  border-radius: 8px;
+/* 모던 헤더 */
+.page-header {
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.v-chip {
+.header-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.header-info {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--gray-900);
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+}
+
+.page-subtitle {
+  font-size: 1.125rem;
+  color: var(--gray-600);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.6;
+}
+
+.header-stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--gray-600);
   font-weight: 500;
 }
 
-.gap-1 {
-  gap: 4px;
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
 }
 
-.gap-2 {
-  gap: 8px;
+/* 메인 콘텐츠 */
+.main-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* 모던 필터 섹션 */
+.filter-section {
+  margin-bottom: 1rem;
+}
+
+.filter-card {
+  background: white;
+  border-radius: var(--radius-2xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+}
+
+.filter-header {
+  margin-bottom: 1.5rem;
+}
+
+.filter-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.filter-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 2rem;
+  align-items: end;
+}
+
+.search-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.modern-search-field {
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 1rem 3rem 1rem 3rem;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius-xl);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background: white;
+  font-family: inherit;
+}
+
+.search-input:focus {
+  border-color: var(--primary-500);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+.search-label {
+  position: absolute;
+  left: 3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: var(--gray-500);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  background: white;
+  padding: 0 0.5rem;
+}
+
+.search-input:focus + .search-label,
+.search-input:not(:placeholder-shown) + .search-label {
+  top: 0;
+  font-size: 0.75rem;
+  color: var(--primary-600);
+  font-weight: 500;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.filter-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.filter-field {
+  flex: 1;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+/* 시스템 섹션 */
+.systems-section {
+  background: white;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+}
+
+.systems-header {
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.view-toggle {
+  display: flex;
+  background: var(--gray-100);
+  border-radius: var(--radius-lg);
+  padding: 0.25rem;
+}
+
+.toggle-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--gray-600);
+}
+
+.toggle-btn.active {
+  background: white;
+  color: var(--primary-600);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 시스템 그리드 */
+.systems-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.system-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.system-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-400), var(--primary-600));
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.system-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-200);
+}
+
+.system-card:hover::before {
+  transform: scaleX(1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.system-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex: 1;
+}
+
+.system-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.system-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.system-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0 0 0.25rem 0;
+  word-wrap: break-word;
+}
+
+.system-type {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.system-status {
+  flex-shrink: 0;
+}
+
+.status-indicator {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid;
+}
+
+.status-indicator.success {
+  background: var(--success-100);
+  border-color: var(--success-500);
+  color: var(--success-700);
+}
+
+.status-indicator.error {
+  background: var(--error-100);
+  border-color: var(--error-500);
+  color: var(--error-700);
+}
+
+.status-indicator.warning {
+  background: var(--warning-100);
+  border-color: var(--warning-500);
+  color: var(--warning-700);
+}
+
+.status-indicator.neutral {
+  background: var(--gray-100);
+  border-color: var(--gray-400);
+  color: var(--gray-600);
+}
+
+.card-content {
+  margin-bottom: 1.5rem;
+}
+
+.system-description {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  line-height: 1.5;
+  margin: 0 0 1rem 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.system-metrics {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.text-success {
+  color: var(--success-600) !important;
+}
+
+.text-warning {
+  color: var(--warning-600) !important;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.action-btn.test:hover {
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
+.action-btn.edit:hover {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+.action-btn.delete:hover {
+  background: var(--error-100);
+  color: var(--error-700);
+}
+
+.action-btn.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* 테이블 뷰 */
+.systems-table-container {
+  padding: 0;
+}
+
+.modern-table-card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.modern-data-table {
+  background: transparent;
+}
+
+/* 빈 상태 */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-icon {
+  margin-bottom: 1.5rem;
+}
+
+.empty-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-description {
+  font-size: 1rem;
+  color: var(--gray-600);
+  margin: 0 0 2rem 0;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 공통 버튼 스타일 */
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.action-button.primary {
+  background: var(--primary-600);
+  color: white;
+}
+
+.action-button.primary:hover:not(:disabled) {
+  background: var(--primary-700);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.action-button.secondary {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+}
+
+.action-button.secondary:hover:not(:disabled) {
+  background: var(--gray-200);
+  transform: translateY(-1px);
+}
+
+.action-button.test {
+  background: var(--success-100);
+  color: var(--success-700);
+  border: 1px solid var(--success-300);
+}
+
+.action-button.test:hover:not(:disabled) {
+  background: var(--success-200);
+  transform: translateY(-1px);
+}
+
+.action-button.danger {
+  background: var(--error-600);
+  color: white;
+}
+
+.action-button.danger:hover:not(:disabled) {
+  background: var(--error-700);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.action-button.loading {
+  pointer-events: none;
+}
+
+.filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-button.primary {
+  background: var(--primary-600);
+  color: white;
+}
+
+.filter-button.primary:hover {
+  background: var(--primary-700);
+}
+
+.filter-button.secondary {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+
+.filter-button.secondary:hover {
+  background: var(--gray-300);
+}
+
+/* 모던 다이얼로그 */
+.modern-dialog {
+  border-radius: var(--radius-2xl) !important;
+  overflow: hidden;
+}
+
+.dialog-header {
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialog-header.danger {
+  border-bottom-color: var(--error-200);
+  background: var(--error-50);
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+}
+
+.dialog-title h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.close-button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--gray-600);
+}
+
+.close-button:hover {
+  background: var(--gray-200);
+  color: var(--gray-800);
+}
+
+.dialog-content {
+  padding: 2rem;
+}
+
+.warning-content {
+  text-align: center;
+}
+
+.warning-text {
+  font-size: 1rem;
+  color: var(--gray-700);
+  margin: 0 0 1rem 0;
+  line-height: 1.6;
+}
+
+.warning-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--warning-50);
+  border: 1px solid var(--warning-200);
+  border-radius: var(--radius-lg);
+  color: var(--warning-800);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dialog-actions {
+  padding: 1rem 2rem 2rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-group {
+  display: flex;
+  gap: 1rem;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 1024px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rem;
+  }
+  
+  .header-stats {
+    justify-content: flex-start;
+  }
+  
+  .filter-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .systems-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+  
+  .header-content {
+    padding: 1.5rem 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .header-stats {
+    gap: 1rem;
+  }
+  
+  .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  .filter-card {
+    padding: 1.5rem;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+  }
+  
+  .filter-actions {
+    flex-direction: column;
+  }
+  
+  .systems-grid {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+  
+  .system-card {
+    padding: 1rem;
+  }
+  
+  .systems-header {
+    padding: 1.5rem 1rem 1rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .action-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.8rem;
+  }
+  
+  .dialog-header {
+    padding: 1.5rem 1rem 1rem 1rem;
+  }
+  
+  .dialog-content {
+    padding: 1.5rem 1rem;
+  }
+  
+  .dialog-actions {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .action-group {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 </style>

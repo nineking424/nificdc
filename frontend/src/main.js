@@ -6,6 +6,7 @@ import vuetify from './plugins/vuetify'
 import i18n from './plugins/i18n'
 import toast from './plugins/toast'
 import './assets/styles/main.scss'
+import './styles/design-system.css'
 
 const app = createApp(App)
 

@@ -37,6 +37,9 @@ export const useAuthStore = defineStore('auth', () => {
   // 액션
   const login = async (credentials) => {
     try {
+      // 디버깅: 받은 credentials 로깅
+      console.log('[DEBUG] Auth store received credentials:', JSON.stringify(credentials))
+      
       isLoading.value = true
       
       // 로그인 시도 제한 확인
@@ -52,6 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
       
+      console.log('[DEBUG] About to call API with:', JSON.stringify(credentials))
       const response = await api.post('/auth/login', credentials)
       
       if (response.data.success) {
@@ -60,11 +64,14 @@ export const useAuthStore = defineStore('auth', () => {
         // 상태 업데이트
         user.value = userData
         token.value = accessToken
-        refreshToken.value = newRefreshToken
+        // refreshToken은 HTTP-Only 쿠키로 설정되므로 직접 저장하지 않음
         
         // 로컬 스토리지에 저장
         localStorage.setItem('auth_token', accessToken)
-        localStorage.setItem('refresh_token', newRefreshToken)
+        if (newRefreshToken) {
+          localStorage.setItem('refresh_token', newRefreshToken)
+          refreshToken.value = newRefreshToken
+        }
         localStorage.setItem('user_data', JSON.stringify(userData))
         
         // API 헤더 설정

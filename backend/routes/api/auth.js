@@ -26,6 +26,10 @@ const loginLimiter = rateLimit({
 // 로그인
 router.post('/login', loginLimiter, async (req, res) => {
   try {
+    // 디버깅: 요청 본문 로깅
+    console.log('[DEBUG] Login request body:', req.body);
+    console.log('[DEBUG] Content-Type:', req.get('Content-Type'));
+    
     const { email, password, rememberMe = false } = req.body;
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const userAgent = req.get('User-Agent') || '';

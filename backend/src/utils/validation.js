@@ -4,8 +4,9 @@ const Joi = require('joi');
 const schemas = {
   // 사용자 관련
   login: Joi.object({
-    username: Joi.string().alphanum().min(3).max(30).required(),
-    password: Joi.string().min(6).required()
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    rememberMe: Joi.boolean().optional().default(false)
   }),
 
   register: Joi.object({
