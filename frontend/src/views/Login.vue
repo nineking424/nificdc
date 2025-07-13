@@ -187,8 +187,8 @@ export default {
     const toast = useToast()
     
     const form = ref({
-      email: 'admin@example.com',  // 테스트용 기본값
-      password: 'admin123'         // 테스트용 기본값
+      email: '',
+      password: ''
     })
     
     const showPassword = ref(false)
@@ -213,30 +213,13 @@ export default {
     })
     
     const isFormValid = computed(() => {
-      const hasEmail = form.value.email && form.value.email.trim().length > 0
-      const hasPassword = form.value.password && form.value.password.trim().length > 0
-      const noEmailError = !emailError.value
-      const noPasswordError = !passwordError.value
-      
-      console.log('[DEBUG] Validity check:', {
-        hasEmail,
-        hasPassword, 
-        noEmailError,
-        noPasswordError,
-        email: form.value.email,
-        password: form.value.password
-      })
-      
-      return hasEmail && hasPassword && noEmailError && noPasswordError
+      return form.value.email && 
+             form.value.password && 
+             !emailError.value && 
+             !passwordError.value
     })
     
     const handleLogin = async () => {
-      // 디버깅: 폼 데이터 로깅
-      console.log('[DEBUG] Form data:', JSON.stringify(form.value))
-      console.log('[DEBUG] Form email:', form.value.email)
-      console.log('[DEBUG] Form password:', form.value.password)
-      console.log('[DEBUG] isFormValid:', isFormValid.value)
-      
       if (!isFormValid.value) {
         toast.error('입력 정보를 다시 확인해주세요.')
         return
@@ -248,9 +231,7 @@ export default {
         const loginData = {
           email: form.value.email,
           password: form.value.password
-          // rememberMe는 일단 제거하여 테스트
         }
-        console.log('[DEBUG] Sending login data:', JSON.stringify(loginData))
         
         await authStore.login(loginData)
         

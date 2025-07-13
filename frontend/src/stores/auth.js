@@ -37,9 +37,6 @@ export const useAuthStore = defineStore('auth', () => {
   // 액션
   const login = async (credentials) => {
     try {
-      // 디버깅: 받은 credentials 로깅
-      console.log('[DEBUG] Auth store received credentials:', JSON.stringify(credentials))
-      
       isLoading.value = true
       
       // 로그인 시도 제한 확인
@@ -55,7 +52,6 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
       
-      console.log('[DEBUG] About to call API with:', JSON.stringify(credentials))
       const response = await api.post('/auth/login', credentials)
       
       if (response.data.success) {
