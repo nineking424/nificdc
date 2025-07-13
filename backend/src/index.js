@@ -10,6 +10,7 @@ const notFoundHandler = require('./middleware/notFoundHandler');
 const { connectDatabase } = require('./database/connection');
 const { connectRedis } = require('./utils/redis');
 const monitoringService = require('./services/monitoringService');
+const scheduledScanner = require('../services/scheduledScanner');
 
 // 보안 미들웨어 통합 사용
 const {
@@ -63,6 +64,7 @@ app.use('/api/v1/systems', require('../routes/api/systems'));
 app.use('/api/v1/audit', require('../routes/api/audit'));
 app.use('/api/v1/alerts', require('../routes/api/alerts'));
 app.use('/api/v1/security', require('../routes/api/security'));
+app.use('/api/v1/security-scan', require('../routes/api/security-scan'));
 app.use('/api/v1/data', require('./routes/data'));
 app.use('/api/v1/mappings', require('./routes/mappings'));
 app.use('/api/v1/jobs', require('./routes/jobs'));
@@ -150,6 +152,14 @@ const startServer = async () => {
     logger.info(`Monitoring WebSocket server initialized on /monitoring`);
     logger.info('SSL/TLS 상태:', sslStatus);
     
+    // 보안 스캐너 상태 로그
+    const scannerStatus = scheduledScanner.getStatus();
+    logger.info('예약된 보안 스캔 상태:', {
+      enabled: scannerStatus.enabled,
+      scheduledJobs: scannerStatus.scheduledJobs.length,
+      activeScans: scannerStatus.activeScans.length
+    });
+    
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
@@ -174,6 +184,7 @@ process.on('SIGTERM', () => {
   }
   
   monitoringService.shutdown();
+  scheduledScanner.shutdown();
   process.exit(0);
 });
 
@@ -194,6 +205,7 @@ process.on('SIGINT', () => {
   }
   
   monitoringService.shutdown();
+  scheduledScanner.shutdown();
   process.exit(0);
 });
 

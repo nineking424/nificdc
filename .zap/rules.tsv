@@ -1,0 +1,54 @@
+# ZAP Scanning Rules Configuration
+# Format: Rule_ID	IGNORE/WARN/FAIL	URL_REGEX	PARAMETER_REGEX	OTHER
+
+# Authentication endpoints - reduce false positives
+10110	IGNORE	.*/api/v1/auth/.*	.*
+10032	IGNORE	.*/api/v1/auth/.*	.*
+
+# Static resources
+10055	IGNORE	.*\.(css|js|jpg|png|gif|svg|ico|woff|woff2)$	.*
+
+# Admin endpoints - require special attention
+40012	FAIL	.*/admin/.*	.*
+40014	FAIL	.*/admin/.*	.*
+
+# API endpoints security
+40018	FAIL	.*/api/.*	.*
+40019	FAIL	.*/api/.*	.*
+
+# HTTPS redirect
+10047	FAIL	.*	.*
+
+# XSS Protection
+40012	FAIL	.*	.*
+40014	FAIL	.*	.*
+40016	FAIL	.*	.*
+40017	FAIL	.*	.*
+
+# SQL Injection
+40018	FAIL	.*	.*
+40019	FAIL	.*	.*
+40020	FAIL	.*	.*
+40021	FAIL	.*	.*
+
+# CSRF Protection
+40026	FAIL	.*	.*
+
+# Information Disclosure
+10045	WARN	.*	.*
+10046	WARN	.*	.*
+10055	WARN	.*	.*
+
+# Security Headers
+10020	FAIL	.*	.*
+10021	FAIL	.*	.*
+10023	FAIL	.*	.*
+10094	FAIL	.*	.*
+10095	FAIL	.*	.*
+10096	FAIL	.*	.*
+10098	FAIL	.*	.*
+
+# Specific to NiFiCDC application
+# Allow monitoring endpoints but warn on sensitive data
+10036	WARN	.*/api/v1/monitoring/.*	.*
+10037	WARN	.*/api/v1/monitoring/.*	.*

@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # OWASP ZAP for dynamic security testing
+  zap:
+    image: owasp/zap2docker-stable:latest
+    command: ["zap-baseline.py", "-t", "http://nificdc-backend:3000", "-J", "/zap/reports/zap-report.json"]
+    volumes:
+      - ./security-reports:/zap/reports
+    depends_on:
+      - nificdc-backend
+    networks:
+      - nificdc-security
+
+  # Trivy for container vulnerability scanning
+  trivy:
+    image: aquasec/trivy:latest
+    command: ["image", "--format", "json", "--output", "/reports/trivy-report.json", "nificdc-backend:latest"]
+    volumes:
+      - ./security-reports:/reports
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - nificdc-security
+
+  # SonarQube for code quality and security analysis
+  sonarqube:
+    image: sonarqube:community
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - nificdc-security
+
+  # PostgreSQL for SonarQube
+  sonarqube-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar_password
+      - POSTGRES_DB=sonarqube
+    volumes:
+      - sonar_db:/var/lib/postgresql/data
+    networks:
+      - nificdc-security
+
+  # Main application for security testing
+  nificdc-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=test
+      - SCHEDULED_SCANS_ENABLED=false
+      - DATABASE_URL=postgresql://user:password@postgres:5432/nificdc_test
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - nificdc-security
+
+  # Test database
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=nificdc_test
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - nificdc-security
+
+  # Nginx for reverse proxy testing
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/nginx-security.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - nificdc-backend
+    networks:
+      - nificdc-security
+
+volumes:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  sonar_db:
+  postgres_test_data:
+
+networks:
+  nificdc-security:
+    driver: bridge

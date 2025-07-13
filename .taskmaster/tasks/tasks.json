@@ -363,8 +363,61 @@
         "dependencies": [
           10
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "RBAC 권한 시스템 고도화 및 세밀한 권한 제어",
+            "description": "역할 기반 접근 제어(RBAC) 시스템을 구현하고 세밀한 권한 제어 메커니즘을 개발합니다.",
+            "dependencies": [],
+            "details": "사용자 역할 정의, 권한 매트릭스 설계, API 엔드포인트별 권한 검증 미들웨어 구현, 동적 권한 할당 기능 개발",
+            "status": "in-progress",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "감사 로그 시스템 구현 및 중요 이벤트 알림",
+            "description": "모든 보안 관련 활동을 추적하는 감사 로그 시스템을 구축하고 실시간 알림 기능을 구현합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "로그 수집 아키텍처 설계, 중요 이벤트 분류 체계 구축, 실시간 알림 시스템 구현, 로그 보관 정책 수립",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "SSL/TLS 설정 및 보안 헤더 구성",
+            "description": "HTTPS 통신을 위한 SSL/TLS 인증서를 설정하고 보안 헤더를 구성합니다.",
+            "dependencies": [],
+            "details": "SSL/TLS 인증서 발급 및 설치, HSTS 헤더 설정, CSP 정책 구성, X-Frame-Options 등 보안 헤더 적용",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "보안 취약점 스캔 자동화 도구 통합",
+            "description": "정기적인 보안 취약점 스캔을 위한 자동화 도구를 통합하고 CI/CD 파이프라인에 연동합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "OWASP ZAP 또는 Burp Suite 통합, 의존성 취약점 스캐너 설정, 정기 스캔 스케줄링, 취약점 리포트 자동화",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "브루트포스 방어 및 Rate Limiting 구현",
+            "description": "무차별 대입 공격을 방어하고 API 요청 제한을 구현합니다.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "로그인 시도 제한 구현, IP 기반 차단 메커니즘 개발, API Rate Limiting 미들웨어 구현, Redis 기반 요청 카운터 구축",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 12,
@@ -382,7 +435,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-12T15:34:04.281Z",
+      "updated": "2025-07-13T09:42:49.389Z",
       "description": "Tasks for master context"
     }
   }

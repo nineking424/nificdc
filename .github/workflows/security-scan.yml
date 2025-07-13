@@ -1,0 +1,220 @@
+name: Security Scan Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Daily security scan at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: Run NPM Audit (Backend)
+      run: |
+        cd backend
+        npm audit --audit-level moderate --json > ../security-reports/npm-audit-backend.json || true
+        
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Run NPM Audit (Frontend)
+      run: |
+        cd frontend
+        npm audit --audit-level moderate --json > ../security-reports/npm-audit-frontend.json || true
+    
+    - name: Upload audit reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-scan-reports
+        path: security-reports/
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified --json
+
+  sast-scan:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install ESLint Security Plugin
+      run: |
+        cd backend
+        npm install --save-dev eslint-plugin-security
+        
+    - name: Run ESLint Security Scan
+      run: |
+        cd backend
+        npx eslint . --ext .js --format json --output-file ../security-reports/eslint-security.json || true
+        
+    - name: Run Semgrep SAST
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/owasp-top-ten
+        json: true
+        output: security-reports/semgrep-results.json
+
+  docker-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Docker Images
+      run: |
+        docker build -t nificdc-backend:latest ./backend
+        docker build -t nificdc-frontend:latest ./frontend
+        
+    - name: Run Trivy Vulnerability Scanner (Backend)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'nificdc-backend:latest'
+        format: 'json'
+        output: 'security-reports/trivy-backend.json'
+        
+    - name: Run Trivy Vulnerability Scanner (Frontend)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'nificdc-frontend:latest'
+        format: 'json'
+        output: 'security-reports/trivy-frontend.json'
+
+  dast-scan:
+    name: Dynamic Application Security Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Start Application
+      run: |
+        docker-compose -f docker-compose.yml up -d
+        sleep 60  # Wait for application to start
+        
+    - name: Run OWASP ZAP Baseline Scan
+      uses: zaproxy/action-baseline@v0.10.0
+      with:
+        target: 'http://localhost:3000'
+        rules_file_name: '.zap/rules.tsv'
+        cmd_options: '-a -j -m 10 -T 60'
+        
+    - name: Stop Application
+      run: docker-compose down
+
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, secret-scan, sast-scan, docker-scan]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Generate Consolidated Report
+      run: |
+        cd backend
+        npm ci
+        node scripts/generate-security-report.js
+        
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-report
+        path: security-reports/
+        
+    - name: Comment PR with Security Summary
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = fs.readFileSync('security-reports/summary.json', 'utf8');
+            const summary = JSON.parse(report);
+            
+            const comment = `## 🔒 Security Scan Summary
+            
+            | Scan Type | Status | Issues Found |
+            |-----------|--------|--------------|
+            | Dependencies | ${summary.dependencies.status} | ${summary.dependencies.issues} |
+            | Secrets | ${summary.secrets.status} | ${summary.secrets.issues} |
+            | SAST | ${summary.sast.status} | ${summary.sast.issues} |
+            | Container | ${summary.container.status} | ${summary.container.issues} |
+            
+            **Risk Level: ${summary.overallRisk}**
+            
+            📊 [View detailed report](${summary.reportUrl})
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (error) {
+            console.log('Failed to post security summary:', error);
+          }
