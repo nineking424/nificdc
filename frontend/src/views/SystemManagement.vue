@@ -207,8 +207,18 @@
           <v-card-title class="text-h6">
             {{ dialogMode === 'create' ? '새 시스템 추가' : '시스템 편집' }}
           </v-card-title>
-          <v-form ref="systemForm" v-model="formValid" @submit.prevent="saveSystem">
+          <v-form ref="systemFormRef" v-model="formValid" @submit.prevent="saveSystem">
             <v-card-text>
+              <!-- 디버그 정보 -->
+              <v-alert type="info" density="compact" class="mb-4" style="font-size: 12px;">
+                <strong>디버그:</strong><br>
+                모드: {{ dialogMode }}<br>
+                이름: {{ systemForm.name }}<br>
+                타입: {{ systemForm.type }}<br>
+                활성: {{ systemForm.isActive }}<br>
+                호스트: {{ systemForm.connectionInfo.host }}<br>
+                포트: {{ systemForm.connectionInfo.port }}
+              </v-alert>
               <v-row>
                 <v-col cols="12" md="6">
                   <v-text-field
@@ -437,11 +447,6 @@ const showDeleteDialog = ref(false)
 const selectedSystem = ref(null)
 const systemToDelete = ref(null)
 const dialogMode = ref('create')
-const deleting = ref(false)
-const saving = ref(false)
-const formValid = ref(false)
-const systemForm = ref({})
-
 // 폼 초기값
 const getInitialFormData = () => ({
   name: '',
@@ -460,6 +465,11 @@ const getInitialFormData = () => ({
     endpoint: ''
   }
 })
+
+const deleting = ref(false)
+const saving = ref(false)
+const formValid = ref(false)
+const systemForm = ref(getInitialFormData())
 
 // 필터 상태
 const filters = reactive({
@@ -582,20 +592,27 @@ const loadSystems = async () => {
     const response = await api.get('/systems')
     
     if (response.data.success) {
+      console.log('Raw API response for systems:', response.data.data)
       // API 응답을 프론트엔드 형식으로 변환
-      systems.value = response.data.data.map(system => ({
-        id: system.id,
-        name: system.name,
-        type: system.type,
-        description: system.description,
-        lastConnectionStatus: system.status === 'active' ? 'success' : 'pending',
-        isActive: system.isActive,
-        lastConnectionTest: system.updatedAt,
-        createdAt: system.createdAt,
-        updatedAt: system.updatedAt,
-        connectionInfo: system.connectionInfo
-      }))
+      systems.value = response.data.data.map(system => {
+        console.log('Processing system:', system)
+        const mappedSystem = {
+          id: system.id,
+          name: system.name,
+          type: system.type,
+          description: system.description,
+          lastConnectionStatus: system.status === 'active' ? 'success' : 'pending',
+          isActive: system.isActive,
+          lastConnectionTest: system.updatedAt,
+          createdAt: system.createdAt,
+          updatedAt: system.updatedAt,
+          connectionInfo: system.connectionInfo
+        }
+        console.log('Mapped system:', mappedSystem)
+        return mappedSystem
+      })
       totalItems.value = response.data.total || systems.value.length
+      console.log('Final systems array:', systems.value)
     } else {
       throw new Error(response.data.error || '시스템 목록을 불러올 수 없습니다')
     }

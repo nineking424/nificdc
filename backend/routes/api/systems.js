@@ -19,29 +19,46 @@ router.get('/', authorize('systems', 'read'), async (req, res) => {
     });
 
     // 시스템 데이터 포맷팅
-    const formattedSystems = systems.map(system => ({
-      id: system.id,
-      name: system.name,
-      type: system.type,
-      status: system.isActive ? 'active' : 'inactive',
-      description: system.description,
-      connectionInfo: system.connectionInfo,
-      isActive: system.isActive,
-      createdAt: system.createdAt,
-      updatedAt: system.updatedAt
-    }));
-
-    await auditLogger.log({
-      type: 'DATA_ACCESS',
-      userId: req.user.id,
-      userName: req.user.name,
-      userRole: req.user.role,
-      action: 'READ',
-      resource: 'systems',
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      result: 'SUCCESS'
+    const formattedSystems = systems.map(system => {
+      console.log('Backend formatting system:', {
+        id: system.id,
+        name: system.name,
+        type: system.type,
+        connectionInfo: system.connectionInfo,
+        isActive: system.isActive
+      });
+      
+      return {
+        id: system.id,
+        name: system.name,
+        type: system.type,
+        status: system.isActive ? 'active' : 'inactive',
+        description: system.description,
+        connectionInfo: system.connectionInfo,
+        isActive: system.isActive,
+        createdAt: system.createdAt,
+        updatedAt: system.updatedAt
+      };
     });
+    
+    console.log('Backend sending formatted systems:', formattedSystems);
+
+    // TODO: Fix audit logs table issue
+    try {
+      await auditLogger.log({
+        type: 'DATA_ACCESS',
+        userId: req.user.id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: 'READ',
+        resource: 'systems',
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        result: 'SUCCESS'
+      });
+    } catch (auditError) {
+      console.warn('Audit logging failed:', auditError.message);
+    }
 
     res.json({
       success: true,
@@ -99,18 +116,22 @@ router.get('/:id', authorize('systems', 'read'), async (req, res) => {
       updatedAt: system.updatedAt
     };
 
-    await auditLogger.log({
-      type: 'DATA_ACCESS',
-      userId: req.user.id,
-      userName: req.user.name,
-      userRole: req.user.role,
-      action: 'READ',
-      resource: 'systems',
-      resourceId: systemId,
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      result: 'SUCCESS'
-    });
+    try {
+      await auditLogger.log({
+        type: 'DATA_ACCESS',
+        userId: req.user.id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: 'READ',
+        resource: 'systems',
+        resourceId: systemId,
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        result: 'SUCCESS'
+      });
+    } catch (auditError) {
+      console.warn('Audit logging failed:', auditError.message);
+    }
 
     res.json({
       success: true,
