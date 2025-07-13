@@ -178,7 +178,7 @@ router.post('/', authorize('systems', 'create'), async (req, res) => {
       name,
       type,
       description,
-      connectionInfo: JSON.stringify(validation.value), // 유효성 검증된 값 사용
+      connectionInfo: validation.value, // 객체로 직접 저장 (모델에서 처리)
       isActive
     });
 
@@ -287,7 +287,7 @@ router.put('/:id', authorize('systems', 'update'), async (req, res) => {
       }
       
       // 유효성 검증된 연결 정보로 교체
-      updateFields.connectionInfo = JSON.stringify(validation.value);
+      updateFields.connectionInfo = validation.value;
     }
 
     // 기존 시스템 데이터 (감사 로그용)

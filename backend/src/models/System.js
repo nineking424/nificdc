@@ -20,7 +20,7 @@ const System = sequelize.define('System', {
     type: DataTypes.STRING(50),
     allowNull: false,
     validate: {
-      isIn: [['oracle', 'postgresql', 'sqlite', 'mysql', 'mssql', 'ftp', 'sftp', 'local_fs', 'aws_s3', 'azure_blob']]
+      isIn: [['postgresql', 'mysql', 'oracle', 'sqlite', 'mongodb', 'redis', 'sftp', 'ftp', 'local_fs', 'aws_s3', 'azure_blob', 'api', 'api_rest', 'kafka']]
     }
   },
   connectionInfo: {
@@ -59,14 +59,23 @@ const System = sequelize.define('System', {
   underscored: true,
   hooks: {
     beforeCreate: (system) => {
-      // 접속 정보 암호화는 별도 유틸리티에서 처리
-      if (system.connectionInfo && typeof system.connectionInfo === 'object') {
-        system.connectionInfo = JSON.stringify(system.connectionInfo);
+      // connectionInfo가 문자열로 들어온 경우 파싱해서 객체로 저장
+      if (system.connectionInfo && typeof system.connectionInfo === 'string') {
+        try {
+          system.connectionInfo = JSON.parse(system.connectionInfo);
+        } catch (e) {
+          // 잘못된 JSON 형식인 경우 그대로 유지하여 validation에서 처리
+        }
       }
     },
     beforeUpdate: (system) => {
-      if (system.connectionInfo && typeof system.connectionInfo === 'object') {
-        system.connectionInfo = JSON.stringify(system.connectionInfo);
+      // connectionInfo가 문자열로 들어온 경우 파싱해서 객체로 저장
+      if (system.connectionInfo && typeof system.connectionInfo === 'string') {
+        try {
+          system.connectionInfo = JSON.parse(system.connectionInfo);
+        } catch (e) {
+          // 잘못된 JSON 형식인 경우 그대로 유지하여 validation에서 처리
+        }
       }
     }
   },
