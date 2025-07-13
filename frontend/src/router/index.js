@@ -112,7 +112,19 @@ router.beforeEach(async (to, from, next) => {
     if (to.meta.requiresAuth) {
       const authStore = useAuthStore()
       
-      // 인증 상태 확인
+      // 토큰이 있지만 사용자 정보가 없는 경우 (새로고침 후)
+      if (authStore.token && !authStore.user) {
+        try {
+          // 사용자 정보 복원 시도
+          await authStore.initialize()
+        } catch (error) {
+          console.error('Failed to restore user session:', error)
+          // 초기화 실패 시 로그아웃 처리
+          await authStore.logout()
+        }
+      }
+      
+      // 인증 상태 재확인
       if (!authStore.isAuthenticated) {
         // 로그인 페이지로 리다이렉트
         next({ 
@@ -126,8 +138,20 @@ router.beforeEach(async (to, from, next) => {
     // 로그인한 사용자가 로그인 페이지에 접근하려 할 때
     if (to.name === 'Login') {
       const authStore = useAuthStore()
+      
+      // 토큰이 있지만 사용자 정보가 없는 경우 초기화 시도
+      if (authStore.token && !authStore.user) {
+        try {
+          await authStore.initialize()
+        } catch (error) {
+          console.error('Failed to restore user session:', error)
+          await authStore.logout()
+        }
+      }
+      
       if (authStore.isAuthenticated) {
-        next({ name: 'Dashboard' })
+        const redirectPath = to.query.redirect || '/dashboard'
+        next({ path: redirectPath })
         return
       }
     }

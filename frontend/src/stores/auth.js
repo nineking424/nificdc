@@ -156,7 +156,10 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (error) {
       console.error('Fetch user error:', error)
-      await logout()
+      // 401 에러인 경우에만 로그아웃 처리
+      if (error.response?.status === 401) {
+        await logout()
+      }
       throw error
     }
   }
@@ -289,11 +292,24 @@ export const useAuthStore = defineStore('auth', () => {
         // 로컬 스토리지에서 사용자 데이터 복원
         const userData = localStorage.getItem('user_data')
         if (userData) {
-          user.value = JSON.parse(userData)
+          try {
+            user.value = JSON.parse(userData)
+          } catch (parseError) {
+            console.warn('Failed to parse stored user data:', parseError)
+            localStorage.removeItem('user_data')
+          }
         }
         
-        // 사용자 정보 갱신
-        await fetchUser()
+        // 사용자 정보 갱신 시도 (실패해도 로그아웃하지 않음)
+        try {
+          await fetchUser()
+        } catch (fetchError) {
+          console.warn('Failed to fetch updated user data:', fetchError)
+          // 로컬 스토리지에 사용자 데이터가 있다면 그것을 유지
+          if (!user.value) {
+            throw fetchError // 사용자 데이터가 없으면 에러를 던져서 로그아웃 처리
+          }
+        }
       } catch (error) {
         console.error('Auth initialization error:', error)
         await logout()

@@ -26,6 +26,7 @@ router.get('/', authorize('systems', 'read'), async (req, res) => {
       status: system.isActive ? 'active' : 'inactive',
       description: system.description,
       connectionInfo: system.connectionInfo,
+      isActive: system.isActive,
       createdAt: system.createdAt,
       updatedAt: system.updatedAt
     }));
@@ -93,6 +94,7 @@ router.get('/:id', authorize('systems', 'read'), async (req, res) => {
       status: system.isActive ? 'active' : 'inactive',
       description: system.description,
       connectionInfo: system.connectionInfo,
+      isActive: system.isActive,
       createdAt: system.createdAt,
       updatedAt: system.updatedAt
     };
@@ -190,6 +192,7 @@ router.post('/', authorize('systems', 'create'), async (req, res) => {
       status: newSystem.isActive ? 'active' : 'inactive',
       description: newSystem.description,
       connectionInfo: newSystem.connectionInfo,
+      isActive: newSystem.isActive,
       createdAt: newSystem.createdAt,
       updatedAt: newSystem.updatedAt
     };
@@ -312,6 +315,7 @@ router.put('/:id', authorize('systems', 'update'), async (req, res) => {
       status: existingSystem.isActive ? 'active' : 'inactive',
       description: existingSystem.description,
       connectionInfo: existingSystem.connectionInfo,
+      isActive: existingSystem.isActive,
       createdAt: existingSystem.createdAt,
       updatedAt: existingSystem.updatedAt
     };

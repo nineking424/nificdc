@@ -258,18 +258,31 @@
                     v-model="systemForm.connectionInfo.port"
                     label="포트"
                     type="number"
-                    :rules="[v => !!v || '포트는 필수입니다']"
+                    :rules="[
+                      v => !!v || '포트는 필수입니다',
+                      v => (v >= 1 && v <= 65535) || '포트는 1-65535 범위여야 합니다'
+                    ]"
                     variant="outlined"
                     density="compact"
                     required
                   />
                 </v-col>
-                <v-col cols="12" md="6" v-if="isDatabaseType">
+                <v-col cols="12" md="6" v-if="isDatabaseType && systemForm.type !== 'oracle'">
                   <v-text-field
                     v-model="systemForm.connectionInfo.database"
-                    :label="systemForm.type === 'oracle' ? '서비스명' : '데이터베이스명'"
+                    label="데이터베이스명"
                     variant="outlined"
                     density="compact"
+                  />
+                </v-col>
+                <v-col cols="12" md="6" v-if="systemForm.type === 'oracle'">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.serviceName"
+                    label="서비스명 (예: ORCL, XE)"
+                    variant="outlined"
+                    density="compact"
+                    :rules="[v => !!v || '서비스명은 필수입니다']"
+                    required
                   />
                 </v-col>
                 <v-col cols="12" md="6" v-if="isDatabaseType">
@@ -384,7 +397,7 @@
 
 <script setup>
 import AppLayout from '@/components/AppLayout.vue'
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'vue-toastification'
 // import { useSystemsStore } from '@/stores/systems'
@@ -439,6 +452,7 @@ const getInitialFormData = () => ({
     host: '',
     port: null,
     database: '',
+    serviceName: '', // Oracle용
     username: '',
     password: '',
     ssl: false,
@@ -542,6 +556,23 @@ const isApiType = computed(() => {
   return apiTypes.includes(systemForm.value.type)
 })
 
+// 시스템 타입별 기본 포트 설정
+const setDefaultPort = () => {
+  const defaultPorts = {
+    postgresql: 5432,
+    mysql: 3306,
+    oracle: 1521,
+    mongodb: 27017,
+    redis: 6379,
+    sftp: 22,
+    ftp: 21
+  }
+  
+  if (systemForm.value.type && defaultPorts[systemForm.value.type]) {
+    systemForm.value.connectionInfo.port = defaultPorts[systemForm.value.type]
+  }
+}
+
 // 메서드
 const loadSystems = async () => {
   loading.value = true
@@ -558,9 +589,10 @@ const loadSystems = async () => {
         type: system.type,
         description: system.description,
         lastConnectionStatus: system.status === 'active' ? 'success' : 'pending',
-        isActive: system.status === 'active',
+        isActive: system.isActive,
         lastConnectionTest: system.updatedAt,
         createdAt: system.createdAt,
+        updatedAt: system.updatedAt,
         connectionInfo: system.connectionInfo
       }))
       totalItems.value = response.data.total || systems.value.length
@@ -598,15 +630,20 @@ const openCreateDialog = () => {
 }
 
 const openEditDialog = (system) => {
+  console.log('Opening edit dialog for system:', system)
   selectedSystem.value = { ...system }
   dialogMode.value = 'edit'
   
   // connectionInfo 파싱 (문자열인 경우)
-  let connectionInfo = system.connectionInfo
+  let connectionInfo = system.connectionInfo || {}
+  console.log('Original connectionInfo:', connectionInfo, 'Type:', typeof connectionInfo)
+  
   if (typeof connectionInfo === 'string') {
     try {
       connectionInfo = JSON.parse(connectionInfo)
+      console.log('Parsed connectionInfo:', connectionInfo)
     } catch (e) {
+      console.warn('Failed to parse connectionInfo:', e)
       connectionInfo = {}
     }
   }
@@ -615,11 +652,12 @@ const openEditDialog = (system) => {
     name: system.name || '',
     type: system.type || '',
     description: system.description || '',
-    isActive: system.isActive || false,
+    isActive: system.isActive !== undefined ? system.isActive : false,
     connectionInfo: {
       host: connectionInfo.host || '',
       port: connectionInfo.port || null,
-      database: connectionInfo.database || connectionInfo.serviceName || '',
+      database: connectionInfo.database || '',
+      serviceName: connectionInfo.serviceName || '', // Oracle 전용
       username: connectionInfo.username || '',
       password: connectionInfo.password || '',
       ssl: connectionInfo.ssl || false,
@@ -628,6 +666,7 @@ const openEditDialog = (system) => {
     }
   }
   
+  console.log('SystemForm populated with:', systemForm.value)
   showDialog.value = true
 }
 
@@ -656,7 +695,7 @@ const saveSystem = async () => {
       type: systemForm.value.type,
       description: systemForm.value.description,
       isActive: systemForm.value.isActive,
-      connectionInfo: JSON.stringify(connectionInfo)
+      connectionInfo: connectionInfo // 객체로 직접 전송 (백엔드에서 처리)
     }
     
     let response
@@ -675,7 +714,19 @@ const saveSystem = async () => {
     }
   } catch (error) {
     console.error('Save system error:', error)
-    toast.error('시스템 저장 실패: ' + (error.response?.data?.error || error.message))
+    // 더 자세한 오류 메시지 표시
+    let errorMessage = '시스템 저장 실패: '
+    if (error.response?.data?.details) {
+      // 유효성 검증 오류인 경우
+      if (Array.isArray(error.response.data.details)) {
+        errorMessage += error.response.data.details.map(detail => `${detail.field}: ${detail.message}`).join(', ')
+      } else {
+        errorMessage += error.response.data.details.message || error.response.data.error
+      }
+    } else {
+      errorMessage += error.response?.data?.error || error.message
+    }
+    toast.error(errorMessage)
   } finally {
     saving.value = false
   }
@@ -831,6 +882,13 @@ const formatDateTime = (dateString) => {
     locale: ko
   })
 }
+
+// 시스템 타입 변경 시 기본 포트 설정
+watch(() => systemForm.value.type, (newType) => {
+  if (newType && dialogMode.value === 'create') {
+    setDefaultPort()
+  }
+})
 
 // 라이프사이클
 onMounted(() => {

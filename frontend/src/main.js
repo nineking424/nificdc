@@ -48,4 +48,22 @@ app.config.globalProperties.$filters = {
   }
 }
 
-app.mount('#app')
+// 앱 초기화 및 인증 상태 복원
+async function initializeApp() {
+  // 인증 스토어 초기화
+  const { useAuthStore } = await import('@/stores/auth')
+  const authStore = useAuthStore()
+  
+  try {
+    // 새로고침 시 로컬 스토리지에서 인증 상태 복원
+    await authStore.initialize()
+  } catch (error) {
+    console.warn('Authentication initialization failed:', error)
+  }
+  
+  // Vue 앱 마운트
+  app.mount('#app')
+}
+
+// 앱 초기화 실행
+initializeApp()
