@@ -2,7 +2,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
 const cors = require('cors');
-const logger = require('../utils/logger');
+const logger = require('../src/utils/logger');
 const auditLogger = require('../services/auditLogger');
 
 /**

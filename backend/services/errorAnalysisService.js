@@ -1,5 +1,5 @@
-const logger = require('../utils/logger');
-const { JobExecution } = require('../models');
+const logger = require('../src/utils/logger');
+const { JobExecution } = require('../src/models');
 const { Op } = require('sequelize');
 
 /**

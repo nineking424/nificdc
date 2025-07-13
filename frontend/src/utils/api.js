@@ -5,7 +5,7 @@ import { useToast } from 'vue-toastification'
 
 // API 기본 설정
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api',
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api/v1',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

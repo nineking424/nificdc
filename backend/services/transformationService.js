@@ -1,5 +1,5 @@
-const ScriptSandbox = require('../utils/scriptSandbox');
-const logger = require('../utils/logger');
+const ScriptSandbox = require('../src/utils/scriptSandbox');
+const logger = require('../src/utils/logger');
 
 /**
  * 변환 서비스 - 데이터 변환 및 스크립트 실행 관리

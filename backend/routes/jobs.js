@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { Job, JobExecution, Mapping, System, DataSchema } = require('../models');
-const { authenticateToken, authorize } = require('../middleware/auth');
-const jobScheduler = require('../services/jobScheduler');
-const nifiClient = require('../utils/nifiClient');
+const { authenticateToken, authorize } = require('./middleware/auth');
+const jobScheduler = require('./services/jobScheduler');
+const nifiClient = require('./src/utils/nifiClient');
 const { Op } = require('sequelize');
 
 // 모든 라우트에 인증 미들웨어 적용
@@ -90,12 +90,12 @@ router.get('/', async (req, res) => {
           ]
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }
@@ -170,12 +170,12 @@ router.get('/:id', async (req, res) => {
           ]
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }
@@ -198,7 +198,7 @@ router.get('/:id', async (req, res) => {
         limit: 20,
         include: [
           {
-            model: require('../models/User'),
+            model: require('./src/models/User'),
             as: 'triggeredByUser',
             attributes: ['id', 'name', 'email']
           }
@@ -306,7 +306,7 @@ router.post('/', authorize(['admin', 'manager']), async (req, res) => {
           ]
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         }
@@ -675,7 +675,7 @@ router.get('/:id/executions', async (req, res) => {
       order: [[sortBy, sortOrder.toUpperCase()]],
       include: [
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'triggeredByUser',
           attributes: ['id', 'name', 'email']
         }

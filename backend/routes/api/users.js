@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authorize, requireAdmin, requireOwnership } = require('../../middleware/rbac');
 const auditLogger = require('../../services/auditLogger');
-const logger = require('../../utils/logger');
+const logger = require('../../src/utils/logger');
 
 /**
  * 사용자 관리 API 라우터

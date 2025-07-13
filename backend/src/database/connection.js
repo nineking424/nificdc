@@ -32,8 +32,9 @@ const connectDatabase = async () => {
     
     // Sync models in development
     if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
-      logger.info('Database models synchronized');
+      // Temporarily disabled to avoid schema conflicts
+      // await sequelize.sync({ alter: true });
+      logger.info('Database models sync skipped (avoiding schema conflicts)');
     }
   } catch (error) {
     logger.error('Unable to connect to database:', error);

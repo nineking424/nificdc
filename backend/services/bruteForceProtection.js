@@ -1,5 +1,5 @@
-const redis = require('../utils/redis');
-const logger = require('../utils/logger');
+const redis = require('../src/utils/redis');
+const logger = require('../src/utils/logger');
 const auditLogger = require('./auditLogger');
 
 /**
@@ -57,7 +57,7 @@ class BruteForceProtection {
       }
     };
     
-    this.redis = redis.getClient();
+    this.redis = null; // Initialize later when first used
     this.patterns = {
       login: 'bf:login',
       ip: 'bf:ip',
@@ -66,6 +66,21 @@ class BruteForceProtection {
       whitelist: 'bf:whitelist',
       pattern: 'bf:pattern'
     };
+  }
+
+  /**
+   * Redis 클라이언트 지연 초기화
+   */
+  getRedisClient() {
+    if (!this.redis) {
+      try {
+        this.redis = redis.getRedisClient();
+      } catch (error) {
+        logger.warn('Redis client not available, operating in degraded mode:', error.message);
+        return null;
+      }
+    }
+    return this.redis;
   }
 
   /**
@@ -184,11 +199,17 @@ class BruteForceProtection {
    * 카운터 증가
    */
   async incrementCounter(type, key, attemptData) {
+    const redisClient = this.getRedisClient();
+    if (!redisClient) {
+      // Redis 불가용 시 메모리 기반 대안 (제한적)
+      return 1;
+    }
+    
     const redisKey = `${this.patterns[type]}:${key}`;
     const config = this.config[type];
     
     // 현재 카운트 조회
-    const current = await this.redis.get(redisKey);
+    const current = await redisClient.get(redisKey);
     const count = current ? parseInt(current) : 0;
     const newCount = count + 1;
 
@@ -197,13 +218,13 @@ class BruteForceProtection {
     const weightedCount = Math.min(newCount * multiplier, config.maxAttempts * 2);
 
     // 카운터 업데이트
-    await this.redis.setex(redisKey, Math.ceil(config.windowMs / 1000), weightedCount);
+    await redisClient.setEx(redisKey, Math.ceil(config.windowMs / 1000), weightedCount.toString());
 
     // 시도 이력 저장 (최근 10개)
     const historyKey = `${redisKey}:history`;
-    await this.redis.lpush(historyKey, JSON.stringify(attemptData));
-    await this.redis.ltrim(historyKey, 0, 9);
-    await this.redis.expire(historyKey, Math.ceil(config.windowMs / 1000));
+    await redisClient.lPush(historyKey, JSON.stringify(attemptData));
+    await redisClient.lTrim(historyKey, 0, 9);
+    await redisClient.expire(historyKey, Math.ceil(config.windowMs / 1000));
 
     return { count: weightedCount, multiplier };
   }
@@ -212,9 +233,12 @@ class BruteForceProtection {
    * 카운터 리셋
    */
   async resetCounter(type, key) {
+    const redisClient = this.getRedisClient();
+    if (!redisClient) return;
+    
     const redisKey = `${this.patterns[type]}:${key}`;
-    await this.redis.del(redisKey);
-    await this.redis.del(`${redisKey}:history`);
+    await redisClient.del(redisKey);
+    await redisClient.del(`${redisKey}:history`);
   }
 
   /**

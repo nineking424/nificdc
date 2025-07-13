@@ -1,8 +1,8 @@
 const WebSocket = require('ws');
 const os = require('os');
-const { Job, JobExecution, System, Mapping } = require('../models');
+const { Job, JobExecution, System, Mapping } = require('../src/models');
 const { Op } = require('sequelize');
-const logger = require('../utils/logger');
+const logger = require('../src/utils/logger');
 
 /**
  * 실시간 모니터링 서비스
@@ -559,7 +559,7 @@ class MonitoringService {
    */
   async checkNiFiHealth() {
     try {
-      const nifiClient = require('../utils/nifiClient');
+      const nifiClient = require('../src/utils/nifiClient');
       const result = await nifiClient.testConnection();
       
       return {

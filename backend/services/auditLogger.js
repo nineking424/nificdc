@@ -1,5 +1,5 @@
-const logger = require('../utils/logger');
-const { AuditLog } = require('../models');
+const logger = require('../src/utils/logger');
+const { AuditLog } = require('../src/models');
 const { Op } = require('sequelize');
 
 /**

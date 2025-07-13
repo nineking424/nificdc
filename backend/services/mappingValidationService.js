@@ -1,6 +1,6 @@
-const logger = require('../utils/logger');
-const MappingEngine = require('../utils/mappingEngine');
-const transformLibrary = require('../utils/transformLibrary');
+const logger = require('../src/utils/logger');
+const MappingEngine = require('../src/utils/mappingEngine');
+const transformLibrary = require('../src/utils/transformLibrary');
 
 /**
  * 매핑 검증 서비스

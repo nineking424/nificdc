@@ -38,7 +38,15 @@ const connectRedis = async () => {
       logger.info('Redis client ready');
     });
 
-    await client.connect();
+    // Set a timeout for connection
+    const connectTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+    );
+    
+    await Promise.race([
+      client.connect(),
+      connectTimeout
+    ]);
     
     // Test connection
     await client.ping();

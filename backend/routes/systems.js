@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { System } = require('../models');
-const { SystemValidator } = require('../utils/systemValidator');
-const ConnectionTester = require('../utils/connectionTester');
-const crypto = require('../utils/crypto');
-const { authenticateToken, authorize } = require('../middleware/auth');
+const { SystemValidator } = require('./src/utils/systemValidator');
+const ConnectionTester = require('./src/utils/connectionTester');
+const crypto = require('./src/utils/crypto');
+const { authenticateToken, authorize } = require('./middleware/auth');
 const { Op } = require('sequelize');
 
 // 모든 라우트에 인증 미들웨어 적용
@@ -54,12 +54,12 @@ router.get('/', async (req, res) => {
       order: [[sortBy, sortOrder.toUpperCase()]],
       include: [
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }
@@ -108,12 +108,12 @@ router.get('/:id', async (req, res) => {
     const system = await System.findByPk(id, {
       include: [
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const monitoringService = require('../services/monitoringService');
+const { authenticateToken } = require('./middleware/auth');
+const monitoringService = require('./services/monitoringService');
 
 // 모든 라우트에 인증 미들웨어 적용
 router.use(authenticateToken);

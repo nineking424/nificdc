@@ -7,6 +7,7 @@ const DataSchema = require('./DataSchema');
 const Mapping = require('./Mapping');
 const Job = require('./Job');
 const JobExecution = require('./JobExecution');
+const AuditLog = require('./AuditLog');
 
 // 모델 객체
 const models = {
@@ -16,6 +17,7 @@ const models = {
   Mapping,
   Job,
   JobExecution,
+  AuditLog,
   sequelize
 };
 

@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const logger = require('../utils/logger');
+const logger = require('../src/utils/logger');
 const vulnerabilityScanner = require('./vulnerabilityScanner');
 const auditLogger = require('./auditLogger');
 

@@ -4,9 +4,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const auditLogger = require('../../services/auditLogger');
-const logger = require('../../utils/logger');
-const bruteForceProtection = require('../../services/bruteForceProtection');
-const enhancedRateLimit = require('../../middleware/enhancedRateLimit');
+const logger = require('../../src/utils/logger');
+// const bruteForceProtection = require('../../services/bruteForceProtection');
+// const enhancedRateLimit = require('../../middleware/enhancedRateLimit');
 
 /**
  * 인증 관련 API 라우터
@@ -14,7 +14,14 @@ const enhancedRateLimit = require('../../middleware/enhancedRateLimit');
  */
 
 // Enhanced login rate limiter with brute force protection
-const loginLimiter = enhancedRateLimit.createLoginLimiter();
+// const loginLimiter = enhancedRateLimit.createLoginLimiter();
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: 'Too many login attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // 로그인
 router.post('/login', loginLimiter, async (req, res) => {
@@ -24,6 +31,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const userAgent = req.get('User-Agent') || '';
     
     // 브루트포스 보호 사전 검사
+    /* 
     const bruteForceCheck = await bruteForceProtection.checkLoginAttempt(
       ip, 
       email || 'unknown',
@@ -40,6 +48,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         type: 'brute_force_protection'
       });
     }
+    */
     
     if (!email || !password) {
       await auditLogger.logLogin({
@@ -63,12 +72,14 @@ router.post('/login', loginLimiter, async (req, res) => {
     
     if (!user) {
       // 사용자 없음 - 브루트포스 공격 기록
+      /*
       await bruteForceProtection.recordFailedAttempt(
         ip,
         email,
         'user_not_found',
         { userAgent, timestamp: Date.now() }
       );
+      */
 
       await auditLogger.logLogin({
         success: false,
@@ -109,12 +120,14 @@ router.post('/login', loginLimiter, async (req, res) => {
     
     if (!isValidPassword) {
       // 잘못된 비밀번호 - 브루트포스 공격 기록
+      /*
       await bruteForceProtection.recordFailedAttempt(
         ip,
         email,
         'invalid_password',
         { userAgent, userId: user.id, timestamp: Date.now() }
       );
+      */
 
       await auditLogger.logLogin({
         success: false,
@@ -156,7 +169,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const sessionId = generateSessionId();
 
     // 성공적인 로그인 - 브루트포스 카운터 리셋
-    await bruteForceProtection.recordSuccessfulAttempt(ip, email);
+    // await bruteForceProtection.recordSuccessfulAttempt(ip, email);
 
     // 성공적인 로그인 감사 로그
     await auditLogger.logLogin({
@@ -476,54 +489,74 @@ function authenticateToken(req, res, next) {
 
 // 헬퍼 함수들 (실제로는 별도 서비스로 분리)
 async function findUserByEmail(email) {
-  // 임시 사용자 데이터
-  const users = [
-    {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@example.com',
-      password: await bcrypt.hash('admin123', 12),
-      role: 'admin',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Operator User',
-      email: 'operator@example.com',
-      password: await bcrypt.hash('operator123', 12),
-      role: 'operator',
-      status: 'active'
-    }
-  ];
-
-  return users.find(user => user.email === email);
+  try {
+    const { User } = require('../../src/models');
+    const user = await User.findByEmail(email);
+    
+    if (!user) return null;
+    
+    // Convert Sequelize model to plain object for compatibility
+    return {
+      id: user.id,
+      name: user.username, // Use username as name
+      email: user.email,
+      password: user.passwordHash,
+      role: user.role,
+      status: user.isActive ? 'active' : 'inactive'
+    };
+  } catch (error) {
+    logger.error('Error finding user by email:', error);
+    return null;
+  }
 }
 
 async function findUserById(id) {
-  // 임시 구현
-  const users = [
-    {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@example.com',
-      role: 'admin',
-      status: 'active',
-      lastLogin: new Date(),
-      profile: { department: 'IT', position: 'Administrator' }
-    }
-  ];
-
-  return users.find(user => user.id === id);
+  try {
+    const { User } = require('../../src/models');
+    const user = await User.findByPk(id);
+    
+    if (!user) return null;
+    
+    // Convert Sequelize model to plain object for compatibility
+    return {
+      id: user.id,
+      name: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.isActive ? 'active' : 'inactive',
+      lastLogin: user.lastLoginAt,
+      profile: { department: 'IT', position: user.role }
+    };
+  } catch (error) {
+    logger.error('Error finding user by ID:', error);
+    return null;
+  }
 }
 
 async function updateLastLogin(userId, ip) {
-  // 실제로는 데이터베이스 업데이트
-  logger.debug('마지막 로그인 업데이트:', { userId, ip });
+  try {
+    const { User } = require('../../src/models');
+    await User.update(
+      { lastLoginAt: new Date() },
+      { where: { id: userId } }
+    );
+    logger.debug('마지막 로그인 업데이트:', { userId, ip });
+  } catch (error) {
+    logger.error('Error updating last login:', error);
+  }
 }
 
 async function updateUserPassword(userId, hashedPassword) {
-  // 실제로는 데이터베이스 업데이트
-  logger.debug('비밀번호 업데이트:', { userId });
+  try {
+    const { User } = require('../../src/models');
+    await User.update(
+      { passwordHash: hashedPassword },
+      { where: { id: userId } }
+    );
+    logger.debug('비밀번호 업데이트:', { userId });
+  } catch (error) {
+    logger.error('Error updating password:', error);
+  }
 }
 
 function getRolePermissions(role) {

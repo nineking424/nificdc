@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { Mapping, System, DataSchema } = require('../models');
-const { authenticateToken, authorize } = require('../middleware/auth');
-const MappingEngine = require('../utils/mappingEngine');
+const { authenticateToken, authorize } = require('./middleware/auth');
+const MappingEngine = require('./src/utils/mappingEngine');
 const { Op } = require('sequelize');
 
 // 모든 라우트에 인증 미들웨어 적용
@@ -83,7 +83,7 @@ router.get('/', async (req, res) => {
           attributes: ['id', 'name', 'version']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         }
@@ -148,12 +148,12 @@ router.get('/:id', async (req, res) => {
           include: ['system']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }

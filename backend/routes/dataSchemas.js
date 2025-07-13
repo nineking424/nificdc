@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { DataSchema, System } = require('../models');
-const { authenticateToken, authorize } = require('../middleware/auth');
-const SchemaDiscovery = require('../utils/schemaDiscovery');
+const { authenticateToken, authorize } = require('./middleware/auth');
+const SchemaDiscovery = require('./src/utils/schemaDiscovery');
 const { Op } = require('sequelize');
 
 // 모든 라우트에 인증 미들웨어 적용
@@ -63,12 +63,12 @@ router.get('/', async (req, res) => {
           attributes: ['id', 'name', 'type']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }
@@ -111,12 +111,12 @@ router.get('/:id', async (req, res) => {
           attributes: ['id', 'name', 'type']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }
@@ -211,7 +211,7 @@ router.post('/', authorize(['admin', 'manager']), async (req, res) => {
           attributes: ['id', 'name', 'type']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         }
@@ -308,12 +308,12 @@ router.put('/:id', authorize(['admin', 'manager']), async (req, res) => {
           attributes: ['id', 'name', 'type']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'creator',
           attributes: ['id', 'name', 'email']
         },
         {
-          model: require('../models/User'),
+          model: require('./src/models/User'),
           as: 'updater',
           attributes: ['id', 'name', 'email']
         }

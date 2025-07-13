@@ -1,9 +1,9 @@
 const rateLimit = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis');
-const redis = require('../utils/redis');
-const logger = require('../utils/logger');
+const redis = require('../src/utils/redis');
+const logger = require('../src/utils/logger');
 const auditLogger = require('../services/auditLogger');
-const bruteForceProtection = require('../services/bruteForceProtection');
+// const bruteForceProtection = require('../services/bruteForceProtection');
 
 /**
  * 고급 Rate Limiting 미들웨어
@@ -11,10 +11,23 @@ const bruteForceProtection = require('../services/bruteForceProtection');
  */
 class EnhancedRateLimit {
   constructor() {
-    this.redisClient = redis.getClient();
-    this.store = new RedisStore({
-      sendCommand: (...args) => this.redisClient.call(...args),
-    });
+    this.redisClient = null; // Initialize later
+    this.store = null; // Initialize later
+  }
+
+  getRedisClient() {
+    if (!this.redisClient) {
+      try {
+        this.redisClient = redis.getRedisClient();
+        this.store = new RedisStore({
+          sendCommand: (...args) => this.redisClient.call(...args),
+        });
+      } catch (error) {
+        logger.warn('Redis client not available for rate limiting:', error.message);
+        return null;
+      }
+    }
+    return this.redisClient;
   }
 
   /**
@@ -63,6 +76,7 @@ class EnhancedRateLimit {
         const identifier = req.body?.email || req.body?.username;
         
         // 브루트포스 보호 서비스와 연동
+        /*
         await bruteForceProtection.recordFailedAttempt(
           ip, 
           identifier, 
@@ -73,6 +87,7 @@ class EnhancedRateLimit {
             method: req.method
           }
         );
+        */
 
         // 감사 로그
         await auditLogger.log({
@@ -293,9 +308,11 @@ class EnhancedRateLimit {
     const ip = this.getClientIP(req);
     
     // 화이트리스트 IP 확인
+    /*
     if (await bruteForceProtection.isWhitelisted(ip)) {
       return true;
     }
+    */
 
     // 헬스체크 엔드포인트
     if (req.path === '/health' || req.path === '/api/health') {
@@ -366,7 +383,7 @@ class EnhancedRateLimit {
     
     // 알림 발송
     try {
-      const alertManager = require('../services/alertManager');
+      const alertManager = require('./services/alertManager');
       
       await alertManager.processEvent({
         type: 'SUSPICIOUS_ACTIVITY_DETECTED',
@@ -513,7 +530,7 @@ class EnhancedRateLimit {
    */
   async sendAdminAlertNotification(req, options) {
     try {
-      const alertManager = require('../services/alertManager');
+      const alertManager = require('./services/alertManager');
       
       await alertManager.processEvent({
         type: 'ADMIN_API_ABUSE',

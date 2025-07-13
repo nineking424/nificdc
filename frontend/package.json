@@ -19,7 +19,7 @@
     "@mdi/font": "^7.2.96",
     "vue-i18n": "^9.4.1",
     "vue-toastification": "^2.0.0-rc.5",
-    "chart.js": "^3.9.1",
+    "chart.js": "^4.4.0",
     "vue-chartjs": "^5.2.0",
     "date-fns": "^2.30.0",
     "lodash": "^4.17.21"

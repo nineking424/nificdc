@@ -1,7 +1,7 @@
 const cron = require('node-cron');
-const { Job, JobExecution, Mapping } = require('../models');
-const MappingEngine = require('../utils/mappingEngine');
-const nifiClient = require('../utils/nifiClient');
+const { Job, JobExecution, Mapping } = require('../src/models');
+const MappingEngine = require('../src/utils/mappingEngine');
+const nifiClient = require('../src/utils/nifiClient');
 
 /**
  * 작업 스케줄러 서비스

@@ -5,20 +5,90 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: ../docker/Dockerfile.dev
-    command: npm run serve
+      dockerfile: ../docker/Dockerfile.frontend.dev
+    ports:
+      - "8080:8080"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - VUE_APP_API_URL=http://localhost:3000
+    networks:
+      - nificdc-network
 
   backend:
     build:
       context: ./backend
-      dockerfile: ../docker/Dockerfile.dev
+      dockerfile: ../docker/Dockerfile.backend.dev
+    ports:
+      - "3000:3000"
     volumes:
       - ./backend:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=nificdc
+      - DB_USER=nificdc_user
+      - DB_PASSWORD=postgrespassword123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redispassword123
+    networks:
+      - nificdc-network
+    depends_on:
+      - postgres
+      - redis
+
+  # PostgreSQL - 메타데이터 저장용
+  postgres:
+    image: postgres:15-alpine
+    container_name: nificdc-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=nificdc
+      - POSTGRES_USER=nificdc_user
+      - POSTGRES_PASSWORD=postgrespassword123
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+    networks:
+      - nificdc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nificdc_user -d nificdc"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - 캐싱용
+  redis:
+    image: redis:7-alpine
+    container_name: nificdc-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redispassword123
+    volumes:
+      - redis-data-dev:/data
+    networks:
+      - nificdc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "-a", "redispassword123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# 볼륨 정의
+volumes:
+  postgres-data-dev:
+    driver: local
+  redis-data-dev:
+    driver: local
+
+# 네트워크 정의
+networks:
+  nificdc-network:
+    driver: bridge
