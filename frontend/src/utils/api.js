@@ -136,12 +136,22 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError)
         
+        // 토큰 만료 메시지 표시
+        if (error.response?.data?.message?.includes('expired') || 
+            error.response?.data?.message?.includes('invalid') ||
+            refreshError.message?.includes('expired') ||
+            refreshError.message?.includes('invalid')) {
+          toast.error('로그인이 만료되었습니다. 다시 로그인해주세요.')
+        }
+        
         // 리프레시 실패 시 로그아웃
         await authStore.logout()
         
-        // 로그인 페이지로 리다이렉트
-        if (window.location.pathname !== '/login') {
+        // 로그인 페이지로 리다이렉트 (현재 페이지가 홈이 아닌 경우)
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
           window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
+        } else if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
         }
         
         return Promise.reject(refreshError)

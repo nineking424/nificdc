@@ -119,6 +119,12 @@ router.beforeEach(async (to, from, next) => {
           await authStore.initialize()
         } catch (error) {
           console.error('Failed to restore user session:', error)
+          // 토큰이 만료되었거나 유효하지 않은 경우
+          if (error.response?.status === 401 || 
+              error.message?.includes('expired') || 
+              error.message?.includes('invalid')) {
+            console.log('Token expired or invalid, redirecting to login')
+          }
           // 초기화 실패 시 로그아웃 처리
           await authStore.logout()
         }

@@ -8,10 +8,48 @@
       
       <v-spacer />
       
-      <v-btn icon="mdi-github" href="https://github.com" target="_blank" />
-      <v-btn variant="outlined" color="white" class="ml-4">
+      <v-btn icon="mdi-github" href="https://github.com/nineking424/nificdc" target="_blank" />
+      
+      <!-- 로그인/로그아웃 버튼 -->
+      <v-btn 
+        v-if="!isAuthenticated"
+        variant="outlined" 
+        color="white" 
+        class="ml-4"
+        @click="goToLogin"
+      >
         로그인
       </v-btn>
+      
+      <v-menu v-else offset-y>
+        <template #activator="{ props }">
+          <v-btn
+            variant="outlined"
+            color="white"
+            class="ml-4"
+            v-bind="props"
+          >
+            <v-icon left>mdi-account</v-icon>
+            {{ userName }}
+          </v-btn>
+        </template>
+        
+        <v-list>
+          <v-list-item @click="goToDashboard">
+            <v-list-item-title>
+              <v-icon left>mdi-view-dashboard</v-icon>
+              대시보드
+            </v-list-item-title>
+          </v-list-item>
+          <v-divider />
+          <v-list-item @click="logout">
+            <v-list-item-title>
+              <v-icon left>mdi-logout</v-icon>
+              로그아웃
+            </v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </v-app-bar>
 
     <!-- 메인 콘텐츠 -->
@@ -32,7 +70,7 @@
                 color="white"
                 variant="outlined"
                 prepend-icon="mdi-play"
-                @click="navigateTo('systems')"
+                @click="navigateToPage('systems')"
               >
                 시스템 관리
               </v-btn>
@@ -41,7 +79,7 @@
                 color="white"
                 variant="outlined"
                 prepend-icon="mdi-chart-line"
-                @click="navigateTo('monitoring')"
+                @click="navigateToPage('monitoring')"
               >
                 모니터링
               </v-btn>
@@ -79,7 +117,7 @@
               <v-btn 
                 color="primary" 
                 variant="text"
-                @click="navigateTo('systems')"
+                @click="navigateToPage('systems')"
                 class="mt-4"
               >
                 자세히 보기
@@ -102,7 +140,7 @@
               <v-btn 
                 color="success" 
                 variant="text"
-                @click="navigateTo('mappings')"
+                @click="navigateToPage('mappings')"
                 class="mt-4"
               >
                 자세히 보기
@@ -125,7 +163,7 @@
               <v-btn 
                 color="info" 
                 variant="text"
-                @click="navigateTo('monitoring')"
+                @click="navigateToPage('monitoring')"
                 class="mt-4"
               >
                 자세히 보기
@@ -259,20 +297,66 @@
 </template>
 
 <script>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useToast } from 'vue-toastification'
 
 export default {
   name: 'Home',
   setup() {
     const router = useRouter()
+    const authStore = useAuthStore()
+    const toast = useToast()
     
-    const navigateTo = (route) => {
-      // 실제 네비게이션 활성화
-      router.push({ name: route })
+    // 인증 상태 컴퓨티드
+    const isAuthenticated = computed(() => authStore.isAuthenticated)
+    const userName = computed(() => authStore.userName)
+    
+    // 로그인 페이지로 이동
+    const goToLogin = () => {
+      router.push({ name: 'Login' })
+    }
+    
+    // 대시보드로 이동
+    const goToDashboard = () => {
+      router.push({ name: 'Dashboard' })
+    }
+    
+    // 로그아웃
+    const logout = async () => {
+      try {
+        await authStore.logout()
+        toast.success('로그아웃되었습니다.')
+        router.push({ name: 'Home' })
+      } catch (error) {
+        console.error('Logout error:', error)
+        toast.error('로그아웃 중 오류가 발생했습니다.')
+      }
+    }
+    
+    // 페이지 네비게이션 (인증 상태 확인)
+    const navigateToPage = (routeName) => {
+      if (isAuthenticated.value) {
+        // 로그인된 상태면 바로 이동
+        router.push({ name: routeName })
+      } else {
+        // 로그인이 필요한 경우 로그인 페이지로 리다이렉트
+        toast.info('로그인이 필요한 서비스입니다.')
+        router.push({ 
+          name: 'Login', 
+          query: { redirect: router.resolve({ name: routeName }).fullPath }
+        })
+      }
     }
     
     return {
-      navigateTo
+      isAuthenticated,
+      userName,
+      goToLogin,
+      goToDashboard,
+      logout,
+      navigateToPage
     }
   }
 }
