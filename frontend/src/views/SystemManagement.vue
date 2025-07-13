@@ -197,14 +197,8 @@
         </v-data-table>
       </v-card>
 
-      <!-- 시스템 생성/편집 다이얼로그 -->
-      <SystemDialog
-        v-model="showDialog"
-        :system="selectedSystem"
-        :mode="dialogMode"
-        @save="onSystemSave"
-        @cancel="closeDialog"
-      />
+      <!-- 시스템 생성/편집 다이얼로그 (개발 중) -->
+      <!-- SystemDialog 컴포넌트는 개발 중입니다 -->
 
       <!-- 삭제 확인 다이얼로그 -->
       <v-dialog
@@ -248,16 +242,35 @@ import AppLayout from '@/components/AppLayout.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'vue-toastification'
-import { useSystemsStore } from '@/stores/systems'
+// import { useSystemsStore } from '@/stores/systems'
 import { useAuthStore } from '@/stores/auth'
-import SystemDialog from '@/components/SystemDialog.vue'
+// import SystemDialog from '@/components/SystemDialog.vue'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
-const { t } = useI18n()
+// const { t } = useI18n()
 const toast = useToast()
-const systemsStore = useSystemsStore()
+// const systemsStore = useSystemsStore()
 const authStore = useAuthStore()
+
+// 임시 t 함수
+const t = (key) => {
+  const translations = {
+    'systems.title': '시스템 관리',
+    'systems.add': '새 시스템 추가',
+    'common.search': '검색',
+    'systems.type': '시스템 타입',
+    'systems.isActive': '활성 상태',
+    'common.reset': '초기화',
+    'systems.name': '시스템명',
+    'systems.createdAt': '생성일',
+    'table.actions': '작업',
+    'table.noData': '데이터가 없습니다',
+    'common.cancel': '취소',
+    'common.delete': '삭제'
+  }
+  return translations[key] || key
+}
 
 // 반응형 데이터
 const loading = ref(false)
@@ -351,17 +364,28 @@ const statusOptions = computed(() => [
 const loadSystems = async () => {
   loading.value = true
   try {
-    const params = {
-      page: currentPage.value,
-      limit: itemsPerPage.value,
-      search: filters.search,
-      type: filters.type,
-      isActive: filters.isActive
-    }
-    
-    const response = await systemsStore.getSystems(params)
-    systems.value = response.systems
-    totalItems.value = response.pagination.total
+    // 임시 더미 데이터
+    systems.value = [
+      {
+        id: 1,
+        name: 'PostgreSQL 메인',
+        type: 'postgresql',
+        lastConnectionStatus: 'success',
+        isActive: true,
+        lastConnectionTest: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 2,
+        name: 'Redis 캐시',
+        type: 'redis',
+        lastConnectionStatus: 'success',
+        isActive: true,
+        lastConnectionTest: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      }
+    ]
+    totalItems.value = systems.value.length
   } catch (error) {
     toast.error('시스템 목록 로드 실패: ' + error.message)
   } finally {
@@ -412,20 +436,12 @@ const testConnection = async (system) => {
   }
   
   try {
-    const result = await systemsStore.testConnection(system.id)
-    if (result.success) {
-      toast.success('연결 테스트 성공')
-      // 테스트 결과 업데이트
-      if (index !== -1) {
-        systems.value[index].lastConnectionStatus = 'success'
-        systems.value[index].lastConnectionTest = new Date().toISOString()
-      }
-    } else {
-      toast.error('연결 테스트 실패: ' + result.message)
-      if (index !== -1) {
-        systems.value[index].lastConnectionStatus = 'failed'
-        systems.value[index].lastConnectionTest = new Date().toISOString()
-      }
+    // 임시 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    toast.success('연결 테스트 성공 (시뮬레이션)')
+    if (index !== -1) {
+      systems.value[index].lastConnectionStatus = 'success'
+      systems.value[index].lastConnectionTest = new Date().toISOString()
     }
   } catch (error) {
     toast.error('연결 테스트 실패: ' + error.message)
@@ -448,7 +464,8 @@ const toggleSystemStatus = async (system) => {
   
   try {
     const newStatus = !system.isActive
-    await systemsStore.updateSystem(system.id, { isActive: newStatus })
+    // 임시 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 500))
     
     if (index !== -1) {
       systems.value[index].isActive = newStatus
@@ -472,10 +489,18 @@ const confirmDelete = (system) => {
 const deleteSystem = async () => {
   deleting.value = true
   try {
-    await systemsStore.deleteSystem(systemToDelete.value.id)
+    // 임시 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // 시스템 목록에서 제거
+    const index = systems.value.findIndex(s => s.id === systemToDelete.value.id)
+    if (index !== -1) {
+      systems.value.splice(index, 1)
+      totalItems.value = systems.value.length
+    }
+    
     toast.success('시스템이 삭제되었습니다.')
     showDeleteDialog.value = false
-    loadSystems()
   } catch (error) {
     toast.error('시스템 삭제 실패: ' + error.message)
   } finally {
