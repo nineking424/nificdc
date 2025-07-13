@@ -137,7 +137,9 @@ router.post('/', authorize('systems', 'create'), async (req, res) => {
     }
 
     // 지원하는 시스템 타입 검증
-    const supportedTypes = ['postgresql', 'mysql', 'oracle', 'sqlite', 'mongodb', 'sftp', 'ftp', 'api'];
+    const { getSupportedSystemTypes } = require('../../src/utils/connectionInfoValidator');
+    const supportedTypes = getSupportedSystemTypes();
+    
     if (!supportedTypes.includes(type)) {
       return res.status(400).json({
         success: false,
@@ -145,13 +147,38 @@ router.post('/', authorize('systems', 'create'), async (req, res) => {
       });
     }
 
-    // 시스템 생성
+    // 연결 정보 유효성 검증
+    const { validateConnectionInfo } = require('../../src/utils/connectionInfoValidator');
+    let parsedConnectionInfo = connectionInfo;
+    
+    // 문자열인 경우 JSON 파싱
+    if (typeof connectionInfo === 'string') {
+      try {
+        parsedConnectionInfo = JSON.parse(connectionInfo);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid connectionInfo JSON format'
+        });
+      }
+    }
+    
+    const validation = validateConnectionInfo(type, parsedConnectionInfo);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid connection information',
+        details: validation.error
+      });
+    }
+
+    // 시스템 생성 - 유효성 검증된 연결 정보 사용
     const { System } = require('../../src/models');
     const newSystem = await System.create({
       name,
       type,
       description,
-      connectionInfo,
+      connectionInfo: JSON.stringify(validation.value), // 유효성 검증된 값 사용
       isActive
     });
 
@@ -218,18 +245,49 @@ router.put('/:id', authorize('systems', 'update'), async (req, res) => {
     if (name !== undefined) updateFields.name = name;
     if (type !== undefined) updateFields.type = type;
     if (description !== undefined) updateFields.description = description;
-    if (connectionInfo !== undefined) updateFields.connectionInfo = connectionInfo;
     if (isActive !== undefined) updateFields.isActive = isActive;
+    // connectionInfo는 유효성 검증 후 별도로 처리
 
     // 입력 검증 - 타입이 변경된 경우
-    if (type) {
-      const supportedTypes = ['postgresql', 'mysql', 'oracle', 'sqlite', 'mongodb', 'sftp', 'ftp', 'api'];
-      if (!supportedTypes.includes(type)) {
+    const { getSupportedSystemTypes, validateConnectionInfo } = require('../../src/utils/connectionInfoValidator');
+    const supportedTypes = getSupportedSystemTypes();
+    
+    if (type && !supportedTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: `Unsupported system type. Supported types: ${supportedTypes.join(', ')}`
+      });
+    }
+
+    // 연결 정보 유효성 검증 (연결 정보가 업데이트되는 경우)
+    if (connectionInfo !== undefined) {
+      let parsedConnectionInfo = connectionInfo;
+      
+      // 문자열인 경우 JSON 파싱
+      if (typeof connectionInfo === 'string') {
+        try {
+          parsedConnectionInfo = JSON.parse(connectionInfo);
+        } catch (e) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid connectionInfo JSON format'
+          });
+        }
+      }
+      
+      const systemType = type || existingSystem.type; // 새 타입 또는 기존 타입 사용
+      const validation = validateConnectionInfo(systemType, parsedConnectionInfo);
+      
+      if (!validation.isValid) {
         return res.status(400).json({
           success: false,
-          error: `Unsupported system type. Supported types: ${supportedTypes.join(', ')}`
+          error: 'Invalid connection information',
+          details: validation.error
         });
       }
+      
+      // 유효성 검증된 연결 정보로 교체
+      updateFields.connectionInfo = JSON.stringify(validation.value);
     }
 
     // 기존 시스템 데이터 (감사 로그용)
@@ -304,8 +362,78 @@ router.delete('/:id', requireAdmin(), async (req, res) => {
       });
     }
 
-    // 시스템이 다른 엔티티에서 사용 중인지 확인 (예: 매핑, 작업 등)
-    // TODO: 실제로는 관련 엔티티들을 확인해야 함
+    // 시스템이 다른 엔티티에서 사용 중인지 확인
+    const { DataSchema, Mapping, Job } = require('../../src/models');
+    
+    // 데이터 스키마에서 사용 중인지 확인
+    const relatedSchemas = await DataSchema.findAll({
+      where: { systemId: systemId },
+      attributes: ['id', 'name']
+    });
+    
+    // 매핑에서 사용 중인지 확인 (소스 또는 타겟 스키마를 통해)
+    const relatedMappings = await Mapping.findAll({
+      include: [
+        {
+          model: DataSchema,
+          as: 'sourceSchema',
+          where: { systemId: systemId },
+          required: false,
+          attributes: ['id', 'name']
+        },
+        {
+          model: DataSchema,
+          as: 'targetSchema', 
+          where: { systemId: systemId },
+          required: false,
+          attributes: ['id', 'name']
+        }
+      ],
+      attributes: ['id', 'name']
+    });
+    
+    // 활성 매핑이 있는지 확인
+    const activeMappings = relatedMappings.filter(mapping => 
+      mapping.sourceSchema || mapping.targetSchema
+    );
+    
+    // 관련 작업이 있는지 확인 (매핑을 통해)
+    let relatedJobs = [];
+    if (activeMappings.length > 0) {
+      const mappingIds = activeMappings.map(m => m.id);
+      relatedJobs = await Job.findAll({
+        where: { mappingId: mappingIds },
+        attributes: ['id', 'name', 'status']
+      });
+    }
+    
+    // 관련 엔티티가 있는 경우 삭제 차단
+    if (relatedSchemas.length > 0 || activeMappings.length > 0 || relatedJobs.length > 0) {
+      const dependencies = [];
+      
+      if (relatedSchemas.length > 0) {
+        dependencies.push(`데이터 스키마 ${relatedSchemas.length}개`);
+      }
+      if (activeMappings.length > 0) {
+        dependencies.push(`데이터 매핑 ${activeMappings.length}개`);
+      }
+      if (relatedJobs.length > 0) {
+        dependencies.push(`작업 ${relatedJobs.length}개`);
+      }
+      
+      return res.status(409).json({
+        success: false,
+        error: 'Cannot delete system: dependencies exist',
+        details: {
+          message: `이 시스템은 다음 항목들에서 사용 중입니다: ${dependencies.join(', ')}`,
+          dependencies: {
+            schemas: relatedSchemas,
+            mappings: activeMappings,
+            jobs: relatedJobs
+          }
+        }
+      });
+    }
     
     // 삭제 전 시스템 데이터 (감사 로그용)
     const systemData = {
@@ -365,46 +493,25 @@ router.post('/:id/test', authorize('systems', 'test'), async (req, res) => {
       });
     }
 
-    // 연결 테스트 로직 (시스템 타입에 따라 다른 테스트 수행)
-    const startTime = Date.now();
-    let testResult;
-
-    try {
-      switch (system.type) {
-        case 'postgresql':
-        case 'mysql':
-        case 'oracle':
-          testResult = await testDatabaseConnection(system);
-          break;
-        case 'sftp':
-        case 'ftp':
-          testResult = await testFileServerConnection(system);
-          break;
-        case 'api':
-          testResult = await testApiConnection(system);
-          break;
-        default:
-          testResult = {
-            success: false,
-            message: `Connection test not implemented for ${system.type}`,
-            details: 'Please implement connection test for this system type'
-          };
+    // connectionInfo 파싱
+    let connectionInfo = system.connectionInfo;
+    if (typeof connectionInfo === 'string') {
+      try {
+        connectionInfo = JSON.parse(connectionInfo);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid connection configuration format'
+        });
       }
-    } catch (testError) {
-      testResult = {
-        success: false,
-        message: 'Connection test failed',
-        error: testError.message
-      };
     }
 
-    const endTime = Date.now();
-    const latency = endTime - startTime;
+    // 실제 연결 테스트 수행
+    const connectionTestService = require('../../src/services/connectionTestService');
+    const testResult = await connectionTestService.testConnection(system.type, connectionInfo);
 
     const finalResult = {
       ...testResult,
-      latency,
-      timestamp: new Date(),
       systemId: system.id,
       systemName: system.name,
       systemType: system.type
@@ -440,125 +547,5 @@ router.post('/:id/test', authorize('systems', 'test'), async (req, res) => {
   }
 });
 
-// 연결 테스트 헬퍼 함수들
-async function testDatabaseConnection(system) {
-  // TODO: 실제 데이터베이스 연결 테스트 구현
-  // 현재는 모의 테스트로 구현
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // connectionInfo에서 필수 필드 확인
-      let connInfo = system.connectionInfo;
-      
-      // connectionInfo가 문자열로 저장된 경우 파싱
-      if (typeof connInfo === 'string') {
-        try {
-          connInfo = JSON.parse(connInfo);
-        } catch (e) {
-          resolve({
-            success: false,
-            message: 'Invalid connection configuration format'
-          });
-          return;
-        }
-      }
-      if (!connInfo.host || !connInfo.port) {
-        resolve({
-          success: false,
-          message: 'Missing required connection parameters (host, port)'
-        });
-        return;
-      }
-
-      // 실제로는 여기서 데이터베이스 연결을 시도
-      resolve({
-        success: true,
-        message: 'Database connection successful',
-        details: {
-          host: connInfo.host,
-          port: connInfo.port,
-          database: connInfo.database || connInfo.serviceName,
-          ssl: connInfo.ssl || false
-        }
-      });
-    }, Math.random() * 1000 + 200); // 200-1200ms 랜덤 지연
-  });
-}
-
-async function testFileServerConnection(system) {
-  // TODO: 실제 파일 서버 연결 테스트 구현
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let connInfo = system.connectionInfo;
-      
-      if (typeof connInfo === 'string') {
-        try {
-          connInfo = JSON.parse(connInfo);
-        } catch (e) {
-          resolve({
-            success: false,
-            message: 'Invalid connection configuration format'
-          });
-          return;
-        }
-      }
-      if (!connInfo.host || !connInfo.port) {
-        resolve({
-          success: false,
-          message: 'Missing required connection parameters (host, port)'
-        });
-        return;
-      }
-
-      resolve({
-        success: true,
-        message: 'File server connection successful',
-        details: {
-          host: connInfo.host,
-          port: connInfo.port,
-          protocol: system.type.toUpperCase(),
-          rootPath: connInfo.rootPath || '/'
-        }
-      });
-    }, Math.random() * 800 + 300);
-  });
-}
-
-async function testApiConnection(system) {
-  // TODO: 실제 API 연결 테스트 구현
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let connInfo = system.connectionInfo;
-      
-      if (typeof connInfo === 'string') {
-        try {
-          connInfo = JSON.parse(connInfo);
-        } catch (e) {
-          resolve({
-            success: false,
-            message: 'Invalid connection configuration format'
-          });
-          return;
-        }
-      }
-      if (!connInfo.endpoint && !connInfo.host) {
-        resolve({
-          success: false,
-          message: 'Missing required connection parameters (endpoint or host)'
-        });
-        return;
-      }
-
-      resolve({
-        success: true,
-        message: 'API connection successful',
-        details: {
-          endpoint: connInfo.endpoint || `${connInfo.host}:${connInfo.port}`,
-          method: 'GET',
-          status: 200
-        }
-      });
-    }, Math.random() * 600 + 100);
-  });
-}
 
 module.exports = router;

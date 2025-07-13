@@ -18,8 +18,13 @@ const schemas = {
   // 시스템 관련
   system: Joi.object({
     name: Joi.string().min(1).max(255).required(),
-    type: Joi.string().valid('oracle', 'postgresql', 'sqlite', 'ftp', 'local_fs').required(),
+    type: Joi.string().valid(
+      'postgresql', 'mysql', 'oracle', 'sqlite', 'mongodb', 'redis',
+      'sftp', 'ftp', 'local_fs', 'aws_s3', 'azure_blob',
+      'api', 'api_rest', 'kafka'
+    ).required(),
     connectionInfo: Joi.object().required(),
+    description: Joi.string().max(1000).allow('', null),
     isActive: Joi.boolean().default(true)
   }),
 

@@ -197,8 +197,153 @@
         </v-data-table>
       </v-card>
 
-      <!-- 시스템 생성/편집 다이얼로그 (개발 중) -->
-      <!-- SystemDialog 컴포넌트는 개발 중입니다 -->
+      <!-- 시스템 생성/편집 다이얼로그 -->
+      <v-dialog
+        v-model="showDialog"
+        max-width="600"
+        persistent
+      >
+        <v-card>
+          <v-card-title class="text-h6">
+            {{ dialogMode === 'create' ? '새 시스템 추가' : '시스템 편집' }}
+          </v-card-title>
+          <v-form ref="systemForm" v-model="formValid" @submit.prevent="saveSystem">
+            <v-card-text>
+              <v-row>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="systemForm.name"
+                    label="시스템명"
+                    :rules="[v => !!v || '시스템명은 필수입니다']"
+                    variant="outlined"
+                    density="compact"
+                    required
+                  />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-select
+                    v-model="systemForm.type"
+                    :items="systemTypeOptions"
+                    label="시스템 타입"
+                    :rules="[v => !!v || '시스템 타입은 필수입니다']"
+                    variant="outlined"
+                    density="compact"
+                    required
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="systemForm.description"
+                    label="설명"
+                    variant="outlined"
+                    density="compact"
+                    rows="2"
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <h4 class="mb-3">연결 정보</h4>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.host"
+                    label="호스트"
+                    :rules="[v => !!v || '호스트는 필수입니다']"
+                    variant="outlined"
+                    density="compact"
+                    required
+                  />
+                </v-col>
+                <v-col cols="12" md="6">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.port"
+                    label="포트"
+                    type="number"
+                    :rules="[v => !!v || '포트는 필수입니다']"
+                    variant="outlined"
+                    density="compact"
+                    required
+                  />
+                </v-col>
+                <v-col cols="12" md="6" v-if="isDatabaseType">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.database"
+                    :label="systemForm.type === 'oracle' ? '서비스명' : '데이터베이스명'"
+                    variant="outlined"
+                    density="compact"
+                  />
+                </v-col>
+                <v-col cols="12" md="6" v-if="isDatabaseType">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.username"
+                    label="사용자명"
+                    variant="outlined"
+                    density="compact"
+                  />
+                </v-col>
+                <v-col cols="12" md="6" v-if="isDatabaseType">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.password"
+                    label="비밀번호"
+                    type="password"
+                    variant="outlined"
+                    density="compact"
+                  />
+                </v-col>
+                <v-col cols="12" md="6" v-if="isDatabaseType">
+                  <v-switch
+                    v-model="systemForm.connectionInfo.ssl"
+                    label="SSL 사용"
+                    color="primary"
+                    hide-details
+                  />
+                </v-col>
+                <v-col cols="12" v-if="isFileSystemType">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.rootPath"
+                    label="루트 경로"
+                    variant="outlined"
+                    density="compact"
+                  />
+                </v-col>
+                <v-col cols="12" v-if="isApiType">
+                  <v-text-field
+                    v-model="systemForm.connectionInfo.endpoint"
+                    label="API 엔드포인트"
+                    variant="outlined"
+                    density="compact"
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <v-switch
+                    v-model="systemForm.isActive"
+                    label="활성 상태"
+                    color="primary"
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                variant="text"
+                @click="closeDialog"
+              >
+                취소
+              </v-btn>
+              <v-btn
+                color="primary"
+                variant="flat"
+                :loading="saving"
+                :disabled="!formValid"
+                type="submit"
+              >
+                {{ dialogMode === 'create' ? '생성' : '수정' }}
+              </v-btn>
+            </v-card-actions>
+          </v-form>
+        </v-card>
+      </v-dialog>
 
       <!-- 삭제 확인 다이얼로그 -->
       <v-dialog
@@ -280,6 +425,27 @@ const selectedSystem = ref(null)
 const systemToDelete = ref(null)
 const dialogMode = ref('create')
 const deleting = ref(false)
+const saving = ref(false)
+const formValid = ref(false)
+const systemForm = ref({})
+
+// 폼 초기값
+const getInitialFormData = () => ({
+  name: '',
+  type: '',
+  description: '',
+  isActive: true,
+  connectionInfo: {
+    host: '',
+    port: null,
+    database: '',
+    username: '',
+    password: '',
+    ssl: false,
+    rootPath: '',
+    endpoint: ''
+  }
+})
 
 // 필터 상태
 const filters = reactive({
@@ -336,21 +502,21 @@ const headers = computed(() => [
   }
 ])
 
-// 시스템 타입 옵션
+// 시스템 타입 옵션 - 백엔드와 동기화
 const systemTypeOptions = computed(() => [
-  { title: 'Oracle Database', value: 'oracle' },
   { title: 'PostgreSQL', value: 'postgresql' },
   { title: 'MySQL', value: 'mysql' },
-  { title: 'SQL Server', value: 'mssql' },
+  { title: 'Oracle Database', value: 'oracle' },
   { title: 'SQLite', value: 'sqlite' },
   { title: 'MongoDB', value: 'mongodb' },
   { title: 'Redis', value: 'redis' },
-  { title: 'FTP Server', value: 'ftp' },
   { title: 'SFTP Server', value: 'sftp' },
+  { title: 'FTP Server', value: 'ftp' },
   { title: 'Local File System', value: 'local_fs' },
   { title: 'Amazon S3', value: 'aws_s3' },
   { title: 'Azure Blob Storage', value: 'azure_blob' },
-  { title: 'REST API', value: 'api_rest' },
+  { title: 'REST API', value: 'api' },
+  { title: 'REST API (Legacy)', value: 'api_rest' },
   { title: 'Apache Kafka', value: 'kafka' }
 ])
 
@@ -359,6 +525,22 @@ const statusOptions = computed(() => [
   { title: '활성', value: 'true' },
   { title: '비활성', value: 'false' }
 ])
+
+// 폼 관련 computed 속성들
+const isDatabaseType = computed(() => {
+  const dbTypes = ['postgresql', 'mysql', 'oracle', 'sqlite', 'mongodb', 'redis']
+  return dbTypes.includes(systemForm.value.type)
+})
+
+const isFileSystemType = computed(() => {
+  const fileTypes = ['ftp', 'sftp', 'local_fs', 'aws_s3', 'azure_blob']
+  return fileTypes.includes(systemForm.value.type)
+})
+
+const isApiType = computed(() => {
+  const apiTypes = ['api', 'api_rest']
+  return apiTypes.includes(systemForm.value.type)
+})
 
 // 메서드
 const loadSystems = async () => {
@@ -411,24 +593,92 @@ const resetFilters = () => {
 const openCreateDialog = () => {
   selectedSystem.value = null
   dialogMode.value = 'create'
+  systemForm.value = getInitialFormData()
   showDialog.value = true
 }
 
 const openEditDialog = (system) => {
   selectedSystem.value = { ...system }
   dialogMode.value = 'edit'
+  
+  // connectionInfo 파싱 (문자열인 경우)
+  let connectionInfo = system.connectionInfo
+  if (typeof connectionInfo === 'string') {
+    try {
+      connectionInfo = JSON.parse(connectionInfo)
+    } catch (e) {
+      connectionInfo = {}
+    }
+  }
+  
+  systemForm.value = {
+    name: system.name || '',
+    type: system.type || '',
+    description: system.description || '',
+    isActive: system.isActive || false,
+    connectionInfo: {
+      host: connectionInfo.host || '',
+      port: connectionInfo.port || null,
+      database: connectionInfo.database || connectionInfo.serviceName || '',
+      username: connectionInfo.username || '',
+      password: connectionInfo.password || '',
+      ssl: connectionInfo.ssl || false,
+      rootPath: connectionInfo.rootPath || '',
+      endpoint: connectionInfo.endpoint || ''
+    }
+  }
+  
   showDialog.value = true
 }
 
 const closeDialog = () => {
   showDialog.value = false
   selectedSystem.value = null
+  systemForm.value = getInitialFormData()
 }
 
-const onSystemSave = () => {
-  closeDialog()
-  loadSystems()
-  toast.success(dialogMode.value === 'create' ? '시스템이 생성되었습니다.' : '시스템이 수정되었습니다.')
+const saveSystem = async () => {
+  saving.value = true
+  try {
+    const api = (await import('@/utils/api')).default
+    
+    // connectionInfo 정리 (빈 값 제거)
+    const connectionInfo = {}
+    Object.keys(systemForm.value.connectionInfo).forEach(key => {
+      const value = systemForm.value.connectionInfo[key]
+      if (value !== null && value !== '' && value !== undefined) {
+        connectionInfo[key] = value
+      }
+    })
+    
+    const systemData = {
+      name: systemForm.value.name,
+      type: systemForm.value.type,
+      description: systemForm.value.description,
+      isActive: systemForm.value.isActive,
+      connectionInfo: JSON.stringify(connectionInfo)
+    }
+    
+    let response
+    if (dialogMode.value === 'create') {
+      response = await api.post('/systems', systemData)
+    } else {
+      response = await api.put(`/systems/${selectedSystem.value.id}`, systemData)
+    }
+    
+    if (response.data.success) {
+      closeDialog()
+      loadSystems()
+      toast.success(dialogMode.value === 'create' ? '시스템이 생성되었습니다.' : '시스템이 수정되었습니다.')
+    } else {
+      throw new Error(response.data.error || '시스템 저장 실패')
+    }
+  } catch (error) {
+    console.error('Save system error:', error)
+    toast.error('시스템 저장 실패: ' + (error.response?.data?.error || error.message))
+  } finally {
+    saving.value = false
+  }
 }
 
 const testConnection = async (system) => {
@@ -584,6 +834,7 @@ const formatDateTime = (dateString) => {
 
 // 라이프사이클
 onMounted(() => {
+  systemForm.value = getInitialFormData()
   loadSystems()
 })
 </script>
