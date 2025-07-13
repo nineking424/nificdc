@@ -55,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await api.post('/auth/login', credentials)
       
       if (response.data.success) {
-        const { user: userData, token: accessToken, refreshToken: newRefreshToken } = response.data
+        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data || response.data
         
         // 상태 업데이트
         user.value = userData

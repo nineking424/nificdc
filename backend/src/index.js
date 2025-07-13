@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const http = require('http');
@@ -30,6 +31,19 @@ const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
 
 // Trust proxy (for accurate IP addresses behind load balancers)
 app.set('trust proxy', 1);
+
+// CORS 설정
+app.use(cors({
+  origin: [
+    'http://localhost:8080',
+    'http://localhost:3000',
+    'http://frontend:8080',
+    'http://127.0.0.1:8080'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'Accept-Language']
+}));
 
 // 기본 미들웨어
 app.use(compression());

@@ -5,8 +5,9 @@ import { useToast } from 'vue-toastification'
 
 // API 기본 설정
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api/v1',
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api/v1',  // Direct backend for now
   timeout: 30000,
+  withCredentials: true,  // Include cookies for authentication
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -23,21 +24,31 @@ api.interceptors.request.use(
     requestStartTimes.set(config, Date.now())
     
     // 인증 토큰 자동 첨부
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
+    try {
+      const authStore = useAuthStore()
+      if (authStore.token) {
+        config.headers.Authorization = `Bearer ${authStore.token}`
+      }
+    } catch (error) {
+      // Auth store 초기화 중일 때 무시
+      console.warn('Auth store not yet initialized')
     }
     
     // 요청 ID 추가 (디버깅용)
     config.headers['X-Request-ID'] = generateRequestId()
     
     // 언어 헤더 추가
-    const appStore = useAppStore()
-    config.headers['Accept-Language'] = appStore.language || 'ko'
-    
-    // 로딩 상태 관리 (특정 요청 제외)
-    if (!config.skipLoading) {
-      appStore.setLoading(true, config.loadingMessage || '데이터를 불러오는 중...')
+    try {
+      const appStore = useAppStore()
+      config.headers['Accept-Language'] = appStore.language || 'ko'
+      
+      // 로딩 상태 관리 (특정 요청 제외)
+      if (!config.skipLoading) {
+        appStore.setLoading(true, config.loadingMessage || '데이터를 불러오는 중...')
+      }
+    } catch (error) {
+      // App store 초기화 중일 때 무시
+      console.warn('App store not yet initialized')
     }
     
     console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {

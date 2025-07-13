@@ -6,7 +6,7 @@ let client;
 const connectRedis = async () => {
   try {
     client = redis.createClient({
-      host: process.env.REDIS_HOST || 'localhost',
+      host: process.env.REDIS_HOST || 'redis',  // Docker container hostname
       port: process.env.REDIS_PORT || 6379,
       password: process.env.REDIS_PASSWORD || 'redispassword123',
       retry_strategy: (options) => {

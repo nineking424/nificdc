@@ -13,10 +13,11 @@ export default defineConfig({
     port: 8080,
     host: '0.0.0.0',
     proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
+      '^/api/.*': {
+        target: 'http://backend:3000',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: (path) => path
       }
     }
   },
