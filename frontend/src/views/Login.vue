@@ -101,7 +101,7 @@ export default {
       try {
         await authStore.login(form.value)
         
-        const redirect = router.currentRoute.value.query.redirect || '/'
+        const redirect = router.currentRoute.value.query.redirect || '/dashboard'
         router.push(redirect)
       } catch (error) {
         console.error('Login failed:', error)

@@ -1,5 +1,5 @@
 <template>
-  <div class="system-management">
+  <AppLayout>
     <v-container fluid>
       <!-- 페이지 헤더 -->
       <div class="d-flex justify-space-between align-center mb-6">
@@ -240,10 +240,11 @@
         </v-card>
       </v-dialog>
     </v-container>
-  </div>
+  </AppLayout>
 </template>
 
 <script setup>
+import AppLayout from '@/components/AppLayout.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'vue-toastification'

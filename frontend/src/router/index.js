@@ -12,42 +12,56 @@ const routes = [
       title: 'NiFiCDC Platform'
     }
   },
-  // {
-  //   path: '/systems',
-  //   name: 'Systems',
-  //   component: () => import('@/views/SystemManagement.vue'),
-  //   meta: { 
-  //     requiresAuth: false,
-  //     title: '시스템 관리'
-  //   }
-  // },
-  // {
-  //   path: '/mappings',
-  //   name: 'Mappings',
-  //   component: () => import('@/views/MappingManagement.vue'),
-  //   meta: { 
-  //     requiresAuth: false,
-  //     title: '매핑 관리'
-  //   }
-  // },
-  // {
-  //   path: '/jobs',
-  //   name: 'Jobs',
-  //   component: () => import('@/views/JobManagement.vue'),
-  //   meta: { 
-  //     requiresAuth: false,
-  //     title: '작업 관리'
-  //   }
-  // },
-  // {
-  //   path: '/monitoring',
-  //   name: 'Monitoring',
-  //   component: () => import('@/views/MonitoringDashboard.vue'),
-  //   meta: { 
-  //     requiresAuth: false,
-  //     title: '모니터링'
-  //   }
-  // },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('@/views/Dashboard.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '대시보드',
+      icon: 'mdi-view-dashboard'
+    }
+  },
+  {
+    path: '/systems',
+    name: 'Systems',
+    component: () => import('@/views/SystemManagement.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '시스템 관리',
+      icon: 'mdi-server-network'
+    }
+  },
+  {
+    path: '/mappings',
+    name: 'Mappings',
+    component: () => import('@/views/MappingManagement.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '매핑 관리',
+      icon: 'mdi-network-outline'
+    }
+  },
+  {
+    path: '/jobs',
+    name: 'Jobs',
+    component: () => import('@/views/JobManagement.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '작업 관리',
+      icon: 'mdi-briefcase-outline'
+    }
+  },
+  {
+    path: '/monitoring',
+    name: 'Monitoring',
+    component: () => import('@/views/MonitoringDashboard.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '모니터링',
+      icon: 'mdi-monitor-dashboard'
+    }
+  },
   {
     path: '/login',
     name: 'Login',
@@ -84,7 +98,7 @@ const router = createRouter({
   }
 })
 
-// 간소화된 네비게이션 가드
+// 네비게이션 가드
 router.beforeEach(async (to, from, next) => {
   try {
     // 페이지 타이틀 설정
@@ -92,6 +106,30 @@ router.beforeEach(async (to, from, next) => {
       document.title = `${to.meta.title} - NiFiCDC`
     } else {
       document.title = 'NiFiCDC'
+    }
+    
+    // 인증이 필요한 페이지 확인
+    if (to.meta.requiresAuth) {
+      const authStore = useAuthStore()
+      
+      // 인증 상태 확인
+      if (!authStore.isAuthenticated) {
+        // 로그인 페이지로 리다이렉트
+        next({ 
+          name: 'Login', 
+          query: { redirect: to.fullPath } 
+        })
+        return
+      }
+    }
+    
+    // 로그인한 사용자가 로그인 페이지에 접근하려 할 때
+    if (to.name === 'Login') {
+      const authStore = useAuthStore()
+      if (authStore.isAuthenticated) {
+        next({ name: 'Dashboard' })
+        return
+      }
     }
     
     next()

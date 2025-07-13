@@ -267,9 +267,8 @@ export default {
     const router = useRouter()
     
     const navigateTo = (route) => {
-      // 임시로 알림만 표시
-      alert(`${route} 페이지는 개발 중입니다.`)
-      // router.push({ name: route })
+      // 실제 네비게이션 활성화
+      router.push({ name: route })
     }
     
     return {
