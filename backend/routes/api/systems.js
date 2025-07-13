@@ -36,6 +36,10 @@ router.get('/', authorize('systems', 'read'), async (req, res) => {
         description: system.description,
         connectionInfo: system.connectionInfo,
         isActive: system.isActive,
+        lastConnectionStatus: system.lastConnectionStatus || 'pending',
+        lastConnectionTest: system.lastConnectionTest,
+        lastConnectionMessage: system.lastConnectionMessage,
+        lastConnectionLatency: system.lastConnectionLatency,
         createdAt: system.createdAt,
         updatedAt: system.updatedAt
       };
@@ -112,6 +116,10 @@ router.get('/:id', authorize('systems', 'read'), async (req, res) => {
       description: system.description,
       connectionInfo: system.connectionInfo,
       isActive: system.isActive,
+      lastConnectionStatus: system.lastConnectionStatus || 'pending',
+      lastConnectionTest: system.lastConnectionTest,
+      lastConnectionMessage: system.lastConnectionMessage,
+      lastConnectionLatency: system.lastConnectionLatency,
       createdAt: system.createdAt,
       updatedAt: system.updatedAt
     };
@@ -614,6 +622,14 @@ router.post('/:id/test', authorize('systems', 'test'), async (req, res) => {
     // 실제 연결 테스트 수행
     const connectionTestService = require('../../src/services/connectionTestService');
     const testResult = await connectionTestService.testConnection(system.type, connectionInfo);
+
+    // 연결 테스트 결과를 데이터베이스에 저장
+    await system.update({
+      lastConnectionStatus: testResult.success ? 'success' : 'failed',
+      lastConnectionTest: new Date(),
+      lastConnectionMessage: testResult.message || testResult.error || null,
+      lastConnectionLatency: testResult.latency || null
+    });
 
     const finalResult = {
       ...testResult,

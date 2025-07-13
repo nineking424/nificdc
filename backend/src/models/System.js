@@ -37,6 +37,30 @@ const System = sequelize.define('System', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  lastConnectionStatus: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    defaultValue: 'pending',
+    field: 'last_connection_status',
+    validate: {
+      isIn: [['success', 'failed', 'pending']]
+    }
+  },
+  lastConnectionTest: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_connection_test'
+  },
+  lastConnectionMessage: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'last_connection_message'
+  },
+  lastConnectionLatency: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'last_connection_latency'
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

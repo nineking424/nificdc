@@ -600,9 +600,11 @@ const loadSystems = async () => {
         name: system.name,
         type: system.type,
         description: system.description,
-        lastConnectionStatus: system.status === 'active' ? 'success' : 'pending',
+        lastConnectionStatus: system.lastConnectionStatus || 'pending',
         isActive: system.isActive,
-        lastConnectionTest: system.updatedAt,
+        lastConnectionTest: system.lastConnectionTest,
+        lastConnectionMessage: system.lastConnectionMessage,
+        lastConnectionLatency: system.lastConnectionLatency,
         createdAt: system.createdAt,
         updatedAt: system.updatedAt,
         connectionInfo: system.connectionInfo
@@ -749,26 +751,21 @@ const testConnection = async (system) => {
     const api = (await import('@/utils/api')).default
     const response = await api.post(`/systems/${system.id}/test`)
     
-    if (response.data.success) {
+    if (response.data.success && response.data.data.success) {
       toast.success('연결 테스트 성공')
-      if (index !== -1) {
-        systems.value[index].lastConnectionStatus = 'success'
-        systems.value[index].lastConnectionTest = new Date().toISOString()
-      }
     } else {
-      throw new Error(response.data.error || '연결 테스트 실패')
+      const errorMessage = response.data.data?.message || response.data.data?.error || '연결 테스트 실패'
+      throw new Error(errorMessage)
     }
   } catch (error) {
     console.error('Connection test error:', error)
     toast.error('연결 테스트 실패: ' + (error.response?.data?.error || error.message))
-    if (index !== -1) {
-      systems.value[index].lastConnectionStatus = 'failed'
-      systems.value[index].lastConnectionTest = new Date().toISOString()
-    }
   } finally {
     if (index !== -1) {
       systems.value[index].testing = false
     }
+    // 연결 테스트 후 시스템 목록 새로고침 (데이터베이스에서 최신 상태 가져오기)
+    loadSystems()
   }
 }
 
@@ -858,19 +855,14 @@ const testConnectionInDialog = async () => {
       connectionInfo: connectionInfo
     }
     
-    let response
-    if (dialogMode.value === 'edit' && selectedSystem.value) {
-      // 편집 모드인 경우 기존 시스템 ID로 테스트
-      response = await api.post(`/systems/${selectedSystem.value.id}/test`)
-    } else {
-      // 새 시스템인 경우 임시로 생성하여 테스트 (실제로는 백엔드에서 테스트만 수행)
-      response = await api.post('/systems/test-connection', testData)
-    }
+    // 항상 현재 폼의 데이터로 연결 테스트 수행 (편집 모드에서도 변경된 값으로 테스트)
+    const response = await api.post('/systems/test-connection', testData)
     
-    if (response.data.success) {
+    if (response.data.success && response.data.data.success) {
       toast.success('연결 테스트 성공!')
     } else {
-      throw new Error(response.data.error || '연결 테스트 실패')
+      const errorMessage = response.data.data?.message || response.data.data?.error || '연결 테스트 실패'
+      throw new Error(errorMessage)
     }
   } catch (error) {
     console.error('Connection test error:', error)
