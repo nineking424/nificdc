@@ -363,7 +363,7 @@
         "dependencies": [
           10
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -371,7 +371,7 @@
             "description": "역할 기반 접근 제어(RBAC) 시스템을 구현하고 세밀한 권한 제어 메커니즘을 개발합니다.",
             "dependencies": [],
             "details": "사용자 역할 정의, 권한 매트릭스 설계, API 엔드포인트별 권한 검증 미들웨어 구현, 동적 권한 할당 기능 개발",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -382,7 +382,7 @@
               1
             ],
             "details": "로그 수집 아키텍처 설계, 중요 이벤트 분류 체계 구축, 실시간 알림 시스템 구현, 로그 보관 정책 수립",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -391,7 +391,7 @@
             "description": "HTTPS 통신을 위한 SSL/TLS 인증서를 설정하고 보안 헤더를 구성합니다.",
             "dependencies": [],
             "details": "SSL/TLS 인증서 발급 및 설치, HSTS 헤더 설정, CSP 정책 구성, X-Frame-Options 등 보안 헤더 적용",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -435,7 +435,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-13T09:50:13.914Z",
+      "updated": "2025-07-13T09:52:31.166Z",
       "description": "Tasks for master context"
     }
   }
