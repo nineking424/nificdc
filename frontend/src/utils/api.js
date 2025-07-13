@@ -118,17 +118,21 @@ api.interceptors.response.use(
     const appStore = useAppStore()
     const toast = useToast()
     
-    // 401 Unauthorized 처리
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 401 Unauthorized 처리 (로그인 요청이 아닌 경우만)
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/auth/login')) {
       originalRequest._retry = true
       
       try {
-        // 토큰 갱신 시도
-        await authStore.refreshAccessToken()
-        
-        // 원래 요청 재시도
-        originalRequest.headers.Authorization = `Bearer ${authStore.token}`
-        return api(originalRequest)
+        // 리프레시 토큰이 있는 경우에만 갱신 시도
+        if (authStore.refreshToken) {
+          await authStore.refreshAccessToken()
+          
+          // 원래 요청 재시도
+          originalRequest.headers.Authorization = `Bearer ${authStore.token}`
+          return api(originalRequest)
+        } else {
+          throw new Error('No refresh token available')
+        }
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError)
         

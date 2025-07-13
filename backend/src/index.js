@@ -76,7 +76,7 @@ app.get('/health', (req, res) => {
 // app.use('/api/v1/upload/', enhancedRateLimit.createUploadLimiter());
 
 // API Routes with RBAC integration
-app.use('/api/v1/auth', require('../routes/api/auth'));
+app.use('/api/v1/auth', require('./routes/auth-db'));
 app.use('/api/v1/users', require('../routes/api/users'));
 app.use('/api/v1/systems', require('../routes/api/systems'));
 app.use('/api/v1/audit', require('../routes/api/audit'));
@@ -116,6 +116,16 @@ if (process.env.NODE_ENV !== 'production') {
   const specs = swaggerJsdoc(options);
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 }
+
+// Health check endpoint
+app.get('/api/v1/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 
 // Error handling middleware
 app.use(notFoundHandler);

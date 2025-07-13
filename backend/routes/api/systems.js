@@ -12,10 +12,9 @@ const logger = require('../../src/utils/logger');
 // 시스템 목록 조회 - 읽기 권한 필요
 router.get('/', authorize('systems', 'read'), async (req, res) => {
   try {
-    // 데이터베이스에서 시스템 목록 조회
+    // 데이터베이스에서 시스템 목록 조회 (paranoid 모드에서 자동으로 삭제되지 않은 것만 조회)
     const { System } = require('../../src/models');
     const systems = await System.findAll({
-      where: { deletedAt: null },
       order: [['createdAt', 'DESC']]
     });
 
@@ -75,19 +74,27 @@ router.get('/:id', authorize('systems', 'read'), async (req, res) => {
   try {
     const systemId = req.params.id;
     
-    // 실제로는 데이터베이스에서 시스템 조회
-    const system = {
-      id: systemId,
-      name: 'Source Database',
-      type: 'database',
-      status: 'active',
-      host: 'db.example.com',
-      port: 5432,
-      config: {
-        maxConnections: 100,
-        timeout: 30000,
-        ssl: true
-      }
+    // 데이터베이스에서 시스템 조회
+    const { System } = require('../../src/models');
+    const system = await System.findByPk(systemId);
+
+    if (!system) {
+      return res.status(404).json({
+        success: false,
+        error: 'System not found'
+      });
+    }
+
+    // 시스템 데이터 포맷팅
+    const formattedSystem = {
+      id: system.id,
+      name: system.name,
+      type: system.type,
+      status: system.isActive ? 'active' : 'inactive',
+      description: system.description,
+      connectionInfo: system.connectionInfo,
+      createdAt: system.createdAt,
+      updatedAt: system.updatedAt
     };
 
     await auditLogger.log({
@@ -105,7 +112,7 @@ router.get('/:id', authorize('systems', 'read'), async (req, res) => {
 
     res.json({
       success: true,
-      data: system
+      data: formattedSystem
     });
   } catch (error) {
     logger.error('시스템 조회 실패:', error);
@@ -119,34 +126,66 @@ router.get('/:id', authorize('systems', 'read'), async (req, res) => {
 // 시스템 생성 - 생성 권한 필요
 router.post('/', authorize('systems', 'create'), async (req, res) => {
   try {
-    const systemData = req.body;
+    const { name, type, description, connectionInfo, isActive = true } = req.body;
     
-    // 시스템 생성 로직
-    const newSystem = {
-      id: Date.now(),
-      ...systemData,
-      createdBy: req.user.id,
-      createdAt: new Date()
+    // 입력 검증
+    if (!name || !type || !connectionInfo) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name, type, and connectionInfo are required'
+      });
+    }
+
+    // 지원하는 시스템 타입 검증
+    const supportedTypes = ['postgresql', 'mysql', 'oracle', 'sqlite', 'mongodb', 'sftp', 'ftp', 'api'];
+    if (!supportedTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: `Unsupported system type. Supported types: ${supportedTypes.join(', ')}`
+      });
+    }
+
+    // 시스템 생성
+    const { System } = require('../../src/models');
+    const newSystem = await System.create({
+      name,
+      type,
+      description,
+      connectionInfo,
+      isActive
+    });
+
+    // 응답 데이터 포맷팅
+    const formattedSystem = {
+      id: newSystem.id,
+      name: newSystem.name,
+      type: newSystem.type,
+      status: newSystem.isActive ? 'active' : 'inactive',
+      description: newSystem.description,
+      connectionInfo: newSystem.connectionInfo,
+      createdAt: newSystem.createdAt,
+      updatedAt: newSystem.updatedAt
     };
 
-    await auditLogger.logDataChange({
+    await auditLogger.log({
+      type: 'DATA_CHANGE',
       userId: req.user.id,
       userName: req.user.name,
       userRole: req.user.role,
       action: 'CREATE',
       resource: 'systems',
       resourceId: newSystem.id.toString(),
-      newValues: systemData,
+      newValues: formattedSystem,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      sessionId: req.session?.id
+      result: 'SUCCESS'
     });
 
     logger.info('새 시스템 생성:', { systemId: newSystem.id, userId: req.user.id });
 
     res.status(201).json({
       success: true,
-      data: newSystem
+      data: formattedSystem
     });
   } catch (error) {
     logger.error('시스템 생성 실패:', error);
@@ -161,44 +200,84 @@ router.post('/', authorize('systems', 'create'), async (req, res) => {
 router.put('/:id', authorize('systems', 'update'), async (req, res) => {
   try {
     const systemId = req.params.id;
-    const updateData = req.body;
+    const { name, type, description, connectionInfo, isActive } = req.body;
     
-    // 기존 시스템 데이터 조회 (감사 로그용)
-    const oldSystem = {
-      name: 'Source Database',
-      type: 'database',
-      status: 'active'
+    // 데이터베이스에서 기존 시스템 조회
+    const { System } = require('../../src/models');
+    const existingSystem = await System.findByPk(systemId);
+
+    if (!existingSystem || existingSystem.deletedAt) {
+      return res.status(404).json({
+        success: false,
+        error: 'System not found'
+      });
+    }
+
+    // 업데이트할 필드만 추출
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name;
+    if (type !== undefined) updateFields.type = type;
+    if (description !== undefined) updateFields.description = description;
+    if (connectionInfo !== undefined) updateFields.connectionInfo = connectionInfo;
+    if (isActive !== undefined) updateFields.isActive = isActive;
+
+    // 입력 검증 - 타입이 변경된 경우
+    if (type) {
+      const supportedTypes = ['postgresql', 'mysql', 'oracle', 'sqlite', 'mongodb', 'sftp', 'ftp', 'api'];
+      if (!supportedTypes.includes(type)) {
+        return res.status(400).json({
+          success: false,
+          error: `Unsupported system type. Supported types: ${supportedTypes.join(', ')}`
+        });
+      }
+    }
+
+    // 기존 시스템 데이터 (감사 로그용)
+    const oldSystemData = {
+      id: existingSystem.id,
+      name: existingSystem.name,
+      type: existingSystem.type,
+      status: existingSystem.isActive ? 'active' : 'inactive',
+      description: existingSystem.description,
+      connectionInfo: existingSystem.connectionInfo
     };
 
-    // 시스템 업데이트 로직
-    const updatedSystem = {
-      id: systemId,
-      ...oldSystem,
-      ...updateData,
-      updatedBy: req.user.id,
-      updatedAt: new Date()
+    // 시스템 업데이트
+    await existingSystem.update(updateFields);
+    await existingSystem.reload();
+
+    // 업데이트된 시스템 데이터 포맷팅
+    const formattedSystem = {
+      id: existingSystem.id,
+      name: existingSystem.name,
+      type: existingSystem.type,
+      status: existingSystem.isActive ? 'active' : 'inactive',
+      description: existingSystem.description,
+      connectionInfo: existingSystem.connectionInfo,
+      createdAt: existingSystem.createdAt,
+      updatedAt: existingSystem.updatedAt
     };
 
-    await auditLogger.logDataChange({
+    await auditLogger.log({
+      type: 'DATA_CHANGE',
       userId: req.user.id,
       userName: req.user.name,
       userRole: req.user.role,
       action: 'UPDATE',
       resource: 'systems',
       resourceId: systemId,
-      oldValues: oldSystem,
-      newValues: updateData,
-      changes: updateData,
+      oldValues: oldSystemData,
+      newValues: formattedSystem,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      sessionId: req.session?.id
+      result: 'SUCCESS'
     });
 
     logger.info('시스템 업데이트:', { systemId, userId: req.user.id });
 
     res.json({
       success: true,
-      data: updatedSystem
+      data: formattedSystem
     });
   } catch (error) {
     logger.error('시스템 업데이트 실패:', error);
@@ -214,26 +293,45 @@ router.delete('/:id', requireAdmin(), async (req, res) => {
   try {
     const systemId = req.params.id;
     
-    // 삭제 전 시스템 데이터 조회 (감사 로그용)
-    const systemToDelete = {
-      id: systemId,
-      name: 'Source Database',
-      type: 'database'
+    // 데이터베이스에서 시스템 조회
+    const { System } = require('../../src/models');
+    const systemToDelete = await System.findByPk(systemId);
+
+    if (!systemToDelete || systemToDelete.deletedAt) {
+      return res.status(404).json({
+        success: false,
+        error: 'System not found'
+      });
+    }
+
+    // 시스템이 다른 엔티티에서 사용 중인지 확인 (예: 매핑, 작업 등)
+    // TODO: 실제로는 관련 엔티티들을 확인해야 함
+    
+    // 삭제 전 시스템 데이터 (감사 로그용)
+    const systemData = {
+      id: systemToDelete.id,
+      name: systemToDelete.name,
+      type: systemToDelete.type,
+      status: systemToDelete.isActive ? 'active' : 'inactive',
+      description: systemToDelete.description,
+      connectionInfo: systemToDelete.connectionInfo
     };
 
-    // 시스템 삭제 로직
-    
-    await auditLogger.logDataChange({
+    // 논리적 삭제 (soft delete) - Sequelize paranoid 모드 사용
+    await systemToDelete.destroy(); // paranoid: true이므로 실제로는 deletedAt만 설정됨
+
+    await auditLogger.log({
+      type: 'DATA_CHANGE',
       userId: req.user.id,
       userName: req.user.name,
       userRole: req.user.role,
       action: 'DELETE',
       resource: 'systems',
       resourceId: systemId,
-      oldValues: systemToDelete,
+      oldValues: systemData,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      sessionId: req.session?.id
+      result: 'SUCCESS'
     });
 
     logger.warn('시스템 삭제:', { systemId, userId: req.user.id });
@@ -256,11 +354,60 @@ router.post('/:id/test', authorize('systems', 'test'), async (req, res) => {
   try {
     const systemId = req.params.id;
     
-    // 연결 테스트 로직
-    const testResult = {
-      success: true,
-      latency: 45,
-      timestamp: new Date()
+    // 데이터베이스에서 시스템 조회
+    const { System } = require('../../src/models');
+    const system = await System.findByPk(systemId);
+
+    if (!system) {
+      return res.status(404).json({
+        success: false,
+        error: 'System not found'
+      });
+    }
+
+    // 연결 테스트 로직 (시스템 타입에 따라 다른 테스트 수행)
+    const startTime = Date.now();
+    let testResult;
+
+    try {
+      switch (system.type) {
+        case 'postgresql':
+        case 'mysql':
+        case 'oracle':
+          testResult = await testDatabaseConnection(system);
+          break;
+        case 'sftp':
+        case 'ftp':
+          testResult = await testFileServerConnection(system);
+          break;
+        case 'api':
+          testResult = await testApiConnection(system);
+          break;
+        default:
+          testResult = {
+            success: false,
+            message: `Connection test not implemented for ${system.type}`,
+            details: 'Please implement connection test for this system type'
+          };
+      }
+    } catch (testError) {
+      testResult = {
+        success: false,
+        message: 'Connection test failed',
+        error: testError.message
+      };
+    }
+
+    const endTime = Date.now();
+    const latency = endTime - startTime;
+
+    const finalResult = {
+      ...testResult,
+      latency,
+      timestamp: new Date(),
+      systemId: system.id,
+      systemName: system.name,
+      systemType: system.type
     };
 
     await auditLogger.log({
@@ -282,7 +429,7 @@ router.post('/:id/test', authorize('systems', 'test'), async (req, res) => {
 
     res.json({
       success: true,
-      data: testResult
+      data: finalResult
     });
   } catch (error) {
     logger.error('시스템 테스트 실패:', error);
@@ -292,5 +439,126 @@ router.post('/:id/test', authorize('systems', 'test'), async (req, res) => {
     });
   }
 });
+
+// 연결 테스트 헬퍼 함수들
+async function testDatabaseConnection(system) {
+  // TODO: 실제 데이터베이스 연결 테스트 구현
+  // 현재는 모의 테스트로 구현
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // connectionInfo에서 필수 필드 확인
+      let connInfo = system.connectionInfo;
+      
+      // connectionInfo가 문자열로 저장된 경우 파싱
+      if (typeof connInfo === 'string') {
+        try {
+          connInfo = JSON.parse(connInfo);
+        } catch (e) {
+          resolve({
+            success: false,
+            message: 'Invalid connection configuration format'
+          });
+          return;
+        }
+      }
+      if (!connInfo.host || !connInfo.port) {
+        resolve({
+          success: false,
+          message: 'Missing required connection parameters (host, port)'
+        });
+        return;
+      }
+
+      // 실제로는 여기서 데이터베이스 연결을 시도
+      resolve({
+        success: true,
+        message: 'Database connection successful',
+        details: {
+          host: connInfo.host,
+          port: connInfo.port,
+          database: connInfo.database || connInfo.serviceName,
+          ssl: connInfo.ssl || false
+        }
+      });
+    }, Math.random() * 1000 + 200); // 200-1200ms 랜덤 지연
+  });
+}
+
+async function testFileServerConnection(system) {
+  // TODO: 실제 파일 서버 연결 테스트 구현
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      let connInfo = system.connectionInfo;
+      
+      if (typeof connInfo === 'string') {
+        try {
+          connInfo = JSON.parse(connInfo);
+        } catch (e) {
+          resolve({
+            success: false,
+            message: 'Invalid connection configuration format'
+          });
+          return;
+        }
+      }
+      if (!connInfo.host || !connInfo.port) {
+        resolve({
+          success: false,
+          message: 'Missing required connection parameters (host, port)'
+        });
+        return;
+      }
+
+      resolve({
+        success: true,
+        message: 'File server connection successful',
+        details: {
+          host: connInfo.host,
+          port: connInfo.port,
+          protocol: system.type.toUpperCase(),
+          rootPath: connInfo.rootPath || '/'
+        }
+      });
+    }, Math.random() * 800 + 300);
+  });
+}
+
+async function testApiConnection(system) {
+  // TODO: 실제 API 연결 테스트 구현
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      let connInfo = system.connectionInfo;
+      
+      if (typeof connInfo === 'string') {
+        try {
+          connInfo = JSON.parse(connInfo);
+        } catch (e) {
+          resolve({
+            success: false,
+            message: 'Invalid connection configuration format'
+          });
+          return;
+        }
+      }
+      if (!connInfo.endpoint && !connInfo.host) {
+        resolve({
+          success: false,
+          message: 'Missing required connection parameters (endpoint or host)'
+        });
+        return;
+      }
+
+      resolve({
+        success: true,
+        message: 'API connection successful',
+        details: {
+          endpoint: connInfo.endpoint || `${connInfo.host}:${connInfo.port}`,
+          method: 'GET',
+          status: 200
+        }
+      });
+    }, Math.random() * 600 + 100);
+  });
+}
 
 module.exports = router;

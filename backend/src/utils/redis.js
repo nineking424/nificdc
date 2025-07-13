@@ -5,24 +5,19 @@ let client;
 
 const connectRedis = async () => {
   try {
+    const redisUrl = `redis://${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || 6379}`;
     client = redis.createClient({
-      host: process.env.REDIS_HOST || 'redis',  // Docker container hostname
-      port: process.env.REDIS_PORT || 6379,
+      url: redisUrl,
       password: process.env.REDIS_PASSWORD || 'redispassword123',
-      retry_strategy: (options) => {
-        if (options.error && options.error.code === 'ECONNREFUSED') {
-          logger.error('Redis server connection refused');
-          return new Error('Redis server connection refused');
+      socket: {
+        connectTimeout: 5000,
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            logger.error('Redis max attempts reached');
+            return new Error('Redis max retry attempts reached');
+          }
+          return Math.min(retries * 100, 3000);
         }
-        if (options.total_retry_time > 1000 * 60 * 60) {
-          logger.error('Redis retry time exhausted');
-          return new Error('Redis retry time exhausted');
-        }
-        if (options.attempt > 10) {
-          logger.error('Redis max attempts reached');
-          return undefined;
-        }
-        return Math.min(options.attempt * 100, 3000);
       }
     });
 

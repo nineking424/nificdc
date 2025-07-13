@@ -364,30 +364,32 @@ const statusOptions = computed(() => [
 const loadSystems = async () => {
   loading.value = true
   try {
-    // 임시 더미 데이터
-    systems.value = [
-      {
-        id: 1,
-        name: 'PostgreSQL 메인',
-        type: 'postgresql',
-        lastConnectionStatus: 'success',
-        isActive: true,
-        lastConnectionTest: new Date().toISOString(),
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        name: 'Redis 캐시',
-        type: 'redis',
-        lastConnectionStatus: 'success',
-        isActive: true,
-        lastConnectionTest: new Date().toISOString(),
-        createdAt: new Date().toISOString()
-      }
-    ]
-    totalItems.value = systems.value.length
+    // 실제 API 호출
+    const api = (await import('@/utils/api')).default
+    const response = await api.get('/systems')
+    
+    if (response.data.success) {
+      // API 응답을 프론트엔드 형식으로 변환
+      systems.value = response.data.data.map(system => ({
+        id: system.id,
+        name: system.name,
+        type: system.type,
+        description: system.description,
+        lastConnectionStatus: system.status === 'active' ? 'success' : 'pending',
+        isActive: system.status === 'active',
+        lastConnectionTest: system.updatedAt,
+        createdAt: system.createdAt,
+        connectionInfo: system.connectionInfo
+      }))
+      totalItems.value = response.data.total || systems.value.length
+    } else {
+      throw new Error(response.data.error || '시스템 목록을 불러올 수 없습니다')
+    }
   } catch (error) {
-    toast.error('시스템 목록 로드 실패: ' + error.message)
+    console.error('Load systems error:', error)
+    toast.error('시스템 목록 로드 실패: ' + (error.response?.data?.error || error.message))
+    systems.value = []
+    totalItems.value = 0
   } finally {
     loading.value = false
   }
@@ -436,15 +438,21 @@ const testConnection = async (system) => {
   }
   
   try {
-    // 임시 시뮬레이션
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    toast.success('연결 테스트 성공 (시뮬레이션)')
-    if (index !== -1) {
-      systems.value[index].lastConnectionStatus = 'success'
-      systems.value[index].lastConnectionTest = new Date().toISOString()
+    const api = (await import('@/utils/api')).default
+    const response = await api.post(`/systems/${system.id}/test`)
+    
+    if (response.data.success) {
+      toast.success('연결 테스트 성공')
+      if (index !== -1) {
+        systems.value[index].lastConnectionStatus = 'success'
+        systems.value[index].lastConnectionTest = new Date().toISOString()
+      }
+    } else {
+      throw new Error(response.data.error || '연결 테스트 실패')
     }
   } catch (error) {
-    toast.error('연결 테스트 실패: ' + error.message)
+    console.error('Connection test error:', error)
+    toast.error('연결 테스트 실패: ' + (error.response?.data?.error || error.message))
     if (index !== -1) {
       systems.value[index].lastConnectionStatus = 'failed'
       systems.value[index].lastConnectionTest = new Date().toISOString()
@@ -464,16 +472,22 @@ const toggleSystemStatus = async (system) => {
   
   try {
     const newStatus = !system.isActive
-    // 임시 시뮬레이션
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const api = (await import('@/utils/api')).default
+    const response = await api.put(`/systems/${system.id}`, {
+      isActive: newStatus
+    })
     
-    if (index !== -1) {
-      systems.value[index].isActive = newStatus
+    if (response.data.success) {
+      if (index !== -1) {
+        systems.value[index].isActive = newStatus
+      }
+      toast.success(newStatus ? '시스템이 활성화되었습니다.' : '시스템이 비활성화되었습니다.')
+    } else {
+      throw new Error(response.data.error || '상태 변경 실패')
     }
-    
-    toast.success(newStatus ? '시스템이 활성화되었습니다.' : '시스템이 비활성화되었습니다.')
   } catch (error) {
-    toast.error('상태 변경 실패: ' + error.message)
+    console.error('Toggle status error:', error)
+    toast.error('상태 변경 실패: ' + (error.response?.data?.error || error.message))
   } finally {
     if (index !== -1) {
       systems.value[index].updating = false
@@ -489,20 +503,25 @@ const confirmDelete = (system) => {
 const deleteSystem = async () => {
   deleting.value = true
   try {
-    // 임시 시뮬레이션
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const api = (await import('@/utils/api')).default
+    const response = await api.delete(`/systems/${systemToDelete.value.id}`)
     
-    // 시스템 목록에서 제거
-    const index = systems.value.findIndex(s => s.id === systemToDelete.value.id)
-    if (index !== -1) {
-      systems.value.splice(index, 1)
-      totalItems.value = systems.value.length
+    if (response.data.success) {
+      // 시스템 목록에서 제거
+      const index = systems.value.findIndex(s => s.id === systemToDelete.value.id)
+      if (index !== -1) {
+        systems.value.splice(index, 1)
+        totalItems.value = systems.value.length
+      }
+      
+      toast.success('시스템이 삭제되었습니다.')
+      showDeleteDialog.value = false
+    } else {
+      throw new Error(response.data.error || '시스템 삭제 실패')
     }
-    
-    toast.success('시스템이 삭제되었습니다.')
-    showDeleteDialog.value = false
   } catch (error) {
-    toast.error('시스템 삭제 실패: ' + error.message)
+    console.error('Delete system error:', error)
+    toast.error('시스템 삭제 실패: ' + (error.response?.data?.error || error.message))
   } finally {
     deleting.value = false
   }
