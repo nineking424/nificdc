@@ -202,6 +202,7 @@
         v-model="showDialog"
         max-width="600"
         persistent
+        @keydown.esc="closeDialog"
       >
         <v-card>
           <v-card-title class="text-h6">
@@ -209,16 +210,6 @@
           </v-card-title>
           <v-form ref="systemFormRef" v-model="formValid" @submit.prevent="saveSystem">
             <v-card-text>
-              <!-- 디버그 정보 -->
-              <v-alert type="info" density="compact" class="mb-4" style="font-size: 12px;">
-                <strong>디버그:</strong><br>
-                모드: {{ dialogMode }}<br>
-                이름: {{ systemForm.name }}<br>
-                타입: {{ systemForm.type }}<br>
-                활성: {{ systemForm.isActive }}<br>
-                호스트: {{ systemForm.connectionInfo.host }}<br>
-                포트: {{ systemForm.connectionInfo.port }}
-              </v-alert>
               <v-row>
                 <v-col cols="12" md="6">
                   <v-text-field
@@ -347,6 +338,16 @@
               </v-row>
             </v-card-text>
             <v-card-actions>
+              <v-btn
+                color="success"
+                variant="outlined"
+                prepend-icon="mdi-connection"
+                :loading="testingConnection"
+                :disabled="!formValid || saving"
+                @click="testConnectionInDialog"
+              >
+                연결 테스트
+              </v-btn>
               <v-spacer />
               <v-btn
                 variant="text"
@@ -469,6 +470,7 @@ const getInitialFormData = () => ({
 const deleting = ref(false)
 const saving = ref(false)
 const formValid = ref(false)
+const testingConnection = ref(false)
 const systemForm = ref(getInitialFormData())
 
 // 필터 상태
@@ -592,27 +594,20 @@ const loadSystems = async () => {
     const response = await api.get('/systems')
     
     if (response.data.success) {
-      console.log('Raw API response for systems:', response.data.data)
       // API 응답을 프론트엔드 형식으로 변환
-      systems.value = response.data.data.map(system => {
-        console.log('Processing system:', system)
-        const mappedSystem = {
-          id: system.id,
-          name: system.name,
-          type: system.type,
-          description: system.description,
-          lastConnectionStatus: system.status === 'active' ? 'success' : 'pending',
-          isActive: system.isActive,
-          lastConnectionTest: system.updatedAt,
-          createdAt: system.createdAt,
-          updatedAt: system.updatedAt,
-          connectionInfo: system.connectionInfo
-        }
-        console.log('Mapped system:', mappedSystem)
-        return mappedSystem
-      })
+      systems.value = response.data.data.map(system => ({
+        id: system.id,
+        name: system.name,
+        type: system.type,
+        description: system.description,
+        lastConnectionStatus: system.status === 'active' ? 'success' : 'pending',
+        isActive: system.isActive,
+        lastConnectionTest: system.updatedAt,
+        createdAt: system.createdAt,
+        updatedAt: system.updatedAt,
+        connectionInfo: system.connectionInfo
+      }))
       totalItems.value = response.data.total || systems.value.length
-      console.log('Final systems array:', systems.value)
     } else {
       throw new Error(response.data.error || '시스템 목록을 불러올 수 없습니다')
     }
@@ -647,20 +642,16 @@ const openCreateDialog = () => {
 }
 
 const openEditDialog = (system) => {
-  console.log('Opening edit dialog for system:', system)
   selectedSystem.value = { ...system }
   dialogMode.value = 'edit'
   
   // connectionInfo 파싱 (문자열인 경우)
   let connectionInfo = system.connectionInfo || {}
-  console.log('Original connectionInfo:', connectionInfo, 'Type:', typeof connectionInfo)
   
   if (typeof connectionInfo === 'string') {
     try {
       connectionInfo = JSON.parse(connectionInfo)
-      console.log('Parsed connectionInfo:', connectionInfo)
     } catch (e) {
-      console.warn('Failed to parse connectionInfo:', e)
       connectionInfo = {}
     }
   }
@@ -683,7 +674,6 @@ const openEditDialog = (system) => {
     }
   }
   
-  console.log('SystemForm populated with:', systemForm.value)
   showDialog.value = true
 }
 
@@ -842,6 +832,51 @@ const deleteSystem = async () => {
     toast.error('시스템 삭제 실패: ' + (error.response?.data?.error || error.message))
   } finally {
     deleting.value = false
+  }
+}
+
+const testConnectionInDialog = async () => {
+  testingConnection.value = true
+  try {
+    const api = (await import('@/utils/api')).default
+    
+    // connectionInfo 정리 (빈 값 제거)
+    const connectionInfo = {}
+    Object.keys(systemForm.value.connectionInfo).forEach(key => {
+      const value = systemForm.value.connectionInfo[key]
+      if (value !== null && value !== '' && value !== undefined) {
+        connectionInfo[key] = value
+      }
+    })
+    
+    // 임시 시스템 데이터로 연결 테스트 (저장하지 않고)
+    const testData = {
+      name: systemForm.value.name,
+      type: systemForm.value.type,
+      description: systemForm.value.description,
+      isActive: systemForm.value.isActive,
+      connectionInfo: connectionInfo
+    }
+    
+    let response
+    if (dialogMode.value === 'edit' && selectedSystem.value) {
+      // 편집 모드인 경우 기존 시스템 ID로 테스트
+      response = await api.post(`/systems/${selectedSystem.value.id}/test`)
+    } else {
+      // 새 시스템인 경우 임시로 생성하여 테스트 (실제로는 백엔드에서 테스트만 수행)
+      response = await api.post('/systems/test-connection', testData)
+    }
+    
+    if (response.data.success) {
+      toast.success('연결 테스트 성공!')
+    } else {
+      throw new Error(response.data.error || '연결 테스트 실패')
+    }
+  } catch (error) {
+    console.error('Connection test error:', error)
+    toast.error('연결 테스트 실패: ' + (error.response?.data?.error || error.message))
+  } finally {
+    testingConnection.value = false
   }
 }
 

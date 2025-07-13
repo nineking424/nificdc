@@ -502,6 +502,86 @@ router.delete('/:id', requireAdmin(), async (req, res) => {
   }
 });
 
+// 연결 정보만으로 테스트 (시스템 저장 없이) - 테스트 권한 필요
+router.post('/test-connection', authorize('systems', 'test'), async (req, res) => {
+  try {
+    const { type, connectionInfo } = req.body;
+    
+    if (!type || !connectionInfo) {
+      return res.status(400).json({
+        success: false,
+        error: 'System type and connection info are required'
+      });
+    }
+
+    // 연결 정보 유효성 검증
+    const { validateConnectionInfo } = require('../../src/utils/connectionInfoValidator');
+    let parsedConnectionInfo = connectionInfo;
+    
+    if (typeof connectionInfo === 'string') {
+      try {
+        parsedConnectionInfo = JSON.parse(connectionInfo);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid connectionInfo JSON format'
+        });
+      }
+    }
+    
+    const validation = validateConnectionInfo(type, parsedConnectionInfo);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid connection information',
+        details: validation.error
+      });
+    }
+
+    // 실제 연결 테스트 수행
+    const connectionTestService = require('../../src/services/connectionTestService');
+    const testResult = await connectionTestService.testConnection(type, validation.value);
+
+    const finalResult = {
+      ...testResult,
+      systemType: type,
+      connectionInfo: validation.value
+    };
+
+    try {
+      await auditLogger.log({
+        type: 'SYSTEM_TEST',
+        userId: req.user.id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: 'TEST_CONNECTION',
+        resource: 'systems',
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        result: testResult.success ? 'SUCCESS' : 'FAILURE',
+        metadata: {
+          latency: testResult.latency,
+          testType: 'connection_only',
+          systemType: type
+        }
+      });
+    } catch (auditError) {
+      console.warn('Audit logging failed:', auditError.message);
+    }
+
+    res.json({
+      success: true,
+      data: finalResult
+    });
+  } catch (error) {
+    logger.error('Connection test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test connection'
+    });
+  }
+});
+
 // 시스템 연결 테스트 - 테스트 권한 필요
 router.post('/:id/test', authorize('systems', 'test'), async (req, res) => {
   try {
