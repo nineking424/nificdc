@@ -414,7 +414,7 @@
               2
             ],
             "details": "로그인 시도 제한 구현, IP 기반 차단 메커니즘 개발, API Rate Limiting 미들웨어 구현, Redis 기반 요청 카운터 구축",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -435,7 +435,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-13T09:42:49.389Z",
+      "updated": "2025-07-13T09:50:13.914Z",
       "description": "Tasks for master context"
     }
   }

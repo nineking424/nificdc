@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 const { cache } = require('../utils/redis');
+const bruteForceProtection = require('../../services/bruteForceProtection');
+const auditLogger = require('../../services/auditLogger');
 
 // JWT 인증 미들웨어
 const authenticateToken = (req, res, next) => {
@@ -18,6 +20,19 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', async (err, user) => {
     if (err) {
+      // 무효한 토큰 시도를 브루트포스 공격으로 간주
+      const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+      await bruteForceProtection.recordFailedAttempt(
+        ip, 
+        'token_validation', 
+        'invalid_token',
+        {
+          tokenPrefix: token.substring(0, 20),
+          userAgent: req.get('User-Agent'),
+          error: err.message
+        }
+      );
+
       logger.security('Invalid token access attempt', {
         token: token.substring(0, 20) + '...',
         ip: req.ip,

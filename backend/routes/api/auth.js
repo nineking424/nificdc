@@ -5,33 +5,41 @@ const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const auditLogger = require('../../services/auditLogger');
 const logger = require('../../utils/logger');
+const bruteForceProtection = require('../../services/bruteForceProtection');
+const enhancedRateLimit = require('../../middleware/enhancedRateLimit');
 
 /**
  * 인증 관련 API 라우터
  * 로그인, 로그아웃, 토큰 갱신 등의 인증 기능
  */
 
-// 로그인 시도 제한 (5분간 5회 시도 제한)
-const loginLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5분
-  max: 5, // 최대 5회 시도
-  message: {
-    success: false,
-    error: 'Too many login attempts, please try again later',
-    retryAfter: 300
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    // IP와 사용자명을 조합하여 키 생성
-    return `${req.ip}-${req.body.email || req.body.username || 'unknown'}`;
-  }
-});
+// Enhanced login rate limiter with brute force protection
+const loginLimiter = enhancedRateLimit.createLoginLimiter();
 
 // 로그인
 router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password, rememberMe = false } = req.body;
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const userAgent = req.get('User-Agent') || '';
+    
+    // 브루트포스 보호 사전 검사
+    const bruteForceCheck = await bruteForceProtection.checkLoginAttempt(
+      ip, 
+      email || 'unknown',
+      userAgent,
+      { timestamp: Date.now() }
+    );
+
+    if (!bruteForceCheck.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: 'Login temporarily blocked',
+        message: bruteForceCheck.blockInfo?.reason || 'Too many failed attempts',
+        retryAfter: bruteForceCheck.retryAfter,
+        type: 'brute_force_protection'
+      });
+    }
     
     if (!email || !password) {
       await auditLogger.logLogin({
@@ -54,6 +62,14 @@ router.post('/login', loginLimiter, async (req, res) => {
     const user = await findUserByEmail(email);
     
     if (!user) {
+      // 사용자 없음 - 브루트포스 공격 기록
+      await bruteForceProtection.recordFailedAttempt(
+        ip,
+        email,
+        'user_not_found',
+        { userAgent, timestamp: Date.now() }
+      );
+
       await auditLogger.logLogin({
         success: false,
         userId: null,
@@ -92,6 +108,14 @@ router.post('/login', loginLimiter, async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
     
     if (!isValidPassword) {
+      // 잘못된 비밀번호 - 브루트포스 공격 기록
+      await bruteForceProtection.recordFailedAttempt(
+        ip,
+        email,
+        'invalid_password',
+        { userAgent, userId: user.id, timestamp: Date.now() }
+      );
+
       await auditLogger.logLogin({
         success: false,
         userId: user.id,
@@ -130,6 +154,9 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     // 세션 ID 생성
     const sessionId = generateSessionId();
+
+    // 성공적인 로그인 - 브루트포스 카운터 리셋
+    await bruteForceProtection.recordSuccessfulAttempt(ip, email);
 
     // 성공적인 로그인 감사 로그
     await auditLogger.logLogin({

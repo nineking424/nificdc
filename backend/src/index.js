@@ -11,6 +11,7 @@ const { connectDatabase } = require('./database/connection');
 const { connectRedis } = require('./utils/redis');
 const monitoringService = require('./services/monitoringService');
 const scheduledScanner = require('../services/scheduledScanner');
+const enhancedRateLimit = require('../middleware/enhancedRateLimit');
 
 // 보안 미들웨어 통합 사용
 const {
@@ -54,8 +55,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 로그인 Rate Limiting 적용
-app.use('/api/v1/auth/login', getLoginRateLimit());
+// Enhanced Rate Limiting 적용
+app.use('/api/v1/', enhancedRateLimit.createApiLimiter());
+app.use('/api/v1/auth/login', enhancedRateLimit.createLoginLimiter());
+app.use('/api/v1/admin/', enhancedRateLimit.createAdminLimiter());
+app.use('/api/v1/upload/', enhancedRateLimit.createUploadLimiter());
 
 // API Routes with RBAC integration
 app.use('/api/v1/auth', require('../routes/api/auth'));
@@ -65,6 +69,7 @@ app.use('/api/v1/audit', require('../routes/api/audit'));
 app.use('/api/v1/alerts', require('../routes/api/alerts'));
 app.use('/api/v1/security', require('../routes/api/security'));
 app.use('/api/v1/security-scan', require('../routes/api/security-scan'));
+app.use('/api/v1/brute-force', require('../routes/api/brute-force'));
 app.use('/api/v1/data', require('./routes/data'));
 app.use('/api/v1/mappings', require('./routes/mappings'));
 app.use('/api/v1/jobs', require('./routes/jobs'));
