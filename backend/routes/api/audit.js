@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authorize, requireAdmin } = require('../../middleware/rbac');
 const auditLogger = require('../../services/auditLogger');
-const AuditLog = require('../../models/AuditLog');
-const logger = require('../../utils/logger');
+const AuditLog = require('../../src/models/AuditLog');
+const logger = require('../../src/utils/logger');
 const { Op } = require('sequelize');
 
 /**

@@ -1,5 +1,6 @@
 const logger = require('../src/utils/logger');
 const auditLogger = require('../services/auditLogger');
+const jwt = require('jsonwebtoken');
 
 /**
  * 역할 기반 접근 제어(RBAC) 미들웨어
@@ -135,6 +136,27 @@ function hasConditionalPermission(user, resource, action, resourceId) {
 function authorize(resource, action, options = {}) {
   return async (req, res, next) => {
     try {
+      // JWT 토큰 검증 먼저 수행
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1];
+
+      if (!token) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          code: 'AUTH_REQUIRED'
+        });
+      }
+
+      try {
+        const user = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'access-secret');
+        req.user = user;
+      } catch (jwtError) {
+        return res.status(403).json({
+          error: 'Invalid or expired token',
+          code: 'INVALID_TOKEN'
+        });
+      }
+
       // 사용자 인증 확인
       if (!req.user) {
         await auditLogger.log({

@@ -3,7 +3,7 @@ const router = express.Router();
 const { requireAdmin } = require('../../middleware/rbac');
 const { getSSLStatus, validateTLSConfig } = require('../../config/ssl');
 const auditLogger = require('../../services/auditLogger');
-const logger = require('../../utils/logger');
+const logger = require('../../src/utils/logger');
 
 /**
  * 보안 설정 관리 API 라우터

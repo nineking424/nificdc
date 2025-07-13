@@ -8,7 +8,24 @@ const consoleFormat = combine(
   colorize(),
   timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.printf(({ level, message, timestamp, ...meta }) => {
-    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+    let metaStr = '';
+    if (Object.keys(meta).length) {
+      try {
+        // Safe JSON stringify to handle circular references
+        metaStr = JSON.stringify(meta, (key, value) => {
+          // Skip circular references and complex objects
+          if (value && typeof value === 'object' && value.constructor && 
+              (value.constructor.name === 'Sequelize' || 
+               value.constructor.name.includes('Dialect') ||
+               value.constructor.name.includes('Model'))) {
+            return '[Complex Object]';
+          }
+          return value;
+        }, 2);
+      } catch (error) {
+        metaStr = '[Circular Reference]';
+      }
+    }
     return `${timestamp} [${level}]: ${message} ${metaStr}`;
   })
 );

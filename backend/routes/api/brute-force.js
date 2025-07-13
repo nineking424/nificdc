@@ -3,7 +3,7 @@ const router = express.Router();
 const { authorize, requireAdmin } = require('../../middleware/rbac');
 const bruteForceProtection = require('../../services/bruteForceProtection');
 const auditLogger = require('../../services/auditLogger');
-const logger = require('../../utils/logger');
+const logger = require('../../src/utils/logger');
 
 /**
  * 브루트포스 방어 관리 API

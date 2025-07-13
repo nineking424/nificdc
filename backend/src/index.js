@@ -77,18 +77,18 @@ app.get('/health', (req, res) => {
 
 // API Routes with RBAC integration
 app.use('/api/v1/auth', require('../routes/api/auth'));
-// Temporarily disabled until path issues are resolved
-// app.use('/api/v1/users', require('../routes/api/users'));
-// app.use('/api/v1/systems', require('../routes/api/systems'));
-// app.use('/api/v1/audit', require('../routes/api/audit'));
-// app.use('/api/v1/alerts', require('../routes/api/alerts'));
-// app.use('/api/v1/security', require('../routes/api/security'));
-// app.use('/api/v1/security-scan', require('../routes/api/security-scan'));
-// app.use('/api/v1/brute-force', require('../routes/api/brute-force'));
-// app.use('/api/v1/data', require('./routes/data'));
-// app.use('/api/v1/mappings', require('./routes/mappings'));
-// app.use('/api/v1/jobs', require('./routes/jobs'));
-// app.use('/api/v1/monitoring', require('./routes/monitoring'));
+app.use('/api/v1/users', require('../routes/api/users'));
+app.use('/api/v1/systems', require('../routes/api/systems'));
+app.use('/api/v1/audit', require('../routes/api/audit'));
+app.use('/api/v1/alerts', require('../routes/api/alerts'));
+app.use('/api/v1/security', require('../routes/api/security'));
+app.use('/api/v1/security-scan', require('../routes/api/security-scan'));
+app.use('/api/v1/brute-force', require('../routes/api/brute-force'));
+// Basic routes - enable only existing ones for now
+app.use('/api/v1/data', require('./routes/data'));
+app.use('/api/v1/mappings', require('./routes/mappings'));
+app.use('/api/v1/jobs', require('./routes/jobs'));
+// app.use('/api/v1/monitoring', require('./routes/monitoring')); // File doesn't exist yet
 
 // Swagger documentation
 if (process.env.NODE_ENV !== 'production') {

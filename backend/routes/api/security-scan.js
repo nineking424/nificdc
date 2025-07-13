@@ -3,7 +3,7 @@ const router = express.Router();
 const { authorize, requireAdmin } = require('../../middleware/rbac');
 const vulnerabilityScanner = require('../../services/vulnerabilityScanner');
 const auditLogger = require('../../services/auditLogger');
-const logger = require('../../utils/logger');
+const logger = require('../../src/utils/logger');
 const fs = require('fs');
 const path = require('path');
 

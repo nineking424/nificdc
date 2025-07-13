@@ -77,16 +77,16 @@ module.exports = {
       RETURNS TRIGGER AS $$
       BEGIN
           IF TG_OP = 'DELETE' THEN
-              INSERT INTO audit_logs(action, table_name, record_id, old_values, created_at)
-              VALUES('DELETE', TG_TABLE_NAME, OLD.id, row_to_json(OLD), CURRENT_TIMESTAMP);
+              INSERT INTO audit_logs(id, action, table_name, record_id, old_values, created_at)
+              VALUES(uuid_generate_v4(), 'DELETE', TG_TABLE_NAME, OLD.id, row_to_json(OLD), CURRENT_TIMESTAMP);
               RETURN OLD;
           ELSIF TG_OP = 'UPDATE' THEN
-              INSERT INTO audit_logs(action, table_name, record_id, old_values, new_values, created_at)
-              VALUES('UPDATE', TG_TABLE_NAME, NEW.id, row_to_json(OLD), row_to_json(NEW), CURRENT_TIMESTAMP);
+              INSERT INTO audit_logs(id, action, table_name, record_id, old_values, new_values, created_at)
+              VALUES(uuid_generate_v4(), 'UPDATE', TG_TABLE_NAME, NEW.id, row_to_json(OLD), row_to_json(NEW), CURRENT_TIMESTAMP);
               RETURN NEW;
           ELSIF TG_OP = 'INSERT' THEN
-              INSERT INTO audit_logs(action, table_name, record_id, new_values, created_at)
-              VALUES('INSERT', TG_TABLE_NAME, NEW.id, row_to_json(NEW), CURRENT_TIMESTAMP);
+              INSERT INTO audit_logs(id, action, table_name, record_id, new_values, created_at)
+              VALUES(uuid_generate_v4(), 'INSERT', TG_TABLE_NAME, NEW.id, row_to_json(NEW), CURRENT_TIMESTAMP);
               RETURN NEW;
           END IF;
           RETURN NULL;

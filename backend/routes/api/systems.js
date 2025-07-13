@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authorize, requireAdmin } = require('../../middleware/rbac');
 const auditLogger = require('../../services/auditLogger');
-const logger = require('../../utils/logger');
+const logger = require('../../src/utils/logger');
 
 /**
  * 시스템 관리 API 라우터
@@ -12,24 +12,24 @@ const logger = require('../../utils/logger');
 // 시스템 목록 조회 - 읽기 권한 필요
 router.get('/', authorize('systems', 'read'), async (req, res) => {
   try {
-    // 실제로는 데이터베이스에서 시스템 목록 조회
-    const systems = [
-      {
-        id: 1,
-        name: 'Source Database',
-        type: 'database',
-        status: 'active',
-        host: 'db.example.com',
-        port: 5432
-      },
-      {
-        id: 2,
-        name: 'Target API',
-        type: 'api',
-        status: 'active',
-        endpoint: 'https://api.example.com'
-      }
-    ];
+    // 데이터베이스에서 시스템 목록 조회
+    const { System } = require('../../src/models');
+    const systems = await System.findAll({
+      where: { deletedAt: null },
+      order: [['createdAt', 'DESC']]
+    });
+
+    // 시스템 데이터 포맷팅
+    const formattedSystems = systems.map(system => ({
+      id: system.id,
+      name: system.name,
+      type: system.type,
+      status: system.isActive ? 'active' : 'inactive',
+      description: system.description,
+      connectionInfo: system.connectionInfo,
+      createdAt: system.createdAt,
+      updatedAt: system.updatedAt
+    }));
 
     await auditLogger.log({
       type: 'DATA_ACCESS',
@@ -45,8 +45,8 @@ router.get('/', authorize('systems', 'read'), async (req, res) => {
 
     res.json({
       success: true,
-      data: systems,
-      total: systems.length
+      data: formattedSystems,
+      total: formattedSystems.length
     });
   } catch (error) {
     logger.error('시스템 목록 조회 실패:', error);

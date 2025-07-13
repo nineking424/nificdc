@@ -3,7 +3,7 @@ const router = express.Router();
 const { authorize, requireAdmin } = require('../../middleware/rbac');
 const alertManager = require('../../services/alertManager');
 const auditLogger = require('../../services/auditLogger');
-const logger = require('../../utils/logger');
+const logger = require('../../src/utils/logger');
 
 /**
  * 알림 관리 API 라우터

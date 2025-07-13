@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const logger = require('../utils/logger');
+const logger = require('../src/utils/logger');
 
 /**
  * SSL/TLS 설정 관리
