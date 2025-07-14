@@ -16,8 +16,20 @@ const logger = require('../utils/logger');
 class ConnectionTestService {
   /**
    * 시스템 타입에 따른 연결 테스트 수행
+   * 호환성을 위해 system 객체나 (systemType, connectionInfo) 모두 지원
    */
-  async testConnection(systemType, connectionInfo) {
+  async testConnection(systemOrType, connectionInfo) {
+    let systemType, connInfo;
+    
+    if (typeof systemOrType === 'object' && systemOrType.type) {
+      // system 객체가 전달된 경우
+      systemType = systemOrType.type;
+      connInfo = systemOrType.connectionInfo;
+    } else {
+      // 별도의 인자로 전달된 경우
+      systemType = systemOrType;
+      connInfo = connectionInfo;
+    }
     const startTime = Date.now();
     
     try {
@@ -25,32 +37,32 @@ class ConnectionTestService {
       
       switch (systemType) {
         case 'postgresql':
-          result = await this.testPostgreSQL(connectionInfo);
+          result = await this.testPostgreSQL(connInfo);
           break;
         case 'mysql':
-          result = await this.testMySQL(connectionInfo);
+          result = await this.testMySQL(connInfo);
           break;
         case 'oracle':
-          result = await this.testOracle(connectionInfo);
+          result = await this.testOracle(connInfo);
           break;
         case 'sqlite':
-          result = await this.testSQLite(connectionInfo);
+          result = await this.testSQLite(connInfo);
           break;
         case 'mongodb':
-          result = await this.testMongoDB(connectionInfo);
+          result = await this.testMongoDB(connInfo);
           break;
         case 'redis':
-          result = await this.testRedis(connectionInfo);
+          result = await this.testRedis(connInfo);
           break;
         case 'sftp':
-          result = await this.testSFTP(connectionInfo);
+          result = await this.testSFTP(connInfo);
           break;
         case 'ftp':
-          result = await this.testFTP(connectionInfo);
+          result = await this.testFTP(connInfo);
           break;
         case 'api':
         case 'api_rest':
-          result = await this.testAPI(connectionInfo);
+          result = await this.testAPI(connInfo);
           break;
         default:
           result = {
@@ -212,9 +224,39 @@ class ConnectionTestService {
    */
   async testSQLite(connInfo) {
     return new Promise((resolve, reject) => {
-      const dbPath = connInfo.database || connInfo.path || ':memory:';
+      // SQLite 파일 경로가 명시적으로 제공되지 않으면 에러
+      const dbPath = connInfo.database || connInfo.path;
       
-      const db = new sqlite3.Database(dbPath, (err) => {
+      if (!dbPath) {
+        reject(new Error('SQLite database path is required'));
+        return;
+      }
+      
+      // :memory: 데이터베이스는 테스트 목적으로만 허용하고 경고 표시
+      if (dbPath === ':memory:') {
+        resolve({
+          success: true,
+          message: 'SQLite in-memory database connection successful (test mode)',
+          details: {
+            database: dbPath,
+            version: 'In-memory database',
+            warning: 'This is a temporary in-memory database'
+          }
+        });
+        return;
+      }
+      
+      // 실제 파일 경로인 경우 파일 존재 여부 확인
+      const fs = require('fs');
+      const path = require('path');
+      
+      // 파일이 존재하는지 확인
+      if (!fs.existsSync(dbPath)) {
+        reject(new Error(`SQLite database file not found: ${dbPath}`));
+        return;
+      }
+      
+      const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
         if (err) {
           reject(new Error(`SQLite connection failed: ${err.message}`));
           return;
@@ -233,7 +275,8 @@ class ConnectionTestService {
             message: 'SQLite connection successful',
             details: {
               database: dbPath,
-              version: row.version
+              version: row.version,
+              fileSize: fs.statSync(dbPath).size
             }
           });
         });

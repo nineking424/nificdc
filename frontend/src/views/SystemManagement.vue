@@ -211,6 +211,13 @@
               class="modern-data-table"
               @update:options="onTableOptionsUpdate"
             >
+          <!-- 설명 -->
+          <template #item.description="{ item }">
+            <span class="text-truncate" style="max-width: 200px; display: inline-block;" :title="item.description">
+              {{ item.description || '설명 없음' }}
+            </span>
+          </template>
+
           <!-- 시스템 타입 -->
           <template #item.type="{ item }">
             <v-chip
@@ -218,7 +225,7 @@
               size="small"
               class="text-capitalize"
             >
-              {{ $t(`systems.types.${item.type}`) }}
+              {{ getSystemTypeLabel(item.type) }}
             </v-chip>
           </template>
 
@@ -593,7 +600,7 @@ const showDeleteDialog = ref(false)
 const selectedSystem = ref(null)
 const systemToDelete = ref(null)
 const dialogMode = ref('create')
-const viewMode = ref('grid') // 'grid' or 'table'
+const viewMode = ref('table') // 'grid' or 'table' - default to table for better list view
 // 폼 초기값
 const getInitialFormData = () => ({
   name: '',
@@ -634,43 +641,49 @@ const totalItems = ref(0)
 // 시스템 목록
 const systems = ref([])
 
-// 테이블 헤더
+// 테이블 헤더 - Enhanced for better column layout
 const headers = computed(() => [
   {
     title: t('systems.name'),
     key: 'name',
-    sortable: true
+    sortable: true,
+    width: '200px'
+  },
+  {
+    title: '설명',
+    key: 'description',
+    sortable: false,
+    width: '250px'
   },
   {
     title: t('systems.type'),
     key: 'type',
-    sortable: true
+    sortable: true,
+    width: '140px'
   },
   {
     title: '연결 상태',
     key: 'lastConnectionStatus',
-    sortable: true
+    sortable: true,
+    width: '120px'
   },
   {
     title: t('systems.isActive'),
     key: 'isActive',
-    sortable: true
+    sortable: true,
+    width: '100px'
   },
   {
     title: '마지막 테스트',
     key: 'lastConnectionTest',
-    sortable: true
-  },
-  {
-    title: t('systems.createdAt'),
-    key: 'createdAt',
-    sortable: true
+    sortable: true,
+    width: '160px'
   },
   {
     title: t('table.actions'),
     key: 'actions',
     sortable: false,
-    width: '150px'
+    width: '140px'
   }
 ])
 
@@ -906,21 +919,60 @@ const testConnection = async (system) => {
     const api = (await import('@/utils/api')).default
     const response = await api.post(`/systems/${system.id}/test`)
     
-    if (response.data.success && response.data.data.success) {
-      toast.success('연결 테스트 성공')
+    // Debug: 응답 데이터 상세 로깅
+    console.log('Connection test response for', system.name, ':', response.data)
+    
+    // API 응답이 성공적이고 테스트 결과도 성공인 경우
+    if (response.data.success) {
+      if (response.data.data && response.data.data.success) {
+        toast.success('연결 테스트 성공')
+        // 해당 시스템의 상태를 성공으로 업데이트
+        if (index !== -1) {
+          systems.value[index].lastConnectionStatus = 'success'
+          systems.value[index].lastConnectionTest = new Date().toISOString()
+          systems.value[index].lastConnectionMessage = response.data.data.message || ''
+          systems.value[index].lastConnectionLatency = response.data.data.latency || null
+        }
+      } else {
+        // API는 성공했지만 연결 테스트는 실패한 경우
+        const errorMessage = response.data.data?.message || response.data.data?.error || '연결 테스트 실패'
+        toast.error('연결 테스트 실패: ' + errorMessage)
+        // 해당 시스템의 상태를 실패로 업데이트
+        if (index !== -1) {
+          systems.value[index].lastConnectionStatus = 'failed'
+          systems.value[index].lastConnectionTest = new Date().toISOString()
+          systems.value[index].lastConnectionMessage = errorMessage
+          systems.value[index].lastConnectionLatency = null
+        }
+      }
     } else {
-      const errorMessage = response.data.data?.message || response.data.data?.error || '연결 테스트 실패'
-      throw new Error(errorMessage)
+      // API 응답 자체가 실패인 경우
+      const errorMessage = response.data.error || '연결 테스트 요청 실패'
+      toast.error('연결 테스트 실패: ' + errorMessage)
+      if (index !== -1) {
+        systems.value[index].lastConnectionStatus = 'failed'
+        systems.value[index].lastConnectionTest = new Date().toISOString()
+        systems.value[index].lastConnectionMessage = errorMessage
+        systems.value[index].lastConnectionLatency = null
+      }
     }
   } catch (error) {
     console.error('Connection test error:', error)
-    toast.error('연결 테스트 실패: ' + (error.response?.data?.error || error.message))
+    // 네트워크 오류나 기타 예외 처리
+    const errorMessage = error.response?.data?.error || error.message || '연결 테스트 중 오류 발생'
+    toast.error('연결 테스트 실패: ' + errorMessage)
+    if (index !== -1) {
+      systems.value[index].lastConnectionStatus = 'failed'
+      systems.value[index].lastConnectionTest = new Date().toISOString()
+      systems.value[index].lastConnectionMessage = errorMessage
+      systems.value[index].lastConnectionLatency = null
+    }
   } finally {
     if (index !== -1) {
       systems.value[index].testing = false
     }
-    // 연결 테스트 후 시스템 목록 새로고침 (데이터베이스에서 최신 상태 가져오기)
-    loadSystems()
+    // 순서 유지를 위해 전체 새로고침 대신 해당 시스템만 업데이트 완료
+    // loadSystems() 호출을 제거하여 순서 변경 방지
   }
 }
 
@@ -1131,10 +1183,14 @@ watch(viewMode, (newMode) => {
 // 라이프사이클
 onMounted(() => {
   systemForm.value = getInitialFormData()
-  // 저장된 뷰 모드 복원
+  // 저장된 뷰 모드 복원 (기본값은 'table')
   const savedViewMode = localStorage.getItem('systemManagementViewMode')
   if (savedViewMode && ['grid', 'table'].includes(savedViewMode)) {
     viewMode.value = savedViewMode
+  } else {
+    // 기본값을 table로 설정하고 저장
+    viewMode.value = 'table'
+    localStorage.setItem('systemManagementViewMode', 'table')
   }
   loadSystems()
 })
@@ -1902,7 +1958,8 @@ onMounted(() => {
 @media (max-width: 640px) {
   .action-button {
     padding: 0.625rem 1.25rem;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
+    min-height: 44px; /* 터치 친화적 크기 */
   }
   
   .dialog-header {
@@ -1922,6 +1979,115 @@ onMounted(() => {
   .action-group {
     width: 100%;
     justify-content: space-between;
+  }
+  
+  /* 모바일 최적화 개선 */
+  .page-header {
+    padding: 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .page-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  
+  .header-stats {
+    gap: 0.75rem;
+  }
+  
+  .stat-item {
+    padding: 0.75rem;
+    min-width: 80px;
+  }
+  
+  .stat-number {
+    font-size: 1.25rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+  }
+  
+  .system-card {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .system-header {
+    margin-bottom: 0.75rem;
+  }
+  
+  .system-name {
+    font-size: 1.125rem;
+  }
+  
+  .system-actions .action-button {
+    padding: 0.5rem;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  
+  .filter-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* 작은 모바일 디바이스 */
+@media (max-width: 375px) {
+  .page-header {
+    padding: 0.75rem;
+  }
+  
+  .page-title {
+    font-size: 1.25rem;
+  }
+  
+  .header-stats {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .stat-item {
+    text-align: center;
+    width: 100%;
+  }
+  
+  .action-button {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .systems-grid {
+    padding: 0.5rem;
+  }
+}
+
+/* 터치 디바이스 최적화 */
+@media (hover: none) and (pointer: coarse) {
+  .action-button,
+  .system-actions .action-button,
+  .filter-button,
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .system-card:hover {
+    transform: none;
+  }
+  
+  .action-button:hover {
+    transform: none;
   }
 }
 </style>
