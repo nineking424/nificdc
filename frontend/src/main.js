@@ -7,8 +7,13 @@ import i18n from './plugins/i18n'
 import toast from './plugins/toast'
 import './assets/styles/main.scss'
 import './styles/design-system.css'
+import './styles/mobile.css'
+import { initMobileOptimization } from './utils/mobile'
 
 const app = createApp(App)
+
+// 모바일 최적화 초기화
+initMobileOptimization()
 
 // 글로벌 에러 핸들링
 app.config.errorHandler = (err, instance, info) => {

@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # Frontend - Vue.js SPA
   frontend:
@@ -7,8 +9,8 @@ services:
     container_name: nificdc-frontend
     ports:
       - "8080:8080"
-    # environment:
-      # 동적 API URL 감지를 위해 환경변수 제거
+    environment:
+      - VUE_APP_API_BASE_URL=http://localhost:3000/api/v1
     networks:
       - nificdc-network
     depends_on:

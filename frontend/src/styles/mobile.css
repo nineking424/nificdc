@@ -1,0 +1,437 @@
+/* Mobile-first Responsive Styles for NiFiCDC */
+
+/* Login Page Mobile Fixes */
+@media (max-width: 768px) {
+  /* 로그인 페이지 모바일 전용 스타일 */
+  .login-container {
+    background: #ffffff !important;
+  }
+  
+  .login-content {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  
+  .visual-section {
+    display: none !important;
+  }
+  
+  .login-form-section {
+    width: 100% !important;
+    min-height: 100vh !important;
+    background: #ffffff !important;
+    padding: 2rem 1rem !important;
+  }
+  
+  .login-form-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 1rem !important;
+  }
+}
+
+/* Mobile Base Styles */
+@media (max-width: 640px) {
+  /* Layout Adjustments */
+  .v-main {
+    padding: 0 !important;
+  }
+  
+  .v-container {
+    padding: 12px !important;
+    max-width: 100% !important;
+  }
+  
+  /* Typography Scaling */
+  h1 { font-size: 1.75rem !important; }
+  h2 { font-size: 1.5rem !important; }
+  h3 { font-size: 1.25rem !important; }
+  h4 { font-size: 1.125rem !important; }
+  
+  /* Button Optimizations */
+  .v-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 0 16px !important;
+  }
+  
+  .v-btn--small {
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 12px !important;
+  }
+  
+  .v-btn .v-btn__content {
+    font-size: 14px !important;
+  }
+  
+  /* Card Adjustments */
+  .v-card {
+    margin-bottom: 12px !important;
+    border-radius: 12px !important;
+  }
+  
+  .v-card-title {
+    font-size: 1.125rem !important;
+    padding: 16px 16px 8px 16px !important;
+    line-height: 1.4 !important;
+  }
+  
+  .v-card-text {
+    padding: 8px 16px 16px 16px !important;
+    font-size: 14px !important;
+  }
+  
+  /* Table Responsiveness */
+  .v-data-table {
+    font-size: 13px !important;
+  }
+  
+  .v-data-table-header th {
+    padding: 8px 4px !important;
+    font-size: 12px !important;
+  }
+  
+  .v-data-table tbody td {
+    padding: 8px 4px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Form Improvements */
+  .v-text-field .v-input__control {
+    min-height: 48px !important;
+  }
+  
+  .v-text-field .v-field__input {
+    padding: 12px 16px !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+  
+  .v-text-field .v-field-label {
+    font-size: 14px !important;
+  }
+  
+  .v-select .v-field__input {
+    font-size: 16px !important;
+  }
+  
+  /* Dialog/Modal Adjustments */
+  .v-dialog {
+    margin: 12px !important;
+  }
+  
+  .v-dialog .v-card {
+    max-height: calc(100vh - 24px) !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Tabs Optimization */
+  .v-tabs .v-tab {
+    min-width: auto !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Navigation Adjustments */
+  .v-navigation-drawer {
+    width: 280px !important;
+  }
+  
+  .v-app-bar {
+    padding: 0 12px !important;
+  }
+  
+  .v-app-bar-title {
+    font-size: 1.125rem !important;
+  }
+  
+  /* Toolbar Spacing */
+  .v-toolbar {
+    padding: 0 12px !important;
+  }
+  
+  .v-toolbar__content {
+    padding: 4px 0 !important;
+  }
+  
+  /* List Improvements */
+  .v-list-item {
+    min-height: 48px !important;
+    padding: 0 16px !important;
+  }
+  
+  .v-list-item-title {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+  
+  .v-list-item-subtitle {
+    font-size: 12px !important;
+  }
+  
+  /* Chip Optimizations */
+  .v-chip {
+    font-size: 12px !important;
+    height: 28px !important;
+    margin: 2px !important;
+  }
+  
+  /* Progress Indicators */
+  .v-progress-circular {
+    margin: 8px !important;
+  }
+  
+  /* Alert Adjustments */
+  .v-alert {
+    margin: 8px 0 !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+  }
+  
+  .v-alert .v-alert__content {
+    font-size: 14px !important;
+  }
+  
+  /* Menu Optimizations */
+  .v-menu .v-list {
+    padding: 8px 0 !important;
+  }
+  
+  .v-menu .v-list-item {
+    min-height: 44px !important;
+  }
+  
+  /* Snackbar Adjustments */
+  .v-snackbar {
+    margin: 12px !important;
+    border-radius: 8px !important;
+  }
+  
+  .v-snackbar .v-snackbar__content {
+    font-size: 14px !important;
+    padding: 14px 16px !important;
+  }
+}
+
+/* Touch-specific Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  .v-btn, .v-list-item, .v-tab, .clickable {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .v-btn:hover::before,
+  .v-list-item:hover::before,
+  .v-card:hover {
+    opacity: 0 !important;
+  }
+  
+  /* Optimize scrolling */
+  .v-data-table__wrapper {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Small Mobile Devices (iPhone SE, small Androids) */
+@media (max-width: 375px) {
+  .v-container {
+    padding: 8px !important;
+  }
+  
+  .v-card-title {
+    padding: 12px 12px 6px 12px !important;
+    font-size: 1rem !important;
+  }
+  
+  .v-card-text {
+    padding: 6px 12px 12px 12px !important;
+  }
+  
+  .v-btn {
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+  
+  .v-data-table-header th {
+    padding: 6px 2px !important;
+    font-size: 11px !important;
+  }
+  
+  .v-data-table tbody td {
+    padding: 6px 2px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Tablet Adjustments */
+@media (min-width: 641px) and (max-width: 768px) {
+  .v-container {
+    padding: 16px !important;
+  }
+  
+  .v-navigation-drawer {
+    width: 300px !important;
+  }
+  
+  .v-data-table {
+    font-size: 14px !important;
+  }
+  
+  .v-card-title {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* Landscape Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .v-app-bar {
+    height: 48px !important;
+  }
+  
+  .v-navigation-drawer {
+    width: 260px !important;
+  }
+  
+  .v-main {
+    padding-top: 48px !important;
+  }
+}
+
+/* Dark mode mobile optimizations */
+@media (prefers-color-scheme: dark) and (max-width: 640px) {
+  .v-card {
+    background-color: #1e1e1e !important;
+  }
+  
+  .v-app-bar {
+    background-color: #121212 !important;
+  }
+  
+  .v-navigation-drawer {
+    background-color: #1e1e1e !important;
+  }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .v-btn {
+    border: 2px solid currentColor !important;
+  }
+  
+  .v-card {
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+}
+
+/* Print optimizations for mobile */
+@media print {
+  .v-navigation-drawer,
+  .v-app-bar,
+  .v-btn,
+  .no-print {
+    display: none !important;
+  }
+  
+  .v-main {
+    padding: 0 !important;
+  }
+  
+  .v-card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    break-inside: avoid;
+  }
+}
+
+/* Custom mobile utility classes */
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: block !important;
+}
+
+@media (max-width: 640px) {
+  .mobile-only {
+    display: block !important;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+  }
+  
+  .mobile-text-center {
+    text-align: center !important;
+  }
+  
+  .mobile-margin-0 {
+    margin: 0 !important;
+  }
+  
+  .mobile-padding-sm {
+    padding: 8px !important;
+  }
+}
+
+/* Safe area handling for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .v-app-bar {
+    padding-top: env(safe-area-inset-top) !important;
+    height: calc(64px + env(safe-area-inset-top)) !important;
+  }
+  
+  .v-main {
+    padding-top: calc(64px + env(safe-area-inset-top)) !important;
+  }
+  
+  .v-navigation-drawer {
+    padding-top: env(safe-area-inset-top) !important;
+  }
+}
+
+/* Prevent zoom on input focus (iOS) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* Smooth scrolling for mobile */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Optimize touch scrolling */
+.v-data-table__wrapper,
+.scrollable {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}

@@ -73,13 +73,13 @@ $z-index-modal: 1050;
 $z-index-popover: 1060;
 $z-index-tooltip: 1070;
 
-// 브레이크포인트
-$breakpoint-xs: 0px;
-$breakpoint-sm: 600px;
-$breakpoint-md: 960px;
-$breakpoint-lg: 1280px;
-$breakpoint-xl: 1920px;
-$breakpoint-xxl: 2560px;
+// Mobile-first Breakpoints
+$breakpoint-xs: 375px;   // Mobile small
+$breakpoint-sm: 640px;   // Mobile large  
+$breakpoint-md: 768px;   // Tablet
+$breakpoint-lg: 1024px;  // Desktop small
+$breakpoint-xl: 1280px;  // Desktop large
+$breakpoint-xxl: 1536px; // Desktop extra large
 
 // 트랜지션
 $transition-fast: 0.15s ease;

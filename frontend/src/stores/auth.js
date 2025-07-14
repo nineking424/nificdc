@@ -39,6 +39,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       isLoading.value = true
       
+      console.log('[AUTH] Login attempt with credentials:', credentials)
+      console.log('[AUTH] Current API base URL:', api.defaults.baseURL)
+      
       // 로그인 시도 제한 확인
       if (loginAttempts.value >= 5) {
         const timeSinceLastAttempt = Date.now() - lastLoginAttempt.value
@@ -52,6 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
       
+      console.log('[AUTH] Making API call to:', `${api.defaults.baseURL}/auth/login`)
       const response = await api.post('/auth/login', credentials)
       
       if (response.data.success) {

@@ -1,7 +1,18 @@
 <template>
   <div class="app-layout">
+    <!-- 모바일 오버레이 -->
+    <div 
+      v-if="isMobile && drawer" 
+      class="mobile-overlay"
+      @click="drawer = false"
+    ></div>
+    
     <!-- 모던 사이드바 -->
-    <aside class="modern-sidebar" :class="{ collapsed: !drawer }">
+    <aside class="modern-sidebar" :class="{ 
+      collapsed: !drawer,
+      'mobile-sidebar': isMobile,
+      'mobile-open': isMobile && drawer
+    }">
       <div class="sidebar-header">
         <div class="brand-section">
           <div class="brand-icon">
@@ -135,10 +146,11 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
+import { useDisplay } from 'vuetify'
 
 export default {
   name: 'AppLayout',
@@ -147,8 +159,10 @@ export default {
     const route = useRoute()
     const authStore = useAuthStore()
     const toast = useToast()
+    const { mobile } = useDisplay()
     
     const drawer = ref(true)
+    const isMobile = computed(() => mobile.value)
     
     const menuItems = [
       {
@@ -231,6 +245,7 @@ export default {
     
     return {
       drawer,
+      isMobile,
       menuItems,
       currentPageTitle,
       userInfo,
@@ -271,6 +286,30 @@ export default {
 
 .modern-sidebar.collapsed {
   width: 80px;
+}
+
+/* 모바일 오버레이 */
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+
+/* 모바일 사이드바 */
+.modern-sidebar.mobile-sidebar {
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  width: 280px;
+  z-index: 1001;
+}
+
+.modern-sidebar.mobile-open {
+  transform: translateX(0);
 }
 
 .sidebar-header {
@@ -785,6 +824,53 @@ export default {
   
   .user-button {
     padding: 0.5rem;
+  }
+  
+  /* 모바일 사이드바 추가 스타일 */
+  .modern-sidebar {
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .modern-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  
+  .sidebar-header {
+    padding: 1rem;
+    min-height: 64px;
+  }
+  
+  .nav-link {
+    padding: 12px 16px;
+    margin: 2px 8px;
+    min-height: 48px; /* 터치 친화적 크기 */
+  }
+  
+  .content-wrapper {
+    margin-top: 56px;
+    min-height: calc(100vh - 56px);
+    padding: 12px;
+  }
+}
+
+/* 터치 디바이스 최적화 */
+@media (hover: none) and (pointer: coarse) {
+  .nav-link,
+  .toggle-btn,
+  .header-actions .v-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .nav-link:hover::before {
+    opacity: 0;
   }
 }
 </style>

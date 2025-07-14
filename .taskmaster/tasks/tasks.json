@@ -2,432 +2,151 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
-        "title": "프로젝트 초기 설정 및 개발 환경 구축",
-        "description": "NiFiCDC 프로젝트의 기본 구조를 설정하고 개발 환경을 구축합니다. Docker 기반 컨테이너화 환경과 마이크로서비스 아키텍처를 위한 기본 구조를 설정합니다.",
-        "details": "1. 프로젝트 디렉토리 구조 생성:\n```\nnificdc/\n├── frontend/          # Vue.js SPA\n├── backend/           # RESTful API 서버\n├── database/          # DB 스키마 및 마이그레이션\n├── docker/            # Docker 설정 파일\n├── docs/              # 프로젝트 문서\n└── scripts/           # 유틸리티 스크립트\n```\n\n2. Docker Compose 설정:\n```yaml\nversion: '3.8'\nservices:\n  frontend:\n    build: ./frontend\n    ports:\n      - \"8080:80\"\n  backend:\n    build: ./backend\n    ports:\n      - \"3000:3000\"\n    environment:\n      - DB_HOST=database\n      - REDIS_HOST=redis\n  database:\n    image: postgres:14\n    environment:\n      - POSTGRES_DB=nificdc\n      - POSTGRES_USER=admin\n      - POSTGRES_PASSWORD=secure_password\n  redis:\n    image: redis:7-alpine\n```\n\n3. Git 저장소 초기화 및 브랜치 전략 설정\n4. CI/CD 파이프라인 기본 설정",
-        "testStrategy": "1. Docker Compose로 모든 서비스가 정상적으로 실행되는지 확인\n2. 각 서비스 간 네트워크 연결 테스트\n3. 개발 환경에서 hot-reload 기능 동작 확인\n4. Git 브랜치 전략에 따른 워크플로우 검증",
+        "id": 28,
+        "title": "연결 테스트 프레임워크 구현",
+        "description": "모든 지원 데이터베이스 유형에 대한 실시간 연결 테스트 기능을 구현하고, 타임아웃 설정, 사용자 정의 테스트 쿼리, SSL/TLS 검증을 포함한 포괄적인 연결 진단 기능을 개발합니다.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "details": "1. ConnectionTestService.js 구현 완료:\n```javascript\n// ConnectionTestService.js\nclass ConnectionTestService {\n  async testConnection(systemId, options = {}) {\n    const { timeout = 30000, testQuery, validateSSL = true } = options;\n    const startTime = Date.now();\n    \n    try {\n      // 모든 데이터베이스 유형 지원\n      // - PostgreSQL, MySQL, Oracle, SQLite, MongoDB, Redis\n      // - 파일 시스템: SFTP, FTP, Local FS, AWS S3, Azure Blob\n      // - REST APIs, Kafka\n      const driver = this.getDriver(system.type);\n      const connection = await driver.connect({\n        ...system.connectionConfig,\n        connectTimeout: timeout,\n        ssl: validateSSL ? system.sslConfig : false\n      });\n      \n      // 연결 성능 측정\n      const connectionTime = Date.now() - startTime;\n      \n      // 테스트 쿼리 실행\n      const queryStart = Date.now();\n      await connection.query(testQuery || this.getDefaultTestQuery(system.type));\n      const queryTime = Date.now() - queryStart;\n      \n      return {\n        success: true,\n        connectionTime,\n        queryTime,\n        metrics: await this.collectMetrics(connection)\n      };\n    } catch (error) {\n      return {\n        success: false,\n        error: this.classifyError(error),\n        diagnostics: await this.runDiagnostics(system),\n        recommendations: this.getRecommendations(error)\n      };\n    }\n  }\n}\n```\n\n2. 향상된 Systems API 구현 완료:\n- GET /systems - 검색, 필터링, 페이지네이션 지원\n- POST /systems - 유효성 검사를 통한 생성\n- PUT /systems/:id - 유효성 검사를 통한 업데이트\n- DELETE /systems/:id - 오류 처리를 포함한 삭제\n- POST /systems/:id/test - 기존 시스템 연결 테스트\n- POST /systems/test-connection - 저장 없이 연결 테스트\n\n3. 데이터베이스 통합 - 연결 상태 추적:\n- lastConnectionStatus: 마지막 연결 상태\n- lastConnectionTest: 마지막 테스트 시간\n- lastConnectionMessage: 상세 메시지\n- lastConnectionLatency: 성능 모니터링을 위한 지연 시간\n- 각 테스트 후 결과 자동 저장\n\n4. 설치된 종속성:\n- 기존: pg v8.11.3, mysql2 v3.6.5, oracledb v6.3.0, tedious v16.6.1, mongodb v6.3.0, sqlite3 v5.1.6\n- 추가: ssh2, ftp, aws-sdk (추가 연결 유형 지원)",
+        "testStrategy": "1. 단위 테스트: 각 데이터베이스 드라이버별 연결 테스트 (완료)\n2. 통합 테스트: Docker Compose를 사용한 실제 데이터베이스 연결 테스트 (완료)\n3. 성능 테스트: 실제 연결을 통한 동시 연결 테스트 검증\n4. 오류 시나리오 테스트: 실제 오류 처리 및 진단 기능 검증\n5. SSL/TLS 검증 테스트: 다양한 인증서 시나리오 처리 확인",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "ConnectionTestService.js 핵심 구현",
+            "description": "모든 데이터베이스 유형을 지원하는 포괄적인 연결 테스트 서비스 구현",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Systems API 엔드포인트 구현",
+            "description": "완전한 CRUD 작업 및 연결 테스트 엔드포인트 구현",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "데이터베이스 스키마 업데이트",
+            "description": "연결 상태 추적을 위한 필드 추가 및 자동 저장 로직 구현",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "추가 연결 유형 지원",
+            "description": "파일 시스템, REST API, Kafka 등 추가 연결 유형 구현",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "실제 연결 테스트 검증",
+            "description": "모든 지원 시스템에 대한 실제 연결 테스트 및 오류 처리 검증",
+            "status": "completed",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 29,
+        "title": "실시간 연결 상태 모니터링 시스템 구축",
+        "description": "백그라운드 헬스 체크, 실시간 상태 표시기, 연결 성능 메트릭 수집 및 자동 재시도 메커니즘을 포함한 포괄적인 모니터링 시스템을 구현합니다.",
+        "details": "1. 헬스 체크 스케줄러 구현 (Bull Queue v4.12.0 사용):\n```javascript\n// HealthCheckScheduler.js\nconst Queue = require('bull');\nconst healthCheckQueue = new Queue('health-checks', {\n  redis: { host: 'localhost', port: 6379 }\n});\n\nhealthCheckQueue.process(async (job) => {\n  const { systemId, interval } = job.data;\n  const result = await connectionTestService.testConnection(systemId);\n  \n  // 상태 업데이트 및 메트릭 저장\n  await systemService.updateStatus(systemId, result);\n  await metricsService.recordHealthCheck(systemId, result);\n  \n  // WebSocket으로 실시간 업데이트 전송\n  io.to(`system:${systemId}`).emit('status-update', result);\n  \n  // 다음 체크 스케줄링\n  await healthCheckQueue.add(\n    { systemId, interval },\n    { delay: interval * 1000 }\n  );\n});\n```\n\n2. WebSocket 서버 구현 (Socket.io v4.6.1):\n```javascript\nconst io = require('socket.io')(server, {\n  cors: { origin: '*' },\n  transports: ['websocket', 'polling']\n});\n\nio.on('connection', (socket) => {\n  socket.on('subscribe-system', (systemId) => {\n    socket.join(`system:${systemId}`);\n  });\n});\n```\n\n3. 메트릭 수집 서비스:\n```javascript\nclass MetricsService {\n  async recordHealthCheck(systemId, result) {\n    const metrics = {\n      timestamp: new Date(),\n      systemId,\n      status: result.success ? 'healthy' : 'error',\n      responseTime: result.connectionTime,\n      errorRate: await this.calculateErrorRate(systemId),\n      throughput: await this.calculateThroughput(systemId)\n    };\n    \n    // Prometheus 메트릭 업데이트\n    connectionGauge.set({ system: systemId }, result.success ? 1 : 0);\n    responseTimeHistogram.observe({ system: systemId }, result.connectionTime);\n    \n    // 시계열 데이터베이스 저장 (InfluxDB)\n    await influxDB.writePoints([{\n      measurement: 'system_health',\n      tags: { systemId },\n      fields: metrics\n    }]);\n  }\n}\n```\n\n4. 자동 재시도 메커니즘:\n```javascript\nclass RetryManager {\n  async executeWithRetry(fn, options = {}) {\n    const { maxRetries = 3, backoff = 'exponential' } = options;\n    \n    for (let attempt = 1; attempt <= maxRetries; attempt++) {\n      try {\n        return await fn();\n      } catch (error) {\n        if (attempt === maxRetries) throw error;\n        \n        const delay = this.calculateDelay(attempt, backoff);\n        await new Promise(resolve => setTimeout(resolve, delay));\n      }\n    }\n  }\n}\n```",
+        "testStrategy": "1. 헬스 체크 정확도 테스트: 모의 장애 시나리오에서 99% 이상 정확도 검증\n2. WebSocket 연결 테스트: 1000개 이상의 동시 클라이언트 연결 처리\n3. 메트릭 수집 성능 테스트: 시스템 리소스 1% 미만 사용 확인\n4. 재시도 메커니즘 테스트: 다양한 실패 시나리오에서 복구 검증\n5. 부하 테스트: K6를 사용한 대규모 모니터링 시뮬레이션",
+        "priority": "high",
+        "dependencies": [
+          28
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 30,
+        "title": "고급 보안 및 자격 증명 관리 시스템 구현",
+        "description": "AES-256 암호화, 외부 시크릿 관리 시스템 통합, 자격 증명 로테이션, 감사 로깅 및 역할 기반 액세스 제어를 포함한 엔터프라이즈급 보안 시스템을 구축합니다.",
+        "details": "1. 암호화 서비스 구현 (crypto-js v4.2.0):\n```javascript\n// EncryptionService.js\nconst CryptoJS = require('crypto-js');\nconst { generateKeyPairSync } = require('crypto');\n\nclass EncryptionService {\n  constructor() {\n    this.masterKey = this.deriveMasterKey();\n  }\n  \n  encrypt(plaintext) {\n    const iv = CryptoJS.lib.WordArray.random(16);\n    const encrypted = CryptoJS.AES.encrypt(plaintext, this.masterKey, {\n      iv: iv,\n      mode: CryptoJS.mode.CBC,\n      padding: CryptoJS.pad.Pkcs7\n    });\n    \n    return {\n      ciphertext: encrypted.toString(),\n      iv: iv.toString(CryptoJS.enc.Base64)\n    };\n  }\n  \n  decrypt(ciphertext, iv) {\n    const decrypted = CryptoJS.AES.decrypt(ciphertext, this.masterKey, {\n      iv: CryptoJS.enc.Base64.parse(iv),\n      mode: CryptoJS.mode.CBC,\n      padding: CryptoJS.pad.Pkcs7\n    });\n    \n    return decrypted.toString(CryptoJS.enc.Utf8);\n  }\n}\n```\n\n2. 외부 시크릿 관리 통합:\n```javascript\n// SecretManager.js\nclass SecretManager {\n  constructor() {\n    this.providers = {\n      vault: new HashiCorpVaultProvider(),\n      aws: new AWSSecretsManagerProvider(),\n      azure: new AzureKeyVaultProvider()\n    };\n  }\n  \n  async getSecret(secretPath, provider = 'vault') {\n    const secretProvider = this.providers[provider];\n    return await secretProvider.getSecret(secretPath);\n  }\n  \n  async rotateCredentials(systemId) {\n    const newCredentials = await this.generateNewCredentials();\n    await this.updateSystemCredentials(systemId, newCredentials);\n    await this.auditLog('credential_rotation', { systemId });\n  }\n}\n```\n\n3. 감사 로깅 시스템:\n```javascript\n// AuditLogger.js\nclass AuditLogger {\n  async log(event, details) {\n    const auditEntry = {\n      timestamp: new Date().toISOString(),\n      eventType: event,\n      userId: details.userId,\n      ipAddress: details.ipAddress,\n      userAgent: details.userAgent,\n      resource: details.resource,\n      action: details.action,\n      result: details.result,\n      metadata: details.metadata\n    };\n    \n    // 데이터베이스 저장\n    await db.auditLogs.create(auditEntry);\n    \n    // SIEM 시스템 전송\n    await siemClient.send(auditEntry);\n  }\n}\n```\n\n4. RBAC 구현 (casl v6.5.1):\n```javascript\n// abilities.js\nconst { defineAbility } = require('@casl/ability');\n\nfunction defineAbilitiesFor(user) {\n  return defineAbility((can, cannot) => {\n    if (user.role === 'admin') {\n      can('manage', 'all');\n    } else if (user.role === 'engineer') {\n      can('read', 'System');\n      can('test', 'System');\n      cannot('delete', 'System');\n      cannot('read', 'System', 'credentials');\n    }\n  });\n}\n```",
+        "testStrategy": "1. 암호화 테스트: FIPS 140-2 준수 검증, 암호화/복호화 정확성 테스트\n2. 시크릿 관리 통합 테스트: HashiCorp Vault, AWS Secrets Manager 실제 연동\n3. 감사 로그 완전성 테스트: 100% 이벤트 캡처 확인\n4. RBAC 테스트: 다양한 역할별 권한 시나리오 검증\n5. 보안 취약점 스캔: OWASP ZAP, SonarQube 사용",
         "priority": "high",
         "dependencies": [],
-        "status": "done",
+        "status": "pending",
         "subtasks": []
       },
       {
-        "id": 2,
-        "title": "백엔드 API 서버 기본 구조 구현",
-        "description": "RESTful API 서버의 기본 구조를 구현하고, 인증/권한 관리, 에러 처리, 로깅 등의 공통 기능을 설정합니다.",
-        "details": "1. Express.js/Fastify (Node.js) 기반 API 서버 구축:\n```javascript\n// app.js\nconst express = require('express');\nconst helmet = require('helmet');\nconst cors = require('cors');\nconst morgan = require('morgan');\n\nconst app = express();\n\n// 미들웨어 설정\napp.use(helmet());\napp.use(cors());\napp.use(morgan('combined'));\napp.use(express.json());\n\n// 라우터 모듈화\napp.use('/api/v1/auth', require('./routes/auth'));\napp.use('/api/v1/systems', require('./routes/systems'));\napp.use('/api/v1/data', require('./routes/data'));\napp.use('/api/v1/mappings', require('./routes/mappings'));\napp.use('/api/v1/jobs', require('./routes/jobs'));\n\n// 에러 핸들링 미들웨어\napp.use((err, req, res, next) => {\n  logger.error(err.stack);\n  res.status(err.status || 500).json({\n    error: {\n      message: err.message,\n      code: err.code\n    }\n  });\n});\n```\n\n2. JWT 기반 인증 시스템 구현\n3. 역할 기반 접근 제어(RBAC) 구현\n4. Winston 로거 설정 및 감사 로그 구현\n5. API 문서화 (Swagger/OpenAPI)",
-        "testStrategy": "1. 각 API 엔드포인트에 대한 단위 테스트 작성 (Jest)\n2. 인증/권한 미들웨어 통합 테스트\n3. 에러 처리 시나리오별 테스트\n4. API 응답시간 1초 이내 성능 테스트\n5. Postman/Insomnia 컬렉션 작성",
-        "priority": "high",
+        "id": 31,
+        "title": "포괄적인 데이터베이스 지원 확장",
+        "description": "PostgreSQL, MySQL, Oracle, SQL Server, MongoDB, SQLite 및 클라우드 데이터베이스를 포함한 다양한 데이터베이스 유형에 대한 고급 연결 옵션과 특화된 기능을 구현합니다.",
+        "details": "1. 데이터베이스별 어댑터 구현:\n```javascript\n// adapters/PostgreSQLAdapter.js\nclass PostgreSQLAdapter extends BaseAdapter {\n  async connect(config) {\n    const { Pool } = require('pg');\n    \n    const poolConfig = {\n      host: config.host,\n      port: config.port,\n      database: config.database,\n      user: config.user,\n      password: await this.decryptPassword(config.password),\n      ssl: config.ssl ? {\n        rejectUnauthorized: config.sslRejectUnauthorized,\n        ca: config.sslCa,\n        cert: config.sslCert,\n        key: config.sslKey\n      } : false,\n      max: config.poolSize || 20,\n      idleTimeoutMillis: 30000,\n      connectionTimeoutMillis: 2000\n    };\n    \n    this.pool = new Pool(poolConfig);\n    \n    // 연결 이벤트 리스너\n    this.pool.on('error', (err) => {\n      logger.error('PostgreSQL pool error', err);\n    });\n    \n    return this.pool;\n  }\n  \n  async testConnection() {\n    const client = await this.pool.connect();\n    try {\n      const result = await client.query('SELECT version()');\n      return { success: true, version: result.rows[0].version };\n    } finally {\n      client.release();\n    }\n  }\n}\n```\n\n2. Oracle 특화 기능:\n```javascript\n// adapters/OracleAdapter.js\nclass OracleAdapter extends BaseAdapter {\n  async connect(config) {\n    const oracledb = require('oracledb');\n    oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;\n    oracledb.autoCommit = true;\n    \n    // TNS 또는 Easy Connect 지원\n    const connectionString = config.tnsName || \n      `${config.host}:${config.port}/${config.serviceName}`;\n    \n    this.pool = await oracledb.createPool({\n      user: config.user,\n      password: await this.decryptPassword(config.password),\n      connectString: connectionString,\n      poolMin: 10,\n      poolMax: config.poolSize || 40,\n      poolIncrement: 5,\n      poolTimeout: 60\n    });\n    \n    return this.pool;\n  }\n}\n```\n\n3. MongoDB 레플리카셋 지원:\n```javascript\n// adapters/MongoDBAdapter.js\nclass MongoDBAdapter extends BaseAdapter {\n  async connect(config) {\n    const { MongoClient } = require('mongodb');\n    \n    let uri;\n    if (config.replicaSet) {\n      // 레플리카셋 연결 문자열\n      const hosts = config.hosts.map(h => `${h.host}:${h.port}`).join(',');\n      uri = `mongodb://${config.user}:${config.password}@${hosts}/${config.database}?replicaSet=${config.replicaSet}`;\n    } else {\n      uri = `mongodb://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;\n    }\n    \n    this.client = new MongoClient(uri, {\n      maxPoolSize: config.poolSize || 50,\n      serverSelectionTimeoutMS: 5000,\n      socketTimeoutMS: 45000\n    });\n    \n    await this.client.connect();\n    return this.client;\n  }\n}\n```\n\n4. 클라우드 데이터베이스 자동 검색:\n```javascript\n// CloudDatabaseDiscovery.js\nclass CloudDatabaseDiscovery {\n  async discoverAWSRDS() {\n    const AWS = require('aws-sdk');\n    const rds = new AWS.RDS();\n    \n    const instances = await rds.describeDBInstances().promise();\n    return instances.DBInstances.map(instance => ({\n      name: instance.DBInstanceIdentifier,\n      engine: instance.Engine,\n      endpoint: instance.Endpoint.Address,\n      port: instance.Endpoint.Port,\n      status: instance.DBInstanceStatus\n    }));\n  }\n}\n```",
+        "testStrategy": "1. 각 데이터베이스 어댑터 단위 테스트: 연결, 쿼리, 트랜잭션 기능\n2. 통합 테스트: Docker Compose로 모든 데이터베이스 유형 테스트 환경 구성\n3. 클라우드 통합 테스트: LocalStack을 사용한 AWS RDS 시뮬레이션\n4. 성능 벤치마크: 각 데이터베이스별 연결 풀 최적화 검증\n5. 호환성 테스트: 다양한 데이터베이스 버전과의 호환성 확인",
+        "priority": "medium",
         "dependencies": [
-          1
+          28
         ],
-        "status": "done",
+        "status": "pending",
         "subtasks": []
       },
       {
-        "id": 3,
-        "title": "데이터베이스 스키마 설계 및 구현",
-        "description": "시스템, 데이터, 맵핑, 작업 정의서를 저장할 데이터베이스 스키마를 설계하고 마이그레이션을 구현합니다.",
-        "details": "1. PostgreSQL 스키마 설계:\n```sql\n-- 시스템 정의서\nCREATE TABLE systems (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(255) NOT NULL,\n  type VARCHAR(50) NOT NULL CHECK (type IN ('oracle', 'postgresql', 'sqlite', 'ftp', 'local_fs')),\n  connection_info JSONB NOT NULL, -- 암호화된 접속 정보\n  is_active BOOLEAN DEFAULT true,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 데이터 정의서\nCREATE TABLE data_schemas (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  system_id UUID REFERENCES systems(id),\n  name VARCHAR(255) NOT NULL,\n  version INTEGER DEFAULT 1,\n  schema_definition JSONB NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 맵핑 정의서\nCREATE TABLE mappings (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(255) NOT NULL,\n  source_schema_id UUID REFERENCES data_schemas(id),\n  target_schema_id UUID REFERENCES data_schemas(id),\n  mapping_rules JSONB NOT NULL,\n  transformation_script TEXT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 작업 정의서\nCREATE TABLE jobs (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(255) NOT NULL,\n  mapping_id UUID REFERENCES mappings(id),\n  schedule_config JSONB,\n  priority INTEGER DEFAULT 5,\n  is_active BOOLEAN DEFAULT true,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 작업 실행 이력\nCREATE TABLE job_executions (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  job_id UUID REFERENCES jobs(id),\n  status VARCHAR(50) NOT NULL,\n  started_at TIMESTAMP,\n  completed_at TIMESTAMP,\n  error_message TEXT,\n  metrics JSONB\n);\n```\n\n2. Sequelize/TypeORM 모델 구현\n3. 데이터베이스 마이그레이션 스크립트 작성\n4. 접속 정보 암호화/복호화 유틸리티 구현",
-        "testStrategy": "1. 스키마 무결성 검증 테스트\n2. 외래 키 제약조건 테스트\n3. 암호화/복호화 기능 단위 테스트\n4. 마이그레이션 롤백 테스트\n5. 동시성 처리 테스트",
-        "priority": "high",
+        "id": 32,
+        "title": "연결 풀링 및 성능 최적화 시스템 구현",
+        "description": "구성 가능한 연결 풀 설정, 연결 수명 주기 관리, 성능 모니터링 및 자동 스케일링을 포함한 고성능 연결 관리 시스템을 구축합니다.",
+        "details": "1. 통합 연결 풀 관리자:\n```javascript\n// ConnectionPoolManager.js\nclass ConnectionPoolManager {\n  constructor() {\n    this.pools = new Map();\n    this.metrics = new PoolMetrics();\n  }\n  \n  async createPool(systemId, config) {\n    const poolConfig = {\n      min: config.minConnections || 2,\n      max: config.maxConnections || 10,\n      acquireTimeoutMillis: config.acquireTimeout || 30000,\n      createTimeoutMillis: config.createTimeout || 30000,\n      destroyTimeoutMillis: config.destroyTimeout || 5000,\n      idleTimeoutMillis: config.idleTimeout || 30000,\n      reapIntervalMillis: config.reapInterval || 1000,\n      createRetryIntervalMillis: 200,\n      propagateCreateError: false\n    };\n    \n    const pool = genericPool.createPool({\n      create: async () => {\n        const connection = await this.createConnection(systemId);\n        this.metrics.recordConnectionCreated(systemId);\n        return connection;\n      },\n      destroy: async (connection) => {\n        await connection.close();\n        this.metrics.recordConnectionDestroyed(systemId);\n      },\n      validate: async (connection) => {\n        return await this.validateConnection(connection);\n      }\n    }, poolConfig);\n    \n    // 풀 이벤트 모니터링\n    pool.on('factoryCreateError', (err) => {\n      logger.error(`Pool creation error for ${systemId}:`, err);\n      this.metrics.recordError(systemId, 'create_error');\n    });\n    \n    pool.on('factoryDestroyError', (err) => {\n      logger.error(`Pool destroy error for ${systemId}:`, err);\n      this.metrics.recordError(systemId, 'destroy_error');\n    });\n    \n    this.pools.set(systemId, pool);\n    return pool;\n  }\n  \n  async getConnection(systemId) {\n    const pool = this.pools.get(systemId);\n    if (!pool) {\n      throw new Error(`No pool found for system ${systemId}`);\n    }\n    \n    const startTime = Date.now();\n    const connection = await pool.acquire();\n    const acquireTime = Date.now() - startTime;\n    \n    this.metrics.recordAcquireTime(systemId, acquireTime);\n    \n    // 연결 래퍼로 자동 반환\n    return new ConnectionWrapper(connection, pool, this.metrics);\n  }\n}\n```\n\n2. 성능 메트릭 수집:\n```javascript\n// PoolMetrics.js\nclass PoolMetrics {\n  constructor() {\n    this.prometheus = new PrometheusClient();\n  }\n  \n  recordAcquireTime(systemId, time) {\n    this.prometheus.histogram('connection_acquire_time', time, { system: systemId });\n  }\n  \n  async getPoolStats(systemId) {\n    const pool = poolManager.getPool(systemId);\n    return {\n      size: pool.size,\n      available: pool.available,\n      borrowed: pool.borrowed,\n      pending: pool.pending,\n      max: pool.max,\n      min: pool.min\n    };\n  }\n  \n  async analyzePerformance(systemId) {\n    const stats = await this.getPoolStats(systemId);\n    const recommendations = [];\n    \n    if (stats.pending > 0 && stats.borrowed === stats.max) {\n      recommendations.push({\n        type: 'increase_pool_size',\n        reason: 'Pool exhaustion detected',\n        suggestion: `Increase max connections to ${stats.max * 1.5}`\n      });\n    }\n    \n    if (stats.available > stats.max * 0.8) {\n      recommendations.push({\n        type: 'decrease_pool_size',\n        reason: 'Pool underutilized',\n        suggestion: `Decrease max connections to ${Math.ceil(stats.max * 0.6)}`\n      });\n    }\n    \n    return recommendations;\n  }\n}\n```\n\n3. 자동 스케일링:\n```javascript\n// AutoScaler.js\nclass PoolAutoScaler {\n  constructor(poolManager, metricsService) {\n    this.poolManager = poolManager;\n    this.metricsService = metricsService;\n    this.scalingPolicies = new Map();\n  }\n  \n  async enableAutoScaling(systemId, policy) {\n    const scalingPolicy = {\n      minSize: policy.minSize || 2,\n      maxSize: policy.maxSize || 100,\n      targetUtilization: policy.targetUtilization || 0.7,\n      scaleUpThreshold: policy.scaleUpThreshold || 0.8,\n      scaleDownThreshold: policy.scaleDownThreshold || 0.3,\n      cooldownPeriod: policy.cooldownPeriod || 300000 // 5분\n    };\n    \n    this.scalingPolicies.set(systemId, scalingPolicy);\n    \n    // 주기적 스케일링 체크\n    setInterval(() => this.checkScaling(systemId), 60000); // 1분마다\n  }\n  \n  async checkScaling(systemId) {\n    const policy = this.scalingPolicies.get(systemId);\n    const metrics = await this.metricsService.getPoolMetrics(systemId);\n    const utilization = metrics.borrowed / metrics.max;\n    \n    if (utilization > policy.scaleUpThreshold) {\n      await this.scaleUp(systemId, policy);\n    } else if (utilization < policy.scaleDownThreshold) {\n      await this.scaleDown(systemId, policy);\n    }\n  }\n}\n```",
+        "testStrategy": "1. 연결 풀 부하 테스트: Apache JMeter로 동시 연결 1000개 이상 처리\n2. 성능 벤치마크: 연결 획득 시간 < 50ms, 풀 효율성 > 80%\n3. 자동 스케일링 테스트: 부하 변화에 따른 풀 크기 조정 검증\n4. 장애 복구 테스트: 연결 실패 시 자동 재생성 및 복구\n5. 메모리 누수 테스트: 장시간 실행 시 메모리 사용량 모니터링",
+        "priority": "medium",
         "dependencies": [
-          1
+          28,
+          31
         ],
-        "status": "done",
+        "status": "pending",
         "subtasks": []
       },
       {
-        "id": 4,
-        "title": "NiFi API 연동 모듈 개발",
-        "description": "외부 Apache NiFi 인스턴스와 통신하기 위한 API 클라이언트 모듈을 개발하고, 연결 상태 관리 기능을 구현합니다.",
-        "details": "1. NiFi API 클라이언트 구현:\n```javascript\n// nifiClient.js\nclass NiFiClient {\n  constructor(config) {\n    this.baseUrl = config.url;\n    this.username = config.username;\n    this.password = config.password;\n    this.token = null;\n  }\n\n  async authenticate() {\n    const response = await axios.post(`${this.baseUrl}/access/token`, {\n      username: this.username,\n      password: this.password\n    });\n    this.token = response.data.token;\n  }\n\n  async createProcessGroup(name, parentId) {\n    const response = await axios.post(\n      `${this.baseUrl}/process-groups/${parentId}/process-groups`,\n      {\n        revision: { version: 0 },\n        component: { name }\n      },\n      { headers: { Authorization: `Bearer ${this.token}` } }\n    );\n    return response.data;\n  }\n\n  async createProcessor(type, processGroupId, config) {\n    // Processor 생성 로직\n  }\n\n  async startProcessor(processorId) {\n    // Processor 시작 로직\n  }\n\n  async getProcessorStatus(processorId) {\n    // 상태 조회 로직\n  }\n}\n```\n\n2. 연결 풀 관리 구현\n3. 재시도 로직 및 Circuit Breaker 패턴 구현\n4. NiFi 버전별 API 호환성 레이어 구현\n5. 연결 상태 모니터링 및 헬스체크 기능",
-        "testStrategy": "1. Mock NiFi API 서버를 사용한 단위 테스트\n2. 연결 실패 시나리오 테스트 (타임아웃, 인증 실패 등)\n3. API 버전 호환성 테스트\n4. 동시 요청 처리 테스트\n5. 실제 NiFi 인스턴스와의 통합 테스트",
-        "priority": "high",
+        "id": 33,
+        "title": "사용자 경험 개선 및 UI/UX 향상",
+        "description": "실시간 폼 검증, 연결 설정 마법사, 대량 가져오기/내보내기, 고급 필터링 및 검색, 시스템 분류 및 태깅 기능을 포함한 향상된 사용자 인터페이스를 구현합니다.",
+        "details": "1. React 컴포넌트 개선 (React 18.2.0 + TypeScript):\n```typescript\n// ConnectionWizard.tsx\nimport { useState } from 'react';\nimport { Stepper, Step } from '@mui/material';\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\n\nconst ConnectionWizard: React.FC = () => {\n  const [activeStep, setActiveStep] = useState(0);\n  \n  const steps = [\n    { label: '데이터베이스 유형 선택', component: DatabaseTypeSelector },\n    { label: '연결 정보 입력', component: ConnectionForm },\n    { label: '고급 설정', component: AdvancedSettings },\n    { label: '연결 테스트', component: ConnectionTest },\n    { label: '완료', component: Summary }\n  ];\n  \n  const { register, handleSubmit, formState: { errors }, watch } = useForm({\n    resolver: zodResolver(connectionSchema),\n    mode: 'onChange'\n  });\n  \n  return (\n    <div className=\"connection-wizard\">\n      <Stepper activeStep={activeStep}>\n        {steps.map((step) => (\n          <Step key={step.label}>\n            <StepLabel>{step.label}</StepLabel>\n          </Step>\n        ))}\n      </Stepper>\n      \n      <div className=\"wizard-content\">\n        {React.createElement(steps[activeStep].component, {\n          register,\n          errors,\n          watch,\n          onNext: () => setActiveStep(prev => prev + 1),\n          onBack: () => setActiveStep(prev => prev - 1)\n        })}\n      </div>\n    </div>\n  );\n};\n```\n\n2. 실시간 폼 검증 (Zod v3.22.4):\n```typescript\n// schemas/connectionSchema.ts\nimport { z } from 'zod';\n\nconst connectionSchema = z.object({\n  name: z.string().min(1, '시스템 이름은 필수입니다'),\n  type: z.enum(['postgresql', 'mysql', 'oracle', 'sqlserver', 'mongodb']),\n  host: z.string().ip('유효한 IP 주소를 입력하세요'),\n  port: z.number().int().positive().max(65535),\n  database: z.string().min(1),\n  username: z.string().min(1),\n  password: z.string().min(8, '비밀번호는 최소 8자 이상이어야 합니다'),\n  ssl: z.boolean().optional(),\n  poolSize: z.number().int().min(1).max(100).optional()\n}).refine(async (data) => {\n  // 실시간 연결 가능성 체크\n  const isReachable = await checkHostReachability(data.host, data.port);\n  return isReachable;\n}, {\n  message: '호스트에 연결할 수 없습니다',\n  path: ['host']\n});\n```\n\n3. 대량 가져오기/내보내기:\n```typescript\n// BulkImportExport.tsx\nconst BulkImportExport: React.FC = () => {\n  const handleImport = async (file: File) => {\n    const reader = new FileReader();\n    reader.onload = async (e) => {\n      const content = e.target?.result as string;\n      const systems = parseImportFile(content);\n      \n      // 검증 및 미리보기\n      const validationResults = await validateSystems(systems);\n      setPreviewData({\n        valid: validationResults.valid,\n        invalid: validationResults.invalid,\n        warnings: validationResults.warnings\n      });\n    };\n    reader.readAsText(file);\n  };\n  \n  const handleExport = async (format: 'json' | 'csv' | 'yaml') => {\n    const systems = await fetchAllSystems();\n    const exportData = formatExportData(systems, format);\n    \n    const blob = new Blob([exportData], { type: getMimeType(format) });\n    const url = URL.createObjectURL(blob);\n    \n    const a = document.createElement('a');\n    a.href = url;\n    a.download = `systems-export-${Date.now()}.${format}`;\n    a.click();\n  };\n};\n```\n\n4. 고급 필터링 및 검색 (Fuse.js v7.0.0):\n```typescript\n// AdvancedSearch.tsx\nimport Fuse from 'fuse.js';\n\nconst AdvancedSearch: React.FC = () => {\n  const [filters, setFilters] = useState({\n    type: [],\n    status: [],\n    tags: [],\n    dateRange: null\n  });\n  \n  const fuseOptions = {\n    keys: ['name', 'description', 'host', 'tags'],\n    threshold: 0.3,\n    includeScore: true\n  };\n  \n  const fuse = new Fuse(systems, fuseOptions);\n  \n  const handleSearch = (query: string) => {\n    const results = fuse.search(query);\n    const filtered = results\n      .filter(result => applyFilters(result.item, filters))\n      .map(result => ({ ...result.item, score: result.score }));\n    \n    setSearchResults(filtered);\n  };\n};\n```\n\n5. 시스템 태깅 및 분류:\n```typescript\n// TagManager.tsx\nconst TagManager: React.FC = () => {\n  const [tags, setTags] = useState<Tag[]>([]);\n  \n  const handleAddTag = (systemId: string, tag: string) => {\n    const color = generateTagColor(tag);\n    api.addSystemTag(systemId, { name: tag, color });\n  };\n  \n  const TagInput = () => (\n    <Autocomplete\n      multiple\n      options={availableTags}\n      freeSolo\n      renderTags={(value, getTagProps) =>\n        value.map((option, index) => (\n          <Chip\n            variant=\"outlined\"\n            label={option}\n            {...getTagProps({ index })}\n            style={{ backgroundColor: getTagColor(option) }}\n          />\n        ))\n      }\n    />\n  );\n};\n```",
+        "testStrategy": "1. 사용성 테스트: 5명 이상의 사용자와 함께 태스크 완료 시간 측정\n2. 접근성 테스트: axe-core로 WCAG 2.1 AA 준수 확인\n3. 성능 테스트: React DevTools Profiler로 렌더링 최적화\n4. 반응형 테스트: 다양한 화면 크기에서 UI 검증\n5. E2E 테스트: Cypress로 전체 사용자 플로우 자동화 테스트",
+        "priority": "medium",
         "dependencies": [
-          2
+          28,
+          29
         ],
-        "status": "done",
+        "status": "pending",
         "subtasks": []
       },
       {
-        "id": 5,
-        "title": "Vue.js 프론트엔드 기본 구조 및 라우팅 설정",
-        "description": "Vue.js 3 기반의 SPA 프론트엔드 애플리케이션 기본 구조를 설정하고, 라우팅 및 상태 관리를 구현합니다.",
-        "details": "1. Vue.js 프로젝트 구조:\n```javascript\n// main.js\nimport { createApp } from 'vue'\nimport { createPinia } from 'pinia'\nimport router from './router'\nimport App from './App.vue'\nimport vuetify from './plugins/vuetify'\nimport i18n from './plugins/i18n'\n\nconst app = createApp(App)\napp.use(createPinia())\napp.use(router)\napp.use(vuetify)\napp.use(i18n)\napp.mount('#app')\n```\n\n2. 라우터 설정:\n```javascript\n// router/index.js\nconst routes = [\n  {\n    path: '/',\n    component: () => import('@/layouts/MainLayout.vue'),\n    children: [\n      { path: '', redirect: '/dashboard' },\n      { path: 'dashboard', component: () => import('@/views/Dashboard.vue') },\n      { path: 'systems', component: () => import('@/views/Systems.vue') },\n      { path: 'data-schemas', component: () => import('@/views/DataSchemas.vue') },\n      { path: 'mappings', component: () => import('@/views/Mappings.vue') },\n      { path: 'jobs', component: () => import('@/views/Jobs.vue') },\n      { path: 'monitoring', component: () => import('@/views/Monitoring.vue') }\n    ],\n    meta: { requiresAuth: true }\n  },\n  {\n    path: '/login',\n    component: () => import('@/views/Login.vue')\n  }\n]\n```\n\n3. Pinia 스토어 구현 (시스템, 데이터, 맵핑, 작업 상태 관리)\n4. Axios 인터셉터 설정 (인증 토큰 자동 첨부)\n5. 반응형 레이아웃 구현",
-        "testStrategy": "1. 컴포넌트 단위 테스트 (Vue Test Utils)\n2. 라우터 네비게이션 가드 테스트\n3. 스토어 액션/뮤테이션 테스트\n4. 반응형 디자인 테스트 (다양한 화면 크기)\n5. 다국어 지원 테스트",
-        "priority": "high",
+        "id": 34,
+        "title": "오류 처리 및 진단 도구 구현",
+        "description": "포괄적인 오류 분류, 연결 문제 해결 도구, 네트워크 연결성 테스트, 데이터베이스 스키마 검사 및 연결 성능 프로파일링을 포함한 고급 진단 시스템을 구축합니다.",
+        "details": "1. 오류 분류 및 처리 시스템:\n```javascript\n// ErrorClassifier.js\nclass ErrorClassifier {\n  constructor() {\n    this.errorPatterns = [\n      {\n        pattern: /ECONNREFUSED/,\n        type: 'CONNECTION_REFUSED',\n        severity: 'critical',\n        message: '데이터베이스 서버에 연결할 수 없습니다',\n        solutions: [\n          '데이터베이스 서버가 실행 중인지 확인하세요',\n          '방화벽 설정을 확인하세요',\n          '호스트 및 포트 정보가 올바른지 확인하세요'\n        ]\n      },\n      {\n        pattern: /authentication failed/i,\n        type: 'AUTH_FAILED',\n        severity: 'high',\n        message: '인증에 실패했습니다',\n        solutions: [\n          '사용자 이름과 비밀번호를 확인하세요',\n          '사용자 권한을 확인하세요',\n          '계정이 잠겨있는지 확인하세요'\n        ]\n      },\n      {\n        pattern: /SSL/i,\n        type: 'SSL_ERROR',\n        severity: 'medium',\n        message: 'SSL 연결 오류',\n        solutions: [\n          'SSL 인증서가 유효한지 확인하세요',\n          'SSL 모드 설정을 확인하세요',\n          'CA 인증서 경로를 확인하세요'\n        ]\n      }\n    ];\n  }\n  \n  classify(error) {\n    const errorString = error.toString();\n    \n    for (const pattern of this.errorPatterns) {\n      if (pattern.pattern.test(errorString)) {\n        return {\n          ...pattern,\n          originalError: error,\n          timestamp: new Date(),\n          diagnostics: this.runDiagnostics(pattern.type)\n        };\n      }\n    }\n    \n    return {\n      type: 'UNKNOWN',\n      severity: 'medium',\n      message: '알 수 없는 오류가 발생했습니다',\n      originalError: error\n    };\n  }\n}\n```\n\n2. 네트워크 진단 도구:\n```javascript\n// NetworkDiagnostics.js\nconst net = require('net');\nconst dns = require('dns').promises;\nconst ping = require('ping');\n\nclass NetworkDiagnostics {\n  async runFullDiagnostics(host, port) {\n    const results = {\n      dnsResolution: await this.checkDNS(host),\n      ping: await this.checkPing(host),\n      portOpen: await this.checkPort(host, port),\n      traceroute: await this.runTraceroute(host),\n      latency: await this.measureLatency(host, port)\n    };\n    \n    return this.generateReport(results);\n  }\n  \n  async checkPort(host, port) {\n    return new Promise((resolve) => {\n      const socket = new net.Socket();\n      socket.setTimeout(5000);\n      \n      socket.on('connect', () => {\n        socket.destroy();\n        resolve({ open: true, responseTime: Date.now() - startTime });\n      });\n      \n      socket.on('timeout', () => {\n        socket.destroy();\n        resolve({ open: false, error: 'timeout' });\n      });\n      \n      socket.on('error', (err) => {\n        resolve({ open: false, error: err.message });\n      });\n      \n      const startTime = Date.now();\n      socket.connect(port, host);\n    });\n  }\n  \n  async measureLatency(host, port, samples = 10) {\n    const measurements = [];\n    \n    for (let i = 0; i < samples; i++) {\n      const start = Date.now();\n      const result = await this.checkPort(host, port);\n      \n      if (result.open) {\n        measurements.push(Date.now() - start);\n      }\n    }\n    \n    return {\n      min: Math.min(...measurements),\n      max: Math.max(...measurements),\n      avg: measurements.reduce((a, b) => a + b, 0) / measurements.length,\n      samples: measurements\n    };\n  }\n}\n```\n\n3. 데이터베이스 스키마 검사기:\n```javascript\n// SchemaInspector.js\nclass SchemaInspector {\n  async inspectDatabase(connection, dbType) {\n    const inspector = this.getInspector(dbType);\n    return await inspector.inspect(connection);\n  }\n  \n  getInspector(dbType) {\n    const inspectors = {\n      postgresql: {\n        inspect: async (conn) => {\n          const tables = await conn.query(`\n            SELECT table_name, table_type \n            FROM information_schema.tables \n            WHERE table_schema = 'public'\n          `);\n          \n          const schemas = await conn.query(`\n            SELECT schema_name \n            FROM information_schema.schemata\n          `);\n          \n          const size = await conn.query(`\n            SELECT pg_database_size(current_database()) as size\n          `);\n          \n          return {\n            tables: tables.rows,\n            schemas: schemas.rows,\n            size: this.formatBytes(size.rows[0].size),\n            version: await this.getVersion(conn)\n          };\n        }\n      },\n      mysql: {\n        inspect: async (conn) => {\n          const [tables] = await conn.query('SHOW TABLES');\n          const [status] = await conn.query('SHOW STATUS');\n          const [variables] = await conn.query('SHOW VARIABLES');\n          \n          return {\n            tables,\n            status: this.parseStatus(status),\n            configuration: this.parseVariables(variables)\n          };\n        }\n      }\n    };\n    \n    return inspectors[dbType];\n  }\n}\n```\n\n4. 성능 프로파일러:\n```javascript\n// PerformanceProfiler.js\nclass PerformanceProfiler {\n  async profileConnection(systemId, duration = 60000) {\n    const metrics = {\n      queries: [],\n      connectionStats: [],\n      resourceUsage: []\n    };\n    \n    const startTime = Date.now();\n    const interval = setInterval(async () => {\n      // 쿼리 성능 측정\n      const queryMetric = await this.measureQueryPerformance(systemId);\n      metrics.queries.push(queryMetric);\n      \n      // 연결 통계\n      const connStats = await this.getConnectionStats(systemId);\n      metrics.connectionStats.push(connStats);\n      \n      // 리소스 사용량\n      const resources = await this.getResourceUsage(systemId);\n      metrics.resourceUsage.push(resources);\n      \n      if (Date.now() - startTime > duration) {\n        clearInterval(interval);\n      }\n    }, 1000);\n    \n    return new Promise((resolve) => {\n      setTimeout(() => {\n        clearInterval(interval);\n        resolve(this.analyzeMetrics(metrics));\n      }, duration);\n    });\n  }\n  \n  analyzeMetrics(metrics) {\n    return {\n      queryPerformance: {\n        avgResponseTime: this.calculateAverage(metrics.queries, 'responseTime'),\n        p95ResponseTime: this.calculatePercentile(metrics.queries, 'responseTime', 95),\n        throughput: metrics.queries.length / (metrics.duration / 1000)\n      },\n      connectionHealth: {\n        avgActiveConnections: this.calculateAverage(metrics.connectionStats, 'active'),\n        maxConnections: Math.max(...metrics.connectionStats.map(s => s.active)),\n        connectionChurn: this.calculateChurn(metrics.connectionStats)\n      },\n      recommendations: this.generateRecommendations(metrics)\n    };\n  }\n}\n```",
+        "testStrategy": "1. 오류 시나리오 테스트: 50개 이상의 다양한 오류 케이스 시뮬레이션\n2. 진단 도구 정확성: 실제 네트워크 문제 상황에서 진단 결과 검증\n3. 성능 프로파일러 테스트: 부하 상황에서 정확한 메트릭 수집 확인\n4. 스키마 검사기 호환성: 모든 지원 데이터베이스에서 정확한 정보 추출\n5. 사용자 피드백 테스트: 오류 해결 제안의 효과성 측정",
+        "priority": "low",
         "dependencies": [
-          2
+          28,
+          29
         ],
-        "status": "done",
+        "status": "pending",
         "subtasks": []
       },
       {
-        "id": 6,
-        "title": "시스템 정의서 CRUD 기능 구현",
-        "description": "시스템 정의서의 생성, 조회, 수정, 삭제 기능을 백엔드 API와 프론트엔드 UI 모두에서 구현합니다.",
-        "details": "1. 백엔드 API 구현:\n```javascript\n// routes/systems.js\nrouter.post('/', async (req, res) => {\n  const { name, type, connectionInfo } = req.body;\n  \n  // 접속 정보 암호화\n  const encryptedInfo = await encryptConnectionInfo(connectionInfo);\n  \n  const system = await System.create({\n    name,\n    type,\n    connectionInfo: encryptedInfo\n  });\n  \n  res.status(201).json(system);\n});\n\nrouter.get('/:id/test-connection', async (req, res) => {\n  const system = await System.findByPk(req.params.id);\n  const decryptedInfo = await decryptConnectionInfo(system.connectionInfo);\n  \n  try {\n    const isConnected = await testConnection(system.type, decryptedInfo);\n    res.json({ connected: isConnected });\n  } catch (error) {\n    res.status(400).json({ error: error.message });\n  }\n});\n```\n\n2. 프론트엔드 시스템 관리 화면:\n```vue\n<template>\n  <v-container>\n    <v-data-table\n      :headers=\"headers\"\n      :items=\"systems\"\n      :loading=\"loading\"\n    >\n      <template v-slot:top>\n        <v-toolbar flat>\n          <v-toolbar-title>시스템 관리</v-toolbar-title>\n          <v-spacer></v-spacer>\n          <v-btn color=\"primary\" @click=\"openDialog\">\n            <v-icon left>mdi-plus</v-icon>\n            시스템 추가\n          </v-btn>\n        </v-toolbar>\n      </template>\n      \n      <template v-slot:item.actions=\"{ item }\">\n        <v-icon small @click=\"testConnection(item)\">mdi-connection</v-icon>\n        <v-icon small @click=\"editItem(item)\">mdi-pencil</v-icon>\n        <v-icon small @click=\"deleteItem(item)\">mdi-delete</v-icon>\n      </template>\n    </v-data-table>\n    \n    <SystemDialog \n      v-model=\"dialog\" \n      :system=\"editedItem\"\n      @save=\"saveSystem\"\n    />\n  </v-container>\n</template>\n```\n\n3. 시스템 타입별 접속 정보 폼 구현\n4. 연결 테스트 기능 구현",
-        "testStrategy": "1. 각 시스템 타입별 CRUD 작업 테스트\n2. 접속 정보 암호화/복호화 검증\n3. 연결 테스트 기능 검증 (성공/실패 케이스)\n4. 권한별 접근 제어 테스트\n5. UI 폼 유효성 검사 테스트",
-        "priority": "medium",
+        "id": 35,
+        "title": "외부 시스템 통합 구현",
+        "description": "LDAP/Active Directory 인증, 클라우드 데이터베이스 자동 검색, 구성 관리 도구 통합 및 모니터링 시스템(Prometheus, Grafana) 연동을 구현합니다.",
+        "details": "1. LDAP/AD 통합 (ldapjs v3.0.0):\n```javascript\n// LDAPIntegration.js\nconst ldap = require('ldapjs');\n\nclass LDAPIntegration {\n  constructor(config) {\n    this.client = ldap.createClient({\n      url: config.url,\n      bindDN: config.bindDN,\n      bindCredentials: config.bindPassword,\n      searchBase: config.searchBase,\n      searchFilter: config.searchFilter || '(objectClass=user)',\n      reconnect: true\n    });\n  }\n  \n  async authenticateUser(username, password) {\n    return new Promise((resolve, reject) => {\n      // 사용자 검색\n      const searchOptions = {\n        filter: `(sAMAccountName=${username})`,\n        scope: 'sub',\n        attributes: ['dn', 'mail', 'memberOf']\n      };\n      \n      this.client.search(this.config.searchBase, searchOptions, (err, res) => {\n        if (err) return reject(err);\n        \n        let userDN = null;\n        res.on('searchEntry', (entry) => {\n          userDN = entry.objectName;\n        });\n        \n        res.on('end', () => {\n          if (!userDN) return resolve({ success: false });\n          \n          // 사용자 인증\n          const userClient = ldap.createClient({ url: this.config.url });\n          userClient.bind(userDN, password, (err) => {\n            userClient.unbind();\n            resolve({ success: !err, userDN, error: err });\n          });\n        });\n      });\n    });\n  }\n  \n  async getDatabaseCredentials(username) {\n    // AD에서 데이터베이스 자격 증명 매핑 조회\n    const user = await this.searchUser(username);\n    const dbCredentials = {};\n    \n    // 그룹 멤버십 기반 권한 매핑\n    for (const group of user.memberOf) {\n      if (group.includes('CN=DB_PostgreSQL_Admin')) {\n        dbCredentials.postgresql = {\n          username: user.sAMAccountName,\n          role: 'admin'\n        };\n      }\n    }\n    \n    return dbCredentials;\n  }\n}\n```\n\n2. 클라우드 데이터베이스 자동 검색:\n```javascript\n// CloudDiscovery.js\nclass CloudDatabaseDiscovery {\n  constructor() {\n    this.providers = {\n      aws: new AWSDiscovery(),\n      azure: new AzureDiscovery(),\n      gcp: new GCPDiscovery()\n    };\n  }\n  \n  async discoverAllDatabases() {\n    const discoveries = await Promise.all([\n      this.providers.aws.discover(),\n      this.providers.azure.discover(),\n      this.providers.gcp.discover()\n    ]);\n    \n    return this.normalizeDiscoveries(discoveries.flat());\n  }\n}\n\n// AWS RDS Discovery\nclass AWSDiscovery {\n  async discover() {\n    const AWS = require('aws-sdk');\n    const rds = new AWS.RDS();\n    const redshift = new AWS.Redshift();\n    \n    const [rdsInstances, redshiftClusters] = await Promise.all([\n      rds.describeDBInstances().promise(),\n      redshift.describeClusters().promise()\n    ]);\n    \n    return [\n      ...rdsInstances.DBInstances.map(db => ({\n        provider: 'aws',\n        service: 'rds',\n        id: db.DBInstanceIdentifier,\n        engine: db.Engine,\n        version: db.EngineVersion,\n        endpoint: {\n          host: db.Endpoint.Address,\n          port: db.Endpoint.Port\n        },\n        status: db.DBInstanceStatus,\n        size: db.DBInstanceClass,\n        storage: db.AllocatedStorage,\n        multiAZ: db.MultiAZ,\n        tags: db.TagList\n      })),\n      ...redshiftClusters.Clusters.map(cluster => ({\n        provider: 'aws',\n        service: 'redshift',\n        id: cluster.ClusterIdentifier,\n        engine: 'redshift',\n        endpoint: {\n          host: cluster.Endpoint.Address,\n          port: cluster.Endpoint.Port\n        },\n        status: cluster.ClusterStatus,\n        nodeType: cluster.NodeType,\n        numberOfNodes: cluster.NumberOfNodes\n      }))\n    ];\n  }\n}\n```\n\n3. Prometheus 메트릭 익스포터:\n```javascript\n// PrometheusExporter.js\nconst promClient = require('prom-client');\n\nclass PrometheusExporter {\n  constructor() {\n    this.register = new promClient.Registry();\n    \n    // 커스텀 메트릭 정의\n    this.metrics = {\n      connectionStatus: new promClient.Gauge({\n        name: 'nificdc_connection_status',\n        help: 'Database connection status (1=up, 0=down)',\n        labelNames: ['system_id', 'system_name', 'db_type']\n      }),\n      \n      connectionLatency: new promClient.Histogram({\n        name: 'nificdc_connection_latency_ms',\n        help: 'Database connection latency in milliseconds',\n        labelNames: ['system_id', 'system_name', 'db_type'],\n        buckets: [10, 50, 100, 500, 1000, 5000]\n      }),\n      \n      poolUtilization: new promClient.Gauge({\n        name: 'nificdc_pool_utilization',\n        help: 'Connection pool utilization percentage',\n        labelNames: ['system_id', 'system_name']\n      }),\n      \n      errorRate: new promClient.Counter({\n        name: 'nificdc_connection_errors_total',\n        help: 'Total number of connection errors',\n        labelNames: ['system_id', 'system_name', 'error_type']\n      })\n    };\n    \n    // 메트릭 등록\n    Object.values(this.metrics).forEach(metric => {\n      this.register.registerMetric(metric);\n    });\n  }\n  \n  updateMetrics(systemId, metrics) {\n    const labels = {\n      system_id: systemId,\n      system_name: metrics.name,\n      db_type: metrics.type\n    };\n    \n    this.metrics.connectionStatus.set(labels, metrics.isConnected ? 1 : 0);\n    this.metrics.connectionLatency.observe(labels, metrics.latency);\n    this.metrics.poolUtilization.set(\n      { system_id: systemId, system_name: metrics.name },\n      metrics.poolUtilization\n    );\n  }\n  \n  getMetrics() {\n    return this.register.metrics();\n  }\n}\n```\n\n4. Grafana 대시보드 프로비저닝:\n```javascript\n// GrafanaProvisioner.js\nclass GrafanaProvisioner {\n  async provisionDashboard() {\n    const dashboard = {\n      dashboard: {\n        title: 'NiFiCDC System Management',\n        panels: [\n          {\n            title: 'Connection Status Overview',\n            type: 'stat',\n            targets: [{\n              expr: 'sum(nificdc_connection_status) by (db_type)'\n            }]\n          },\n          {\n            title: 'Connection Latency',\n            type: 'graph',\n            targets: [{\n              expr: 'histogram_quantile(0.95, nificdc_connection_latency_ms)'\n            }]\n          },\n          {\n            title: 'Error Rate',\n            type: 'graph',\n            targets: [{\n              expr: 'rate(nificdc_connection_errors_total[5m])'\n            }]\n          }\n        ]\n      }\n    };\n    \n    await this.grafanaAPI.createDashboard(dashboard);\n  }\n}\n```\n\n5. 구성 관리 통합 (Ansible/Terraform):\n```javascript\n// ConfigManagement.js\nclass ConfigManagementIntegration {\n  async exportToAnsible(systems) {\n    const inventory = {\n      all: {\n        children: {\n          databases: {\n            hosts: {}\n          }\n        }\n      }\n    };\n    \n    systems.forEach(system => {\n      inventory.all.children.databases.hosts[system.name] = {\n        ansible_host: system.host,\n        ansible_port: system.port,\n        db_type: system.type,\n        db_name: system.database\n      };\n    });\n    \n    return yaml.dump(inventory);\n  }\n  \n  async exportToTerraform(systems) {\n    const resources = systems.map(system => ({\n      [`database_${system.name}`]: {\n        type: this.mapToTerraformResource(system.type),\n        properties: {\n          name: system.name,\n          host: system.host,\n          port: system.port,\n          database: system.database\n        }\n      }\n    }));\n    \n    return this.generateTerraformConfig(resources);\n  }\n}\n```",
+        "testStrategy": "1. LDAP 통합 테스트: 실제 AD 환경 또는 OpenLDAP 테스트 서버 사용\n2. 클라우드 검색 테스트: LocalStack으로 AWS 서비스 모의\n3. Prometheus 메트릭 검증: 메트릭 정확성 및 성능 영향 측정\n4. Grafana 대시보드 테스트: 자동 프로비저닝 및 시각화 검증\n5. 구성 관리 통합 테스트: Ansible/Terraform 구성 파일 유효성 검증",
+        "priority": "low",
         "dependencies": [
-          3,
-          4,
-          5
-        ],
-        "status": "done",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "백엔드 시스템 CRUD API 엔드포인트 구현",
-            "description": "시스템 정보를 생성, 조회, 수정, 삭제할 수 있는 RESTful API 엔드포인트를 구현합니다.",
-            "dependencies": [],
-            "details": "POST /api/systems (생성), GET /api/systems (목록 조회), GET /api/systems/:id (상세 조회), PUT /api/systems/:id (수정), DELETE /api/systems/:id (삭제) 엔드포인트를 구현하고, 접속 정보 암호화/복호화 처리를 포함합니다.",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "시스템 타입별 접속 정보 검증 로직 구현",
-            "description": "각 시스템 타입(데이터베이스, API, FTP 등)에 따른 접속 정보 유효성 검증 로직을 구현합니다.",
-            "dependencies": [
-              1
-            ],
-            "details": "시스템 타입별로 필수 필드 검증, 포트 번호 범위 확인, URL 형식 검증, 인증 방식별 필수 정보 확인 등의 검증 규칙을 구현하고, 검증 실패 시 구체적인 에러 메시지를 반환합니다.",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "프론트엔드 시스템 관리 UI 컴포넌트 개발",
-            "description": "시스템 목록 조회, 추가, 수정, 삭제를 위한 React 컴포넌트와 폼을 개발합니다.",
-            "dependencies": [
-              1,
-              2
-            ],
-            "details": "시스템 목록 테이블 컴포넌트, 시스템 추가/수정 모달 폼, 시스템 타입별 동적 폼 필드 렌더링, 삭제 확인 다이얼로그를 구현하고, API와 연동하여 실시간 데이터 동기화를 처리합니다.",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "연결 테스트 기능 구현 및 에러 처리",
-            "description": "각 시스템 타입별 연결 테스트 기능을 구현하고 상세한 에러 처리를 추가합니다.",
-            "dependencies": [
-              1,
-              2,
-              3
-            ],
-            "details": "데이터베이스 연결 테스트, API 엔드포인트 접근성 테스트, FTP 서버 연결 테스트 등을 구현하고, 연결 실패 시 타임아웃, 인증 실패, 네트워크 오류 등 구체적인 에러 원인을 파악하여 사용자에게 안내합니다.",
-            "status": "done",
-            "testStrategy": ""
-          }
-        ]
-      },
-      {
-        "id": 7,
-        "title": "데이터 정의서 및 스키마 관리 기능 구현",
-        "description": "데이터 정의서 CRUD 기능과 시스템 타입별 스키마 정의, 컬럼 정보 관리, 버전 관리 기능을 구현합니다.",
-        "details": "1. 스키마 정의 API:\n```javascript\n// routes/dataSchemas.js\nrouter.post('/', async (req, res) => {\n  const { systemId, name, schemaDefinition } = req.body;\n  \n  // 기존 스키마의 최신 버전 조회\n  const latestVersion = await DataSchema.findOne({\n    where: { systemId, name },\n    order: [['version', 'DESC']]\n  });\n  \n  const newSchema = await DataSchema.create({\n    systemId,\n    name,\n    version: latestVersion ? latestVersion.version + 1 : 1,\n    schemaDefinition\n  });\n  \n  res.status(201).json(newSchema);\n});\n\n// 스키마 자동 탐색 (DB 타입인 경우)\nrouter.get('/discover/:systemId', async (req, res) => {\n  const system = await System.findByPk(req.params.systemId);\n  \n  if (['oracle', 'postgresql', 'sqlite'].includes(system.type)) {\n    const schema = await discoverDatabaseSchema(system);\n    res.json(schema);\n  } else {\n    res.status(400).json({ error: 'Schema discovery not supported for this system type' });\n  }\n});\n```\n\n2. 스키마 정의 UI 컴포넌트:\n```vue\n<template>\n  <v-card>\n    <v-card-title>스키마 정의</v-card-title>\n    <v-card-text>\n      <v-btn v-if=\"canDiscover\" @click=\"discoverSchema\" color=\"info\">\n        <v-icon left>mdi-magnify</v-icon>\n        스키마 자동 탐색\n      </v-btn>\n      \n      <v-data-table\n        :headers=\"columnHeaders\"\n        :items=\"columns\"\n        dense\n      >\n        <template v-slot:item=\"{ item, index }\">\n          <tr>\n            <td>\n              <v-text-field\n                v-model=\"item.name\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-select\n                v-model=\"item.dataType\"\n                :items=\"dataTypes\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-checkbox\n                v-model=\"item.nullable\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-checkbox\n                v-model=\"item.primaryKey\"\n                dense\n                hide-details\n              />\n            </td>\n            <td>\n              <v-icon small @click=\"removeColumn(index)\">\n                mdi-delete\n              </v-icon>\n            </td>\n          </tr>\n        </template>\n      </v-data-table>\n      \n      <v-btn @click=\"addColumn\" color=\"primary\" small>\n        <v-icon left>mdi-plus</v-icon>\n        컬럼 추가\n      </v-btn>\n    </v-card-text>\n  </v-card>\n</template>\n```\n\n3. 스키마 버전 비교 기능\n4. 스키마 유효성 검증",
-        "testStrategy": "1. 스키마 버전 관리 로직 테스트\n2. 데이터베이스 스키마 자동 탐색 테스트\n3. 다양한 데이터 타입 지원 테스트\n4. 스키마 변경 이력 추적 테스트\n5. UI에서 컬럼 추가/삭제/수정 테스트",
-        "priority": "medium",
-        "dependencies": [
-          6
-        ],
-        "status": "done",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "스키마 CRUD API 및 버전 관리 로직 구현",
-            "description": "스키마 생성, 조회, 수정, 삭제를 위한 RESTful API 엔드포인트 개발 및 버전 관리 시스템 구축",
-            "dependencies": [],
-            "details": "- POST /api/schemas: 새 스키마 생성\n- GET /api/schemas: 스키마 목록 조회\n- PUT /api/schemas/:id: 스키마 수정 (새 버전 생성)\n- DELETE /api/schemas/:id: 스키마 삭제\n- 버전 관리: 각 수정 시 새 버전 생성, 버전 히스토리 추적\n- 스키마 메타데이터 저장 (생성일, 수정일, 작성자 등)",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "데이터베이스 스키마 자동 탐색 기능 개발",
-            "description": "연결된 데이터베이스의 테이블, 컬럼, 데이터 타입을 자동으로 탐색하고 스키마 정보를 추출하는 기능 구현",
-            "dependencies": [
-              1
-            ],
-            "details": "- 다양한 데이터베이스 지원 (PostgreSQL, MySQL, MongoDB 등)\n- 테이블/컬렉션 목록 자동 탐색\n- 컬럼 정보 추출 (이름, 타입, 제약조건, 기본값)\n- 인덱스 및 관계 정보 탐색\n- 탐색 결과를 스키마 형식으로 변환\n- 비동기 처리 및 진행 상태 표시",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "스키마 정의 UI 컴포넌트 및 컬럼 편집기 구현",
-            "description": "사용자가 직관적으로 스키마를 정의하고 편집할 수 있는 React 기반 UI 컴포넌트 개발",
-            "dependencies": [
-              1
-            ],
-            "details": "- 스키마 목록 뷰 컴포넌트\n- 드래그 앤 드롭 가능한 컬럼 편집기\n- 데이터 타입 선택 드롭다운\n- 제약조건 설정 UI (NOT NULL, UNIQUE, DEFAULT 등)\n- 실시간 스키마 미리보기\n- 컬럼 추가/삭제/수정 인터페이스\n- 스키마 임포트/익스포트 기능",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "스키마 버전 비교 및 변경 이력 추적 기능",
-            "description": "스키마 버전 간 차이점을 시각적으로 표시하고 변경 이력을 추적하는 기능 구현",
-            "dependencies": [
-              1,
-              3
-            ],
-            "details": "- 버전 간 diff 알고리즘 구현\n- 변경사항 시각화 (추가/삭제/수정된 컬럼 하이라이트)\n- 변경 이력 타임라인 UI\n- 특정 버전으로 롤백 기능\n- 변경사항 요약 및 상세 보기\n- 버전 태그 및 코멘트 기능",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "스키마 유효성 검증 로직 구현",
-            "description": "정의된 스키마의 유효성을 검증하고 데이터베이스 호환성을 확인하는 검증 시스템 구축",
-            "dependencies": [
-              1,
-              2
-            ],
-            "details": "- 데이터 타입 호환성 검증\n- 컬럼명 규칙 검증 (예약어, 특수문자 등)\n- 제약조건 충돌 검사\n- 순환 참조 감지\n- 데이터베이스별 제한사항 확인\n- 검증 오류 메시지 및 해결 가이드 제공\n- 실시간 검증 및 경고 표시",
-            "status": "done",
-            "testStrategy": ""
-          }
-        ]
-      },
-      {
-        "id": 8,
-        "title": "맵핑 정의서 관리 및 변환 규칙 구현",
-        "description": "소스-타겟 데이터 맵핑 기능과 컬럼 간 다양한 맵핑 관계(1:1, 1:N, N:1) 및 데이터 변환 규칙을 구현합니다.",
-        "details": "1. 맵핑 정의 API:\n```javascript\n// routes/mappings.js\nrouter.post('/', async (req, res) => {\n  const { name, sourceSchemaId, targetSchemaId, mappingRules, transformationScript } = req.body;\n  \n  // 맵핑 규칙 검증\n  const validationResult = await validateMappingRules(\n    sourceSchemaId, \n    targetSchemaId, \n    mappingRules\n  );\n  \n  if (!validationResult.valid) {\n    return res.status(400).json({ errors: validationResult.errors });\n  }\n  \n  const mapping = await Mapping.create({\n    name,\n    sourceSchemaId,\n    targetSchemaId,\n    mappingRules,\n    transformationScript\n  });\n  \n  res.status(201).json(mapping);\n});\n\n// 맵핑 미리보기\nrouter.post('/:id/preview', async (req, res) => {\n  const { sampleData } = req.body;\n  const mapping = await Mapping.findByPk(req.params.id);\n  \n  const transformedData = await applyMapping(mapping, sampleData);\n  res.json({ original: sampleData, transformed: transformedData });\n});\n```\n\n2. 맵핑 UI 컴포넌트:\n```vue\n<template>\n  <v-container>\n    <v-row>\n      <v-col cols=\"5\">\n        <v-card>\n          <v-card-title>소스 스키마</v-card-title>\n          <v-card-text>\n            <v-treeview\n              :items=\"sourceColumns\"\n              item-key=\"id\"\n              @update:active=\"selectSourceColumn\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n      \n      <v-col cols=\"2\" class=\"text-center\">\n        <v-btn @click=\"createMapping\" :disabled=\"!canCreateMapping\">\n          <v-icon>mdi-arrow-right</v-icon>\n        </v-btn>\n        \n        <div class=\"mt-4\">\n          <v-chip\n            v-for=\"mapping in activeMappings\"\n            :key=\"mapping.id\"\n            close\n            @click:close=\"removeMapping(mapping)\"\n          >\n            {{ mapping.label }}\n          </v-chip>\n        </div>\n      </v-col>\n      \n      <v-col cols=\"5\">\n        <v-card>\n          <v-card-title>타겟 스키마</v-card-title>\n          <v-card-text>\n            <v-treeview\n              :items=\"targetColumns\"\n              item-key=\"id\"\n              @update:active=\"selectTargetColumn\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n    </v-row>\n    \n    <v-row>\n      <v-col>\n        <v-card>\n          <v-card-title>변환 스크립트</v-card-title>\n          <v-card-text>\n            <MonacoEditor\n              v-model=\"transformationScript\"\n              language=\"javascript\"\n              :height=\"300\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n    </v-row>\n  </v-container>\n</template>\n```\n\n3. 변환 함수 라이브러리 구현\n4. 맵핑 검증 로직 구현",
-        "testStrategy": "1. 다양한 맵핑 관계 테스트 (1:1, 1:N, N:1)\n2. 변환 스크립트 실행 안전성 테스트\n3. 맵핑 규칙 검증 로직 테스트\n4. 데이터 타입 변환 테스트\n5. 맵핑 미리보기 기능 테스트",
-        "priority": "medium",
-        "dependencies": [
-          7
-        ],
-        "status": "done",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "맵핑 규칙 데이터 모델 및 API 구현",
-            "description": "데이터 맵핑 규칙을 저장하고 관리하기 위한 데이터베이스 스키마 설계 및 RESTful API 엔드포인트 구현",
-            "dependencies": [],
-            "details": "맵핑 규칙 테이블 설계, CRUD API 개발, 맵핑 히스토리 관리, 버전 관리 기능 포함\n<info added on 2025-07-11T21:00:18.938Z>\nTask 8.1 맵핑 규칙 데이터 모델 구현 완료. MappingRule 모델을 새로 생성하여 기존 Mapping 모델과 분리된 세부 규칙 관리 시스템을 구현했습니다.\n\n주요 구현 사항:\n- MappingRule 모델: 개별 매핑 규칙을 관리하는 전용 모델\n- 7가지 매핑 타입 지원: direct, transform, concat, split, lookup, formula, conditional\n- 데이터 타입 호환성 검증 로직\n- 조건부 매핑 및 에러 처리 메커니즘\n- 변환 함수 라이브러리 및 수식 평가 엔진\n- 우선순위 기반 규칙 적용 순서\n- 매핑 규칙 검증 및 자동 추천 기능\n\n다음 단계로 API 엔드포인트 구현이 필요합니다.\n</info added on 2025-07-11T21:00:18.938Z>",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "다양한 맵핑 관계(1:1, 1:N, N:1) 처리 로직 개발",
-            "description": "일대일, 일대다, 다대일 등 복잡한 데이터 관계를 처리할 수 있는 맵핑 엔진 핵심 로직 구현",
-            "dependencies": [
-              1
-            ],
-            "details": "관계 타입별 처리 알고리즘 개발, 중첩된 객체 처리, 배열 데이터 변환 로직 구현\n<info added on 2025-07-12T14:51:19.698Z>\nTask 8.2 다양한 매핑 관계 처리 로직 개발 완료. 기존 mappingEngine.js 파일에 이미 1:1, 1:N, N:1, N:N 매핑 관계를 처리하는 로직이 구현되어 있었습니다.\n\n주요 기능:\n- 1:1 매핑: 단일 소스를 단일 타겟으로 직접 변환\n- 1:N 매핑: expandToMultiple 메서드를 통해 하나의 소스를 여러 타겟으로 확장\n- N:1 매핑: aggregateToSingle 메서드를 통해 여러 소스를 하나의 타겟으로 집계\n- N:N 매핑: 여러 소스를 여러 타겟으로 변환\n- 중첩 객체 지원 및 배열 인덱스 접근\n- 다양한 집계 함수 (sum, avg, count, max, min 등)\n- 조건부 매핑 및 변환 스크립트 실행\n</info added on 2025-07-12T14:51:19.698Z>",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "변환 스크립트 실행 엔진 구현",
-            "description": "사용자 정의 변환 스크립트를 안전하게 실행할 수 있는 샌드박스 환경 및 실행 엔진 개발",
-            "dependencies": [
-              2
-            ],
-            "details": "JavaScript 샌드박스 구현, 실행 시간 제한, 메모리 사용량 제한, 보안 검증 로직 포함\n<info added on 2025-07-12T14:54:32.242Z>\nScriptSandbox 구현 완료:\n- VM 모듈 기반 격리 실행 환경 구축\n- 실행 시간 제한 설정 (기본 5초, 최대 10초)\n- 메모리 사용량 제한 설정 (기본 50MB, 최대 100MB)\n- fs, process, eval 등 위험 패턴 감지 및 차단 기능\n- 스크립트 복잡도 계산 및 제한 기능 구현\n\nTransformationService 구현 완료:\n- 날짜 변환 함수 (포맷 변환, 시간대 처리 등)\n- 문자열 변환 함수 (대소문자, 트림, 패딩 등)\n- 숫자 변환 함수 (반올림, 포맷팅, 단위 변환 등)\n- 배열 및 객체 변환 함수 (필터링, 매핑, 병합 등)\n- 데이터 검증 함수 (이메일, URL, 전화번호 형식 검증)\n- 비즈니스 로직 함수 (나이 계산, 민감정보 마스킹 등)\n- 실행 결과 캐싱 메커니즘\n- 변환 통계 수집 기능\n\n보안 강화 및 성능 최적화 작업 완료\n</info added on 2025-07-12T14:54:32.242Z>",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "드래그앤드롭 맵핑 UI 컴포넌트 개발",
-            "description": "소스와 타겟 스키마 간 시각적 맵핑을 위한 직관적인 드래그앤드롭 인터페이스 구현",
-            "dependencies": [
-              1
-            ],
-            "details": "React DnD 활용, 스키마 트리 뷰 구현, 연결선 시각화, 맵핑 상태 표시 기능\n<info added on 2025-07-12T14:58:09.965Z>\nTask 8.4 드래그앤드롭 매핑 UI 컴포넌트 개발 완료.\n\n주요 구현 사항:\n1. MappingDesigner: 매핑 디자이너 메인 컴포넌트\n   - 3패널 레이아웃 (소스 스키마, 매핑 캔버스, 타겟 스키마)\n   - SVG 기반 연결선 시각화\n   - 실시간 드래그앤드롭 인터랙션\n   - 매핑 규칙 테이블 및 편집 기능\n\n2. SchemaTree: 스키마 트리 컴포넌트\n   - 데이터 타입별 아이콘 및 색상 표시\n   - 드래그앤드롭 지원\n   - 필드 정보 팝업\n   - 샘플 데이터 조회\n   - 필드 검색 및 필터링\n\n시각적 매핑 인터페이스 및 사용자 경험 최적화 완료.\n</info added on 2025-07-12T14:58:09.965Z>",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "맵핑 검증 및 미리보기 기능 구현",
-            "description": "설정된 맵핑 규칙의 유효성 검증 및 실제 데이터 변환 결과를 미리 확인할 수 있는 기능 개발",
-            "dependencies": [
-              2,
-              3,
-              4
-            ],
-            "details": "데이터 타입 검증, 필수 필드 확인, 샘플 데이터 변환 미리보기, 오류 하이라이팅\n<info added on 2025-07-12T15:03:59.509Z>\nMappingValidationService를 통한 종합적인 매핑 검증 서비스 구현 완료. 구조적 검증으로 필수 필드, 매핑 타입, 변환 스크립트의 유효성을 확인하고, 스키마 호환성 검증을 통해 필드 존재 여부와 필수 필드 매핑 상태를 점검. 규칙별 검증에서는 데이터 타입 호환성, 변환 함수 유효성, 조건식 검증을 수행. 소스와 타겟 필드의 매핑 비율을 계산하는 커버리지 분석 기능과 미매핑 필드에 대한 자동 추천 및 최적화 방안을 제시하는 개선 제안 기능 구현. 샘플 데이터를 활용한 실시간 변환 결과 미리보기와 배치 크기별 처리 성능 측정 및 최적화 권장 사항을 제공하는 성능 분석 기능 추가. 데이터 무결성 보장과 사용자 경험 향상을 위한 모든 기능 구현 완료.\n</info added on 2025-07-12T15:03:59.509Z>",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 6,
-            "title": "변환 함수 라이브러리 구축",
-            "description": "자주 사용되는 데이터 변환 함수들을 모듈화하여 재사용 가능한 라이브러리로 구축",
-            "dependencies": [
-              3
-            ],
-            "details": "날짜 형식 변환, 문자열 처리, 숫자 포맷팅, 조건부 변환 등 기본 함수 세트 구현\n<info added on 2025-07-12T15:01:02.873Z>\n주요 구현 사항:\n- 7개 카테고리, 80+ 함수로 구성된 포괄적인 변환 라이브러리\n- dateTransforms: 날짜 포맷팅, 파싱, 연산, 차이 계산\n- stringTransforms: 대소문자 변환, 케이스 변환, 문자열 조작\n- numberTransforms: 수학 연산, 포맷팅, 통화/퍼센트 변환\n- arrayTransforms: 정렬, 그룹화, 집계, 집합 연산\n- conditionalTransforms: 조건부 로직, null 처리\n- typeTransforms: 데이터 타입 변환\n- validators: 이메일, URL, 전화번호, 신용카드 등 검증\n\n동적 함수 실행 및 메타데이터 조회 기능 포함.\n</info added on 2025-07-12T15:01:02.873Z>",
-            "status": "done",
-            "testStrategy": ""
-          }
-        ]
-      },
-      {
-        "id": 9,
-        "title": "작업 정의서 및 스케줄링 기능 구현",
-        "description": "작업 정의서 CRUD 기능과 다양한 실행 스케줄 설정, 우선순위 관리, NiFi 프로세스 그룹 생성 및 실행을 구현합니다.",
-        "details": "1. 작업 스케줄링 API:\n```javascript\n// routes/jobs.js\nconst cron = require('node-cron');\nconst jobScheduler = new Map();\n\nrouter.post('/', async (req, res) => {\n  const { name, mappingId, scheduleConfig, priority } = req.body;\n  \n  const job = await Job.create({\n    name,\n    mappingId,\n    scheduleConfig,\n    priority,\n    isActive: true\n  });\n  \n  // NiFi 프로세스 그룹 생성\n  const processGroup = await createNiFiProcessGroup(job);\n  job.nifiProcessGroupId = processGroup.id;\n  await job.save();\n  \n  // 스케줄 등록\n  if (scheduleConfig.type === 'cron') {\n    scheduleJob(job);\n  }\n  \n  res.status(201).json(job);\n});\n\nfunction scheduleJob(job) {\n  const task = cron.schedule(job.scheduleConfig.expression, async () => {\n    await executeJob(job.id);\n  });\n  \n  jobScheduler.set(job.id, task);\n}\n\nasync function executeJob(jobId) {\n  const execution = await JobExecution.create({\n    jobId,\n    status: 'running',\n    startedAt: new Date()\n  });\n  \n  try {\n    const job = await Job.findByPk(jobId, {\n      include: [{ model: Mapping, include: [DataSchema] }]\n    });\n    \n    // NiFi 프로세스 실행\n    await nifiClient.startProcessor(job.nifiProcessGroupId);\n    \n    // 실행 모니터링\n    const result = await monitorExecution(job.nifiProcessGroupId);\n    \n    execution.status = 'completed';\n    execution.completedAt = new Date();\n    execution.metrics = result.metrics;\n  } catch (error) {\n    execution.status = 'failed';\n    execution.errorMessage = error.message;\n  }\n  \n  await execution.save();\n}\n```\n\n2. 스케줄 설정 UI:\n```vue\n<template>\n  <v-card>\n    <v-card-title>실행 스케줄 설정</v-card-title>\n    <v-card-text>\n      <v-radio-group v-model=\"scheduleType\">\n        <v-radio label=\"즉시 실행\" value=\"immediate\" />\n        <v-radio label=\"일회성 예약\" value=\"once\" />\n        <v-radio label=\"주기적 실행\" value=\"recurring\" />\n      </v-radio-group>\n      \n      <v-datetime-picker\n        v-if=\"scheduleType === 'once'\"\n        v-model=\"scheduleTime\"\n        label=\"실행 시간\"\n      />\n      \n      <div v-if=\"scheduleType === 'recurring'\">\n        <v-select\n          v-model=\"recurringType\"\n          :items=\"['분', '시간', '일', '주', '월']\"\n          label=\"반복 주기\"\n        />\n        \n        <v-text-field\n          v-model=\"interval\"\n          type=\"number\"\n          :label=\"`${recurringType} 간격`\"\n        />\n        \n        <v-text-field\n          v-model=\"cronExpression\"\n          label=\"Cron 표현식\"\n          hint=\"고급 사용자용\"\n          persistent-hint\n        />\n      </div>\n      \n      <v-slider\n        v-model=\"priority\"\n        :min=\"1\"\n        :max=\"10\"\n        label=\"우선순위\"\n        thumb-label\n      />\n    </v-card-text>\n  </v-card>\n</template>\n```\n\n3. 작업 큐 관리 시스템 구현\n4. NiFi 프로세스 그룹 자동 생성 로직",
-        "testStrategy": "1. 다양한 스케줄 타입 실행 테스트\n2. Cron 표현식 파싱 및 실행 테스트\n3. 우선순위 기반 작업 실행 순서 테스트\n4. 작업 활성화/비활성화 토글 테스트\n5. NiFi 프로세스 그룹 생성 및 실행 통합 테스트",
-        "priority": "medium",
-        "dependencies": [
-          8
-        ],
-        "status": "done",
-        "subtasks": []
-      },
-      {
-        "id": 10,
-        "title": "모니터링 대시보드 및 실시간 상태 추적 구현",
-        "description": "작업 실행 이력, 실시간 상태 모니터링, 성능 메트릭, 에러 로그 분석 기능을 포함한 종합 모니터링 대시보드를 구현합니다.",
-        "details": "1. 실시간 모니터링 WebSocket 서버:\n```javascript\n// websocket/monitoring.js\nconst WebSocket = require('ws');\n\nfunction setupMonitoringWebSocket(server) {\n  const wss = new WebSocket.Server({ server });\n  \n  wss.on('connection', (ws) => {\n    console.log('Monitoring client connected');\n    \n    // 초기 상태 전송\n    sendCurrentStatus(ws);\n    \n    // 주기적 업데이트\n    const interval = setInterval(() => {\n      sendRealtimeMetrics(ws);\n    }, 1000);\n    \n    ws.on('close', () => {\n      clearInterval(interval);\n    });\n  });\n}\n\nasync function sendRealtimeMetrics(ws) {\n  const metrics = {\n    activeJobs: await getActiveJobsCount(),\n    throughput: await calculateThroughput(),\n    avgLatency: await calculateAverageLatency(),\n    errorRate: await calculateErrorRate(),\n    systemHealth: await checkSystemHealth()\n  };\n  \n  ws.send(JSON.stringify({ type: 'metrics', data: metrics }));\n}\n```\n\n2. 모니터링 대시보드 UI:\n```vue\n<template>\n  <v-container fluid>\n    <v-row>\n      <!-- 실시간 메트릭 카드 -->\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"활성 작업\"\n          :value=\"metrics.activeJobs\"\n          icon=\"mdi-play-circle\"\n          color=\"primary\"\n        />\n      </v-col>\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"처리량\"\n          :value=\"`${metrics.throughput}/s`\"\n          icon=\"mdi-speedometer\"\n          color=\"success\"\n        />\n      </v-col>\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"평균 지연시간\"\n          :value=\"`${metrics.avgLatency}ms`\"\n          icon=\"mdi-timer\"\n          color=\"warning\"\n        />\n      </v-col>\n      <v-col cols=\"3\">\n        <MetricCard\n          title=\"에러율\"\n          :value=\"`${metrics.errorRate}%`\"\n          icon=\"mdi-alert\"\n          :color=\"metrics.errorRate > 5 ? 'error' : 'success'\"\n        />\n      </v-col>\n    </v-row>\n    \n    <v-row>\n      <!-- 실행 이력 차트 -->\n      <v-col cols=\"8\">\n        <v-card>\n          <v-card-title>작업 실행 추이</v-card-title>\n          <v-card-text>\n            <ApexChart\n              type=\"area\"\n              :options=\"chartOptions\"\n              :series=\"executionSeries\"\n              height=\"350\"\n            />\n          </v-card-text>\n        </v-card>\n      </v-col>\n      \n      <!-- 시스템 상태 -->\n      <v-col cols=\"4\">\n        <v-card>\n          <v-card-title>시스템 상태</v-card-title>\n          <v-card-text>\n            <v-list>\n              <v-list-item v-for=\"system in systems\" :key=\"system.id\">\n                <v-list-item-icon>\n                  <v-icon :color=\"system.status === 'healthy' ? 'success' : 'error'\">\n                    {{ system.status === 'healthy' ? 'mdi-check-circle' : 'mdi-alert-circle' }}\n                  </v-icon>\n                </v-list-item-icon>\n                <v-list-item-content>\n                  <v-list-item-title>{{ system.name }}</v-list-item-title>\n                  <v-list-item-subtitle>{{ system.type }}</v-list-item-subtitle>\n                </v-list-item-content>\n              </v-list-item>\n            </v-list>\n          </v-card-text>\n        </v-card>\n      </v-col>\n    </v-row>\n    \n    <!-- 에러 로그 테이블 -->\n    <v-row>\n      <v-col>\n        <ErrorLogTable :logs=\"errorLogs\" />\n      </v-col>\n    </v-row>\n  </v-container>\n</template>\n\n<script>\nexport default {\n  data() {\n    return {\n      ws: null,\n      metrics: {\n        activeJobs: 0,\n        throughput: 0,\n        avgLatency: 0,\n        errorRate: 0\n      }\n    }\n  },\n  \n  mounted() {\n    this.connectWebSocket();\n  },\n  \n  methods: {\n    connectWebSocket() {\n      this.ws = new WebSocket('ws://localhost:3000/monitoring');\n      \n      this.ws.onmessage = (event) => {\n        const message = JSON.parse(event.data);\n        if (message.type === 'metrics') {\n          this.metrics = message.data;\n        }\n      };\n    }\n  }\n}\n</script>\n```\n\n3. 성능 메트릭 수집 및 집계 로직\n4. 에러 분석 및 알림 시스템\n5. 대시보드 커스터마이징 기능",
-        "testStrategy": "1. WebSocket 연결 안정성 테스트\n2. 실시간 데이터 업데이트 정확성 검증\n3. 대용량 로그 데이터 처리 성능 테스트\n4. 차트 렌더링 성능 테스트\n5. 동시 다중 사용자 접속 테스트",
-        "priority": "medium",
-        "dependencies": [
-          9
-        ],
-        "status": "done",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "WebSocket 서버 구현 및 실시간 데이터 스트리밍",
-            "description": "실시간 데이터 전송을 위한 WebSocket 서버를 구현하고 클라이언트와의 양방향 통신 채널을 구축합니다.",
-            "dependencies": [],
-            "details": "Node.js와 Socket.io를 사용하여 WebSocket 서버 구현, 연결 관리 및 재연결 로직 구현, 데이터 압축 및 최적화, 동시 접속자 수 제한 및 부하 분산 처리",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "성능 메트릭 수집 및 집계 서비스 개발",
-            "description": "시스템 성능 지표를 수집하고 시계열 데이터로 저장하며 효율적으로 집계하는 서비스를 개발합니다.",
-            "dependencies": [],
-            "details": "CPU, 메모리, 네트워크 사용량 등 시스템 메트릭 수집, 시계열 데이터베이스(InfluxDB/Prometheus) 연동, 데이터 집계 및 다운샘플링 로직 구현, RESTful API 엔드포인트 개발",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "대시보드 UI 컴포넌트 및 차트 구현",
-            "description": "실시간 데이터를 시각화하는 대시보드 UI와 다양한 차트 컴포넌트를 구현합니다.",
-            "dependencies": [
-              1,
-              2
-            ],
-            "details": "React/Vue.js 기반 대시보드 프레임워크 구축, D3.js 또는 Chart.js를 활용한 실시간 차트 구현, 반응형 레이아웃 및 다크모드 지원, 실시간 데이터 업데이트 최적화",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "에러 로그 분석 및 알림 시스템 구축",
-            "description": "시스템 에러 로그를 실시간으로 분석하고 중요도에 따라 알림을 발송하는 시스템을 구축합니다.",
-            "dependencies": [
-              1
-            ],
-            "details": "로그 파싱 및 패턴 매칭 엔진 개발, 에러 심각도 분류 및 우선순위 설정, 이메일/Slack/웹훅 알림 통합, 알림 규칙 및 임계값 설정 기능",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "대시보드 커스터마이징 기능 개발",
-            "description": "사용자가 대시보드 레이아웃과 위젯을 자유롭게 구성할 수 있는 커스터마이징 기능을 개발합니다.",
-            "dependencies": [
-              3
-            ],
-            "details": "드래그 앤 드롭 위젯 배치 기능, 사용자별 대시보드 설정 저장/불러오기, 위젯 크기 조절 및 템플릿 관리, 커스텀 위젯 생성 인터페이스",
-            "status": "done",
-            "testStrategy": ""
-          }
-        ]
-      },
-      {
-        "id": 11,
-        "title": "보안 강화 및 감사 로그 구현",
-        "description": "SSL/TLS 암호화, 역할 기반 접근 제어(RBAC) 강화, 감사 로그 기록 및 보안 취약점 스캔 기능을 구현합니다.",
-        "details": "1. RBAC 미들웨어 강화:\n```javascript\n// middleware/rbac.js\nconst permissions = {\n  admin: ['*'],\n  operator: ['systems:read', 'systems:test', 'jobs:*', 'monitoring:*'],\n  viewer: ['*:read', 'monitoring:read']\n};\n\nfunction authorize(resource, action) {\n  return (req, res, next) => {\n    const userRole = req.user.role;\n    const permission = `${resource}:${action}`;\n    \n    const hasPermission = permissions[userRole].some(p => {\n      if (p === '*') return true;\n      if (p === `${resource}:*`) return true;\n      if (p === `*:${action}`) return true;\n      return p === permission;\n    });\n    \n    if (!hasPermission) {\n      // 감사 로그 기록\n      auditLogger.warn({\n        event: 'UNAUTHORIZED_ACCESS_ATTEMPT',\n        user: req.user.id,\n        resource,\n        action,\n        ip: req.ip\n      });\n      \n      return res.status(403).json({ error: 'Insufficient permissions' });\n    }\n    \n    next();\n  };\n}\n```\n\n2. 감사 로그 시스템:\n```javascript\n// services/auditLogger.js\nclass AuditLogger {\n  async log(event) {\n    const auditEntry = {\n      timestamp: new Date(),\n      eventType: event.type,\n      userId: event.userId,\n      userName: event.userName,\n      action: event.action,\n      resource: event.resource,\n      resourceId: event.resourceId,\n      changes: event.changes,\n      ipAddress: event.ip,\n      userAgent: event.userAgent,\n      result: event.result\n    };\n    \n    // DB에 저장\n    await AuditLog.create(auditEntry);\n    \n    // 중요 이벤트는 실시간 알림\n    if (this.isCriticalEvent(event.type)) {\n      await this.sendSecurityAlert(auditEntry);\n    }\n  }\n  \n  isCriticalEvent(eventType) {\n    const criticalEvents = [\n      'UNAUTHORIZED_ACCESS_ATTEMPT',\n      'MULTIPLE_LOGIN_FAILURES',\n      'PRIVILEGE_ESCALATION',\n      'DATA_EXPORT',\n      'SYSTEM_CONFIG_CHANGE'\n    ];\n    return criticalEvents.includes(eventType);\n  }\n}\n```\n\n3. SSL/TLS 설정:\n```javascript\n// server.js\nconst https = require('https');\nconst fs = require('fs');\n\nconst options = {\n  key: fs.readFileSync('private-key.pem'),\n  cert: fs.readFileSync('certificate.pem'),\n  // 보안 강화 옵션\n  secureOptions: crypto.constants.SSL_OP_NO_TLSv1 | crypto.constants.SSL_OP_NO_TLSv1_1,\n  ciphers: [\n    'ECDHE-RSA-AES128-GCM-SHA256',\n    'ECDHE-RSA-AES256-GCM-SHA384',\n    'ECDHE-RSA-AES128-SHA256',\n    'ECDHE-RSA-AES256-SHA384'\n  ].join(':')\n};\n\nhttps.createServer(options, app).listen(443);\n```\n\n4. 보안 헤더 설정 및 CORS 정책\n5. 정기적 보안 스캔 스케줄러",
-        "testStrategy": "1. 각 역할별 권한 테스트 (positive/negative)\n2. 감사 로그 기록 정확성 검증\n3. SSL/TLS 연결 보안 테스트\n4. SQL Injection, XSS 등 보안 취약점 테스트\n5. 브루트포스 공격 방어 테스트",
-        "priority": "high",
-        "dependencies": [
-          10
-        ],
-        "status": "done",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "RBAC 권한 시스템 고도화 및 세밀한 권한 제어",
-            "description": "역할 기반 접근 제어(RBAC) 시스템을 구현하고 세밀한 권한 제어 메커니즘을 개발합니다.",
-            "dependencies": [],
-            "details": "사용자 역할 정의, 권한 매트릭스 설계, API 엔드포인트별 권한 검증 미들웨어 구현, 동적 권한 할당 기능 개발",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 2,
-            "title": "감사 로그 시스템 구현 및 중요 이벤트 알림",
-            "description": "모든 보안 관련 활동을 추적하는 감사 로그 시스템을 구축하고 실시간 알림 기능을 구현합니다.",
-            "dependencies": [
-              1
-            ],
-            "details": "로그 수집 아키텍처 설계, 중요 이벤트 분류 체계 구축, 실시간 알림 시스템 구현, 로그 보관 정책 수립",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 3,
-            "title": "SSL/TLS 설정 및 보안 헤더 구성",
-            "description": "HTTPS 통신을 위한 SSL/TLS 인증서를 설정하고 보안 헤더를 구성합니다.",
-            "dependencies": [],
-            "details": "SSL/TLS 인증서 발급 및 설치, HSTS 헤더 설정, CSP 정책 구성, X-Frame-Options 등 보안 헤더 적용",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 4,
-            "title": "보안 취약점 스캔 자동화 도구 통합",
-            "description": "정기적인 보안 취약점 스캔을 위한 자동화 도구를 통합하고 CI/CD 파이프라인에 연동합니다.",
-            "dependencies": [
-              3
-            ],
-            "details": "OWASP ZAP 또는 Burp Suite 통합, 의존성 취약점 스캐너 설정, 정기 스캔 스케줄링, 취약점 리포트 자동화",
-            "status": "done",
-            "testStrategy": ""
-          },
-          {
-            "id": 5,
-            "title": "브루트포스 방어 및 Rate Limiting 구현",
-            "description": "무차별 대입 공격을 방어하고 API 요청 제한을 구현합니다.",
-            "dependencies": [
-              1,
-              2
-            ],
-            "details": "로그인 시도 제한 구현, IP 기반 차단 메커니즘 개발, API Rate Limiting 미들웨어 구현, Redis 기반 요청 카운터 구축",
-            "status": "done",
-            "testStrategy": ""
-          }
-        ]
-      },
-      {
-        "id": 12,
-        "title": "성능 최적화 및 캐싱 구현",
-        "description": "Redis를 활용한 캐싱 전략, 데이터베이스 쿼리 최적화, 프론트엔드 번들 최적화를 통해 전반적인 시스템 성능을 향상시킵니다.",
-        "details": "1. Redis 캐싱 레이어 구현:\n```javascript\n// services/cache.js\nconst Redis = require('ioredis');\nconst redis = new Redis({\n  host: process.env.REDIS_HOST,\n  port: process.env.REDIS_PORT,\n  retryStrategy: (times) => Math.min(times * 50, 2000)\n});\n\nclass CacheService {\n  async get(key) {\n    const value = await redis.get(key);\n    return value ? JSON.parse(value) : null;\n  }\n  \n  async set(key, value, ttl = 3600) {\n    await redis.setex(key, ttl, JSON.stringify(value));\n  }\n  \n  async invalidate(pattern) {\n    const keys = await redis.keys(pattern);\n    if (keys.length > 0) {\n      await redis.del(...keys);\n    }\n  }\n  \n  // 캐시 미들웨어\n  cacheMiddleware(keyGenerator, ttl = 300) {\n    return async (req, res, next) => {\n      const key = keyGenerator(req);\n      const cached = await this.get(key);\n      \n      if (cached) {\n        return res.json(cached);\n      }\n      \n      // 원본 응답 캐싱\n      const originalJson = res.json;\n      res.json = async (data) => {\n        await this.set(key, data, ttl);\n        originalJson.call(res, data);\n      };\n      \n      next();\n    };\n  }\n}\n```\n\n2. 데이터베이스 쿼리 최적화:\n```javascript\n// 인덱스 생성\nALTER TABLE job_executions ADD INDEX idx_job_status_date (job_id, status, started_at);\nALTER TABLE systems ADD INDEX idx_type_active (type, is_active);\n\n// 쿼리 최적화 예시\n// Before\nconst jobs = await Job.findAll({\n  include: [{\n    model: Mapping,\n    include: [{\n      model: DataSchema,\n      include: [System]\n    }]\n  }]\n});\n\n// After - 필요한 필드만 선택\nconst jobs = await Job.findAll({\n  attributes: ['id', 'name', 'isActive', 'scheduleConfig'],\n  include: [{\n    model: Mapping,\n    attributes: ['id', 'name'],\n    include: [{\n      model: DataSchema,\n      attributes: ['id', 'name', 'version'],\n      include: [{\n        model: System,\n        attributes: ['id', 'name', 'type']\n      }]\n    }]\n  }]\n});\n```\n\n3. 프론트엔드 최적화:\n```javascript\n// vite.config.js\nexport default {\n  build: {\n    rollupOptions: {\n      output: {\n        manualChunks: {\n          'vendor': ['vue', 'vue-router', 'pinia'],\n          'ui': ['vuetify'],\n          'charts': ['apexcharts', 'vue3-apexcharts'],\n          'editor': ['monaco-editor']\n        }\n      }\n    },\n    // 압축 설정\n    minify: 'terser',\n    terserOptions: {\n      compress: {\n        drop_console: true,\n        drop_debugger: true\n      }\n    }\n  }\n};\n\n// 컴포넌트 지연 로딩\nconst MonitoringDashboard = () => import(\n  /* webpackChunkName: \"monitoring\" */\n  '@/views/MonitoringDashboard.vue'\n);\n```\n\n4. API 응답 압축 및 페이지네이션\n5. 이미지 및 정적 자원 최적화",
-        "testStrategy": "1. 캐시 히트율 측정 및 최적화\n2. API 응답시간 1초 이내 달성 검증\n3. 페이지 로딩 시간 3초 이내 검증\n4. 동시 사용자 100명 부하 테스트\n5. 메모리 누수 및 리소스 사용량 모니터링",
-        "priority": "medium",
-        "dependencies": [
-          11
+          30,
+          31
         ],
         "status": "pending",
         "subtasks": []
@@ -435,7 +154,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-13T09:52:31.166Z",
+      "updated": "2025-07-14T06:58:56.244Z",
       "description": "Tasks for master context"
     }
   }
