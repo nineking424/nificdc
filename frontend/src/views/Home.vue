@@ -305,15 +305,26 @@ export default {
     
     // 페이지 네비게이션 (인증 상태 확인)
     const navigateToPage = (routeName) => {
+      // 라우트 이름 매핑 (소문자 -> 대문자)
+      const routeNameMap = {
+        'systems': 'Systems',
+        'mappings': 'Mappings',
+        'jobs': 'Jobs',
+        'monitoring': 'Monitoring',
+        'dashboard': 'Dashboard'
+      }
+      
+      const actualRouteName = routeNameMap[routeName] || routeName
+      
       if (isAuthenticated.value) {
         // 로그인된 상태면 바로 이동
-        router.push({ name: routeName })
+        router.push({ name: actualRouteName })
       } else {
         // 로그인이 필요한 경우 로그인 페이지로 리다이렉트
         toast.info('로그인이 필요한 서비스입니다.')
         router.push({ 
           name: 'Login', 
-          query: { redirect: router.resolve({ name: routeName }).fullPath }
+          query: { redirect: router.resolve({ name: actualRouteName }).fullPath }
         })
       }
     }

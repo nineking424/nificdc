@@ -328,11 +328,53 @@
         </v-col>
       </v-row>
     </v-container>
+
+    <!-- System Create/Edit Dialog -->
+    <SystemDialog
+      v-model="showDialog"
+      :system="selectedSystem"
+      :mode="dialogMode"
+      @save="handleSave"
+      @cancel="closeDialog"
+    />
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500">
+      <v-card>
+        <v-card-title class="text-h5">
+          시스템 삭제 확인
+        </v-card-title>
+        <v-card-text>
+          <p>정말로 이 시스템을 삭제하시겠습니까?</p>
+          <p class="font-weight-bold mt-2">{{ systemToDelete?.name }}</p>
+          <p class="text-caption text-medium-emphasis">이 작업은 되돌릴 수 없습니다.</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="showDeleteDialog = false"
+            :disabled="deleting"
+          >
+            취소
+          </v-btn>
+          <v-btn
+            color="error"
+            variant="flat"
+            @click="confirmDelete"
+            :loading="deleting"
+          >
+            삭제
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </AppLayout>
 </template>
 
 <script setup>
 import AppLayout from '@/components/AppLayout.vue'
+import SystemDialog from '@/components/SystemDialog.vue'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/stores/auth'
@@ -536,21 +578,87 @@ const getConnectionStatusText = (status) => {
   return texts[status] || '알 수 없음'
 }
 
-// 추가 함수들
+// 다이얼로그 관련 함수들
 const openCreateDialog = () => {
-  toast.info('시스템 생성 기능은 개발 중입니다.')
+  selectedSystem.value = null
+  dialogMode.value = 'create'
+  showDialog.value = true
 }
 
 const editSystem = (system) => {
-  toast.info('시스템 편집 기능은 개발 중입니다.')
+  selectedSystem.value = { ...system }
+  dialogMode.value = 'edit'
+  showDialog.value = true
 }
 
 const deleteSystem = (system) => {
-  toast.info('시스템 삭제 기능은 개발 중입니다.')
+  systemToDelete.value = system
+  showDeleteDialog.value = true
 }
 
-const updateSystemStatus = (system) => {
-  toast.info('시스템 상태 변경 기능은 개발 중입니다.')
+const confirmDelete = async () => {
+  if (!systemToDelete.value) return
+  
+  deleting.value = true
+  try {
+    const api = (await import('@/utils/api')).default
+    const response = await api.delete(`/systems/${systemToDelete.value.id}`)
+    
+    if (response.data.success) {
+      toast.success('시스템이 삭제되었습니다.')
+      // 목록에서 제거
+      const index = systems.value.findIndex(s => s.id === systemToDelete.value.id)
+      if (index !== -1) {
+        systems.value.splice(index, 1)
+      }
+      showDeleteDialog.value = false
+      systemToDelete.value = null
+    }
+  } catch (error) {
+    console.error('Delete system error:', error)
+    toast.error('시스템 삭제 실패: ' + (error.response?.data?.error || error.message))
+  } finally {
+    deleting.value = false
+  }
+}
+
+const updateSystemStatus = async (system) => {
+  const index = systems.value.findIndex(s => s.id === system.id)
+  if (index === -1) return
+  
+  const originalStatus = system.isActive
+  
+  try {
+    const api = (await import('@/utils/api')).default
+    const response = await api.put(`/systems/${system.id}`, {
+      isActive: system.isActive
+    })
+    
+    if (response.data.success) {
+      toast.success(`시스템이 ${system.isActive ? '활성화' : '비활성화'}되었습니다.`)
+      // Update the system data with the response
+      systems.value[index] = {
+        ...systems.value[index],
+        ...response.data.data
+      }
+    }
+  } catch (error) {
+    console.error('Update system status error:', error)
+    // Revert the status on error
+    system.isActive = originalStatus
+    systems.value[index].isActive = originalStatus
+    toast.error('시스템 상태 변경 실패: ' + (error.response?.data?.error || error.message))
+  }
+}
+
+const handleSave = async () => {
+  showDialog.value = false
+  await loadSystems() // Reload the systems list
+}
+
+const closeDialog = () => {
+  showDialog.value = false
+  selectedSystem.value = null
 }
 
 // 메서드

@@ -1,5 +1,6 @@
 <template>
-  <div class="monitoring-dashboard">
+  <AppLayout>
+    <div class="monitoring-dashboard">
     <v-container fluid>
       <!-- 헤더 -->
       <v-row class="mb-4">
@@ -324,10 +325,12 @@
         </v-card>
       </v-dialog>
     </v-container>
-  </div>
+    </div>
+  </AppLayout>
 </template>
 
 <script>
+import AppLayout from '@/components/AppLayout.vue';
 import { ref, reactive, onMounted, onUnmounted, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
@@ -338,6 +341,9 @@ import Chart from 'chart.js/auto';
 
 export default {
   name: 'MonitoringDashboard',
+  components: {
+    AppLayout
+  },
   setup() {
     const router = useRouter();
     const appStore = useAppStore();
