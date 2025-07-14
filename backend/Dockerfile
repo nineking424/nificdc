@@ -5,7 +5,7 @@ WORKDIR /app
 
 # 의존성 먼저 복사하여 캐시 활용
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # 소스 코드 복사
 COPY . .
