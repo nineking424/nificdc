@@ -3,9 +3,27 @@ import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { useToast } from 'vue-toastification'
 
-// API 기본 설정
+// API 기본 설정 - 동적 호스트 감지
+const getApiBaseUrl = () => {
+  // 환경 변수가 설정된 경우 우선 사용
+  if (process.env.VUE_APP_API_BASE_URL) {
+    console.log('[API] Using environment variable:', process.env.VUE_APP_API_BASE_URL)
+    return process.env.VUE_APP_API_BASE_URL
+  }
+  
+  // 현재 브라우저의 호스트를 기반으로 API URL 생성
+  const currentHost = window.location.hostname
+  const protocol = window.location.protocol
+  
+  // 개발 환경에서는 3000 포트 사용
+  const apiUrl = `${protocol}//${currentHost}:3000/api/v1`
+  console.log('[API] Dynamic URL generated:', apiUrl)
+  console.log('[API] Window location:', window.location.href)
+  return apiUrl
+}
+
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api/v1',  // Direct backend for now
+  baseURL: getApiBaseUrl(),
   timeout: 30000,
   withCredentials: true,  // Include cookies for authentication
   headers: {

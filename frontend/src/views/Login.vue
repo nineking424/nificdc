@@ -19,6 +19,7 @@
             <div class="brand-logo">
               <h1 class="text-gradient">NiFiCDC</h1>
               <span class="brand-subtitle">Data Sync Platform</span>
+              <div class="version-display">v{{ appVersion }}</div>
             </div>
             <div class="welcome-text">
               <h2>환영합니다</h2>
@@ -110,6 +111,7 @@
               <v-icon size="20" class="mr-2">mdi-github</v-icon>
               GitHub으로 로그인
             </button>
+            
           </div>
         </div>
       </div>
@@ -178,6 +180,8 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
+import api from '@/utils/api'
+import packageInfo from '../../package.json'
 
 export default {
   name: 'Login',
@@ -194,6 +198,7 @@ export default {
     const showPassword = ref(false)
     const loading = ref(false)
     const rememberMe = ref(false)
+    const appVersion = ref(packageInfo.version)
     
     // 실시간 유효성 검사
     const emailError = computed(() => {
@@ -256,11 +261,13 @@ export default {
       toast.info('GitHub 로그인 기능은 준비 중입니다.')
     }
     
+    
     return {
       form,
       showPassword,
       loading,
       rememberMe,
+      appVersion,
       emailError,
       passwordError,
       isFormValid,
@@ -388,6 +395,19 @@ export default {
   color: var(--gray-600);
   font-size: 1rem;
   font-weight: 500;
+}
+
+.version-display {
+  color: var(--gray-500);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--gray-100);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+  display: inline-block;
+  font-family: 'Monaco', 'Consolas', monospace;
 }
 
 .welcome-text {
@@ -822,6 +842,31 @@ export default {
   }
 }
 
+/* 태블릿에서 visual section 축소 */
+@media (max-width: 768px) {
+  .visual-section {
+    min-height: 30vh;
+  }
+}
+
+/* 모바일에서 visual section 완전 숨김 */
+@media (max-width: 640px) {
+  .login-content {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  
+  .visual-section {
+    display: none !important;
+  }
+  
+  .login-form-section {
+    width: 100% !important;
+    min-height: 100vh !important;
+    padding: 1rem !important;
+  }
+}
+
 @media (max-width: 768px) {
   .login-form-section {
     padding: 1.5rem 1rem;
@@ -855,12 +900,39 @@ export default {
 }
 
 @media (max-width: 640px) {
+  /* 로그인 컨테이너 모바일 최적화 */
+  .login-container {
+    min-height: 100vh;
+    background: #ffffff;
+  }
+  
+  .background-pattern {
+    display: none; /* 모바일에서 배경 패턴 숨김 */
+  }
+  
+  .login-form-section {
+    background: #ffffff !important;
+    padding: 2rem 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .login-form-container {
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  
   .modern-input {
     padding: 0.875rem 2.5rem 0.875rem 2.5rem;
+    font-size: 16px; /* iOS 줌 방지 */
   }
   
   .modern-label {
     left: 2.5rem;
+    font-size: 14px;
   }
   
   .input-icon {
@@ -870,5 +942,67 @@ export default {
   .password-toggle {
     right: 0.75rem;
   }
+  
+  .brand-logo h1 {
+    font-size: 2rem;
+  }
+  
+  .welcome-text h2 {
+    font-size: 1.5rem;
+  }
+  
+  .welcome-text p {
+    font-size: 0.9rem;
+  }
+  
+  .login-button {
+    min-height: 48px;
+    font-size: 16px;
+    width: 100%;
+  }
+  
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  
+  .form-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
 }
+
+/* 작은 모바일 디바이스 */
+@media (max-width: 375px) {
+  .login-form-container {
+    padding: 1.5rem 1rem;
+  }
+  
+  .brand-logo h1 {
+    font-size: 1.75rem;
+  }
+  
+  .welcome-text h2 {
+    font-size: 1.25rem;
+  }
+  
+  .modern-input {
+    padding: 0.75rem 2.25rem 0.75rem 2.25rem;
+  }
+}
+
+/* 터치 디바이스 최적화 */
+@media (hover: none) and (pointer: coarse) {
+  .modern-btn,
+  .forgot-password,
+  .password-toggle {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .modern-btn:hover {
+    transform: none;
+  }
+}
+
 </style>

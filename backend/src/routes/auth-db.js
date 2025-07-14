@@ -11,13 +11,13 @@ const { User } = require('../models');
 
 // Validation schemas
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string().email({ tlds: { allow: false } }).required(), // Allow all TLDs including .local
   password: Joi.string().min(6).required()
 });
 
 const registerSchema = Joi.object({
   username: Joi.string().alphanum().min(3).max(30).required(),
-  email: Joi.string().email().required(),
+  email: Joi.string().email({ tlds: { allow: false } }).required(), // Allow all TLDs including .local
   password: Joi.string().min(6).required(),
   role: Joi.string().valid('admin', 'user').default('user')
 });
@@ -348,6 +348,28 @@ router.post('/refresh', async (req, res) => {
     });
   }
 });
+
+/**
+ * Debug endpoint to test connectivity
+ */
+router.get('/debug', (req, res) => {
+  logger.info('Debug endpoint called', {
+    ip: req.ip,
+    headers: req.headers,
+    origin: req.get('Origin'),
+    userAgent: req.get('User-Agent')
+  });
+  
+  res.json({
+    success: true,
+    message: 'Debug endpoint working',
+    clientIP: req.ip,
+    origin: req.get('Origin'),
+    userAgent: req.get('User-Agent'),
+    timestamp: new Date().toISOString()
+  });
+});
+
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
