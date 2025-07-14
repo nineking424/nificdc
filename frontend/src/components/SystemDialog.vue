@@ -118,8 +118,9 @@
                 <v-col v-if="needsDatabase" cols="12" md="6">
                   <v-text-field
                     v-model="formData.connectionInfo.database"
-                    :label="$t('systems.connection.database')"
-                    :rules="requiredRules"
+                    :label="formData.type === 'sqlite' ? '데이터베이스 파일 경로' : $t('systems.connection.database')"
+                    :rules="formData.type === 'sqlite' ? sqlitePathRules : requiredRules"
+                    :placeholder="formData.type === 'sqlite' ? '/path/to/database.db' : undefined"
                     variant="outlined"
                     required
                     :disabled="saving"
@@ -491,6 +492,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSystemsStore } from '@/stores/systems'
+import { useToast } from 'vue-toastification'
 
 // Props & Emits
 const props = defineProps({
@@ -506,6 +508,7 @@ const emit = defineEmits(['update:modelValue', 'save', 'cancel'])
 
 const { t } = useI18n()
 const systemsStore = useSystemsStore()
+const toast = useToast()
 
 // 반응형 데이터
 const form = ref(null)
@@ -563,7 +566,7 @@ const isAPIType = computed(() => {
 })
 
 const needsDatabase = computed(() => {
-  return ['postgresql', 'mysql', 'mssql', 'mongodb'].includes(formData.value.type)
+  return ['postgresql', 'mysql', 'mssql', 'mongodb', 'sqlite'].includes(formData.value.type)
 })
 
 const needsServiceName = computed(() => {
@@ -608,6 +611,26 @@ const brokersRules = [
   v => (v && v.length > 0) || '브로커 주소는 필수입니다.'
 ]
 
+const sqlitePathRules = [
+  v => !!v || '데이터베이스 파일 경로는 필수입니다.',
+  v => {
+    if (!v) return true
+    // 절대 경로 또는 상대 경로 형식 검증
+    if (v.startsWith('/') || v.startsWith('./') || v.startsWith('../') || /^[a-zA-Z]:\\/.test(v)) {
+      return true
+    }
+    return '올바른 파일 경로를 입력해주세요. (예: /path/to/database.db, ./data/db.sqlite)'
+  },
+  v => {
+    if (!v) return true
+    // 파일 확장자 검증 (선택사항이지만 권장)
+    if (v.endsWith('.db') || v.endsWith('.sqlite') || v.endsWith('.sqlite3')) {
+      return true
+    }
+    return '권장 파일 확장자: .db, .sqlite, .sqlite3'
+  }
+]
+
 // 메서드
 const initializeForm = () => {
   if (props.system) {
@@ -649,7 +672,7 @@ const getDefaultConnectionInfo = (type) => {
     postgresql: { port: 5432, ssl: false, schema: 'public' },
     mysql: { port: 3306, ssl: false },
     mssql: { port: 1433, encrypt: false, trustServerCertificate: false },
-    sqlite: { readonly: false },
+    sqlite: { readonly: false, database: './data/app.db' },
     mongodb: { port: 27017, ssl: false, authSource: 'admin' },
     redis: { port: 6379, ssl: false, database: 0 },
     ftp: { port: 21, passiveMode: true },
@@ -676,15 +699,28 @@ const testConnection = async () => {
   testResult.value = null
   
   try {
-    const result = await systemsStore.validateConnection(formData.value.type, formData.value.connectionInfo)
-    testResult.value = {
-      success: true,
-      message: '연결 정보가 유효합니다.'
+    const api = (await import('@/utils/api')).default
+    const response = await api.post('/systems/test-connection', {
+      name: formData.value.name,
+      type: formData.value.type,
+      connectionInfo: formData.value.connectionInfo
+    })
+    
+    if (response.data.success && response.data.data.success) {
+      testResult.value = {
+        success: true,
+        message: response.data.data.message || '연결 테스트 성공!'
+      }
+    } else {
+      testResult.value = {
+        success: false,
+        message: response.data.data?.message || response.data.data?.error || '연결 테스트 실패'
+      }
     }
   } catch (error) {
     testResult.value = {
       success: false,
-      message: error.message || '연결 테스트 실패'
+      message: error.response?.data?.error || error.message || '연결 테스트 실패'
     }
   } finally {
     testing.value = false
@@ -697,16 +733,25 @@ const save = async () => {
   saving.value = true
   
   try {
-    if (props.mode === 'create') {
-      await systemsStore.createSystem(formData.value)
-    } else {
-      await systemsStore.updateSystem(props.system.id, formData.value)
-    }
+    const api = (await import('@/utils/api')).default
     
-    emit('save')
+    if (props.mode === 'create') {
+      const response = await api.post('/systems', formData.value)
+      if (response.data.success) {
+        toast.success('시스템이 생성되었습니다.')
+        emit('save')
+      }
+    } else {
+      const response = await api.put(`/systems/${props.system.id}`, formData.value)
+      if (response.data.success) {
+        toast.success('시스템이 수정되었습니다.')
+        emit('save')
+      }
+    }
   } catch (error) {
     console.error('시스템 저장 실패:', error)
-    // 에러는 상위 컴포넌트에서 처리
+    const errorMessage = error.response?.data?.error || error.response?.data?.message || '시스템 저장에 실패했습니다.'
+    toast.error(errorMessage)
   } finally {
     saving.value = false
   }
