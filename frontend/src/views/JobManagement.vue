@@ -5,7 +5,6 @@
         <v-col cols="12">
           <div class="d-flex justify-space-between align-center">
             <div>
-              <h1 class="text-h4 font-weight-bold text-primary mb-2">작업 관리</h1>
               <p class="text-subtitle-1 text-medium-emphasis">데이터 동기화 작업을 관리하고 모니터링합니다</p>
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" @click="showAlert">

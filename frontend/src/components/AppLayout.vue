@@ -48,15 +48,58 @@
       </nav>
       
       <div class="sidebar-footer" v-show="drawer">
-        <div class="user-info">
-          <div class="user-avatar">
-            <v-icon size="16">mdi-account</v-icon>
-          </div>
-          <div class="user-details">
-            <span class="user-name">{{ userInfo.name }}</span>
-            <span class="user-role">관리자</span>
-          </div>
-        </div>
+        <v-menu location="top" :close-on-content-click="false">
+          <template #activator="{ props }">
+            <div class="user-info" v-bind="props">
+              <div class="user-avatar">
+                <v-icon size="16">mdi-account</v-icon>
+              </div>
+              <div class="user-details">
+                <span class="user-name">{{ userInfo.name }}</span>
+                <span class="user-role">관리자</span>
+              </div>
+              <v-icon size="16" class="user-dropdown-icon">mdi-chevron-up</v-icon>
+            </div>
+          </template>
+          
+          <v-list class="sidebar-user-dropdown">
+            <v-list-item class="user-profile">
+              <div class="profile-content">
+                <div class="profile-avatar">
+                  <v-icon size="20">mdi-account</v-icon>
+                </div>
+                <div class="profile-info">
+                  <h4 class="profile-name">{{ userInfo.name }}</h4>
+                  <p class="profile-email">{{ userInfo.email }}</p>
+                </div>
+              </div>
+            </v-list-item>
+            
+            <v-divider />
+            
+            <v-list-item @click="openProfile" class="dropdown-item">
+              <v-icon class="mr-3" size="18">mdi-account-edit</v-icon>
+              프로필 설정
+            </v-list-item>
+            
+            <v-list-item @click="openSettings" class="dropdown-item">
+              <v-icon class="mr-3" size="18">mdi-cog</v-icon>
+              설정
+            </v-list-item>
+            
+            <v-divider />
+            
+            <v-list-item @click="logout" class="dropdown-item logout">
+              <v-icon class="mr-3" size="18">mdi-logout</v-icon>
+              로그아웃
+            </v-list-item>
+          </v-list>
+        </v-menu>
+        
+        <button class="home-button" @click="goToHome">
+          <v-icon size="18" class="mr-2">mdi-home</v-icon>
+          홈으로
+        </button>
       </div>
     </aside>
 
@@ -64,11 +107,22 @@
     <header class="modern-header">
       <div class="header-content">
         <div class="header-left">
-          <h1 class="page-title">{{ currentPageTitle }}</h1>
-          <div class="breadcrumb">
-            <router-link to="/dashboard" class="breadcrumb-item">대시보드</router-link>
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current">{{ currentPageTitle }}</span>
+          <!-- 모바일 메뉴 버튼 -->
+          <button 
+            v-if="isMobile"
+            class="mobile-menu-btn"
+            @click="toggleDrawer"
+          >
+            <v-icon size="24">mdi-menu</v-icon>
+          </button>
+          
+          <div>
+            <h1 class="page-title">{{ currentPageTitle }}</h1>
+            <div class="breadcrumb">
+              <router-link to="/dashboard" class="breadcrumb-item">대시보드</router-link>
+              <span class="breadcrumb-separator">/</span>
+              <span class="breadcrumb-current">{{ currentPageTitle }}</span>
+            </div>
           </div>
         </div>
         
@@ -81,56 +135,6 @@
               <v-icon size="18">mdi-bell-outline</v-icon>
               <span class="notification-badge">3</span>
             </button>
-          </div>
-          
-          <div class="user-menu">
-            <v-menu offset-y>
-              <template #activator="{ props }">
-                <button class="user-button" v-bind="props">
-                  <div class="user-avatar">
-                    <v-icon size="16">mdi-account</v-icon>
-                  </div>
-                  <div class="user-info">
-                    <span class="user-name">{{ userInfo.name }}</span>
-                    <span class="user-email">{{ userInfo.email }}</span>
-                  </div>
-                  <v-icon size="16" class="dropdown-icon">mdi-chevron-down</v-icon>
-                </button>
-              </template>
-              
-              <v-list class="user-dropdown">
-                <v-list-item class="user-profile">
-                  <div class="profile-content">
-                    <div class="profile-avatar">
-                      <v-icon size="20">mdi-account</v-icon>
-                    </div>
-                    <div class="profile-info">
-                      <h4 class="profile-name">{{ userInfo.name }}</h4>
-                      <p class="profile-email">{{ userInfo.email }}</p>
-                    </div>
-                  </div>
-                </v-list-item>
-                
-                <v-divider />
-                
-                <v-list-item @click="openProfile" class="dropdown-item">
-                  <v-icon class="mr-3" size="18">mdi-account-edit</v-icon>
-                  프로필 설정
-                </v-list-item>
-                
-                <v-list-item @click="openSettings" class="dropdown-item">
-                  <v-icon class="mr-3" size="18">mdi-cog</v-icon>
-                  설정
-                </v-list-item>
-                
-                <v-divider />
-                
-                <v-list-item @click="logout" class="dropdown-item logout">
-                  <v-icon class="mr-3" size="18">mdi-logout</v-icon>
-                  로그아웃
-                </v-list-item>
-              </v-list>
-            </v-menu>
           </div>
         </div>
       </div>
@@ -168,27 +172,32 @@ export default {
       {
         title: '대시보드',
         icon: 'mdi-view-dashboard',
-        to: '/dashboard'
+        to: '/dashboard',
+        name: 'Dashboard'
       },
       {
         title: '시스템 관리',
         icon: 'mdi-server-network',
-        to: '/systems'
+        to: '/systems',
+        name: 'Systems'
       },
       {
         title: '매핑 관리',
         icon: 'mdi-network-outline',
-        to: '/mappings'
+        to: '/mappings',
+        name: 'Mappings'
       },
       {
         title: '작업 관리',
         icon: 'mdi-briefcase-outline',
-        to: '/jobs'
+        to: '/jobs',
+        name: 'Jobs'
       },
       {
         title: '모니터링',
         icon: 'mdi-monitor-dashboard',
-        to: '/monitoring'
+        to: '/monitoring',
+        name: 'Monitoring'
       }
     ]
     
@@ -234,12 +243,21 @@ export default {
       }
     }
     
+    const goToHome = () => {
+      router.push('/')
+    }
+    
     // 라이프사이클
     onMounted(() => {
-      // 저장된 사이드바 상태 복원
-      const collapsed = localStorage.getItem('sidebarCollapsed')
-      if (collapsed !== null) {
-        drawer.value = collapsed === 'false'
+      // 모바일이 아닌 경우에만 저장된 사이드바 상태 복원
+      if (!isMobile.value) {
+        const collapsed = localStorage.getItem('sidebarCollapsed')
+        if (collapsed !== null) {
+          drawer.value = collapsed === 'false'
+        }
+      } else {
+        // 모바일에서는 기본적으로 사이드바를 닫아둠
+        drawer.value = false
       }
     })
     
@@ -254,7 +272,8 @@ export default {
       openNotifications,
       openProfile,
       openSettings,
-      logout
+      logout,
+      goToHome
     }
   }
 }
@@ -469,6 +488,12 @@ export default {
   padding: 0.75rem;
   background: var(--gray-50);
   border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.user-info:hover {
+  background: var(--gray-100);
 }
 
 .user-info .user-avatar {
@@ -504,20 +529,31 @@ export default {
   color: var(--gray-500);
 }
 
+.user-dropdown-icon {
+  color: var(--gray-500);
+  transition: transform 0.2s ease;
+}
+
+.user-info:hover .user-dropdown-icon {
+  transform: translateY(-2px);
+}
+
 /* 모던 헤더 */
 .modern-header {
   background: white;
   border-bottom: 1px solid var(--gray-200);
   box-shadow: var(--shadow-sm);
-  position: sticky;
+  position: fixed;
   top: 0;
+  right: 0;
+  left: 280px;
   z-index: 100;
-  margin-left: 280px;
-  transition: margin-left 0.3s ease;
+  transition: left 0.3s ease;
+  overflow: visible; /* 드롭다운 메뉴가 보이도록 */
 }
 
-.collapsed + .modern-header {
-  margin-left: 80px;
+.collapsed ~ .modern-header {
+  left: 80px;
 }
 
 .header-content {
@@ -525,13 +561,33 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 2rem;
-  min-height: 80px;
+  height: 80px;
 }
 
 .header-left {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-menu-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: var(--gray-100);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--gray-600);
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn:hover {
+  background: var(--gray-200);
+  color: var(--gray-800);
 }
 
 .page-title {
@@ -617,75 +673,14 @@ export default {
   border: 2px solid white;
 }
 
-.user-button {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
-  background: var(--gray-50);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 0;
-}
-
-.user-button:hover {
-  background: var(--gray-100);
-  border-color: var(--gray-300);
-}
-
-.user-button .user-avatar {
-  width: 32px;
-  height: 32px;
-  background: var(--primary-100);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-600);
-  flex-shrink: 0;
-}
-
-.user-button .user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
-  flex: 1;
-}
-
-.user-button .user-name {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--gray-900);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
-}
-
-.user-button .user-email {
-  font-size: 0.75rem;
-  color: var(--gray-500);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
-}
-
-.dropdown-icon {
-  color: var(--gray-400);
-  flex-shrink: 0;
-}
-
-/* 사용자 드롭다운 */
-.user-dropdown {
+/* 사용자 드롭다운 - 사이드바에서 사용 */
+.sidebar-user-dropdown {
   border-radius: var(--radius-lg) !important;
   box-shadow: var(--shadow-lg) !important;
   border: 1px solid var(--gray-200) !important;
   padding: 0.5rem 0 !important;
   min-width: 240px;
+  z-index: 9999 !important;
 }
 
 .user-profile {
@@ -750,20 +745,51 @@ export default {
 
 /* 메인 콘텐츠 */
 .main-content {
-  flex: 1;
-  margin-left: 280px;
-  transition: margin-left 0.3s ease;
-  min-height: 100vh;
+  position: fixed;
+  top: 81px; /* 헤더 높이(80px) + border(1px) */
+  left: 280px;
+  right: 0;
+  bottom: 0;
+  transition: left 0.3s ease;
   background: var(--gray-50);
+  overflow-y: auto;
 }
 
-.collapsed + * .main-content {
-  margin-left: 80px;
+.collapsed ~ .main-content {
+  left: 80px;
 }
 
 .content-wrapper {
-  min-height: calc(100vh - 80px);
-  margin-top: 80px;
+  min-height: 100%;
+  padding-bottom: 2rem;
+}
+
+/* 홈 버튼 */
+.home-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-lg);
+  color: var(--primary-700);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-button:hover {
+  background: var(--primary-100);
+  border-color: var(--primary-300);
+  transform: translateY(-1px);
+}
+
+.home-button:active {
+  transform: translateY(0);
 }
 
 /* 반응형 디자인 */
@@ -778,19 +804,11 @@ export default {
   }
   
   .modern-header {
-    margin-left: 0;
+    left: 0;
   }
   
   .main-content {
-    margin-left: 0;
-  }
-  
-  .user-button .user-info {
-    display: none;
-  }
-  
-  .dropdown-icon {
-    display: none;
+    left: 0;
   }
 }
 
@@ -815,15 +833,12 @@ export default {
     width: 36px;
     height: 36px;
   }
+  
 }
 
 @media (max-width: 640px) {
   .header-right {
     gap: 1rem;
-  }
-  
-  .user-button {
-    padding: 0.5rem;
   }
   
   /* 모바일 사이드바 추가 스타일 */
@@ -838,8 +853,12 @@ export default {
   }
   
   .main-content {
-    margin-left: 0 !important;
-    width: 100% !important;
+    left: 0 !important;
+    top: 65px !important; /* 모바일 헤더 높이 + padding + border */
+  }
+  
+  .modern-header {
+    left: 0 !important;
   }
   
   .sidebar-header {
@@ -854,9 +873,7 @@ export default {
   }
   
   .content-wrapper {
-    margin-top: 56px;
-    min-height: calc(100vh - 56px);
-    padding: 12px;
+    padding: 1rem;
   }
 }
 

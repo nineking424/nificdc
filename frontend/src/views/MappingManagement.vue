@@ -5,7 +5,6 @@
         <v-col cols="12">
           <div class="d-flex justify-space-between align-center">
             <div>
-              <h1 class="text-h4 font-weight-bold text-primary mb-2">매핑 관리</h1>
               <p class="text-subtitle-1 text-medium-emphasis">데이터 변환 매핑 규칙을 관리합니다</p>
             </div>
             <v-btn color="primary" prepend-icon="mdi-plus" @click="showAlert">
