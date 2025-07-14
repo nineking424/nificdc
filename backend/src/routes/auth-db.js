@@ -105,7 +105,7 @@ router.post('/login', async (req, res, next) => {
         role: user.role
       },
       process.env.JWT_ACCESS_SECRET || 'access-secret',
-      { expiresIn: '15m' }
+      { expiresIn: '1h' }
     );
 
     const refreshToken = jwt.sign(
@@ -162,7 +162,7 @@ router.post('/login', async (req, res, next) => {
         },
         accessToken,
         refreshToken,
-        expiresIn: 900, // 15 minutes in seconds
+        expiresIn: 3600, // 1 hour in seconds
         sessionId
       }
     });
@@ -321,7 +321,7 @@ router.post('/refresh', async (req, res) => {
         role: user.role
       },
       process.env.JWT_ACCESS_SECRET || 'access-secret',
-      { expiresIn: '15m' }
+      { expiresIn: '1h' }
     );
 
     // Generate new refresh token
@@ -338,7 +338,7 @@ router.post('/refresh', async (req, res) => {
       success: true,
       token: accessToken,
       refreshToken: newRefreshToken,
-      expiresIn: 900
+      expiresIn: 3600
     });
   } catch (error) {
     logger.error('Token refresh error:', error);

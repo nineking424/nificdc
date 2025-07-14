@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const loginAttempts = ref(0)
   const lastLoginAttempt = ref(null)
+  const tokenExpiresAt = ref(null)
   
   // 계산된 속성
   const isAuthenticated = computed(() => !!token.value && !!user.value)
@@ -59,12 +60,18 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await api.post('/auth/login', credentials)
       
       if (response.data.success) {
-        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data || response.data
+        const { user: userData, accessToken, refreshToken: newRefreshToken, expiresIn } = response.data.data || response.data
         
         // 상태 업데이트
         user.value = userData
         token.value = accessToken
         // refreshToken은 HTTP-Only 쿠키로 설정되므로 직접 저장하지 않음
+        
+        // 토큰 만료 시간 설정 (expiresIn은 초 단위)
+        if (expiresIn) {
+          tokenExpiresAt.value = new Date(Date.now() + expiresIn * 1000)
+          localStorage.setItem('token_expires_at', tokenExpiresAt.value.toISOString())
+        }
         
         // 로컬 스토리지에 저장
         localStorage.setItem('auth_token', accessToken)
@@ -121,7 +128,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
   
-  const logout = async () => {
+  const logout = async (isTokenExpired = false) => {
     try {
       if (token.value) {
         await api.post('/auth/logout')
@@ -133,16 +140,23 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       token.value = null
       refreshToken.value = null
+      tokenExpiresAt.value = null
       
       // 로컬 스토리지 정리
       localStorage.removeItem('auth_token')
       localStorage.removeItem('refresh_token')
       localStorage.removeItem('user_data')
+      localStorage.removeItem('token_expires_at')
       
       // API 헤더 제거
       delete api.defaults.headers.common['Authorization']
       
-      toast.info('로그아웃되었습니다.')
+      // 토큰 만료로 인한 로그아웃인지 확인하여 메시지 표시
+      if (isTokenExpired) {
+        toast.warning('로그인이 만료되어 자동 로그아웃되었습니다.')
+      } else {
+        toast.info('로그아웃되었습니다.')
+      }
     }
   }
   
@@ -165,7 +179,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('Fetch user error:', error)
       // 401 에러인 경우에만 로그아웃 처리
       if (error.response?.status === 401) {
-        await logout()
+        await logout(true) // 토큰 만료로 인한 로그아웃
       }
       throw error
     }
@@ -182,10 +196,16 @@ export const useAuthStore = defineStore('auth', () => {
       })
       
       if (response.data.success) {
-        const { token: newAccessToken, refreshToken: newRefreshToken } = response.data
+        const { token: newAccessToken, refreshToken: newRefreshToken, expiresIn } = response.data
         
         token.value = newAccessToken
         refreshToken.value = newRefreshToken
+        
+        // 토큰 만료 시간 업데이트
+        if (expiresIn) {
+          tokenExpiresAt.value = new Date(Date.now() + expiresIn * 1000)
+          localStorage.setItem('token_expires_at', tokenExpiresAt.value.toISOString())
+        }
         
         localStorage.setItem('auth_token', newAccessToken)
         localStorage.setItem('refresh_token', newRefreshToken)
@@ -198,7 +218,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (error) {
       console.error('Token refresh error:', error)
-      await logout()
+      await logout(true) // 토큰 만료로 인한 로그아웃
       throw error
     }
   }
@@ -289,12 +309,37 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
   
+  // 토큰 만료 여부 확인
+  const isTokenExpired = () => {
+    if (!tokenExpiresAt.value) return false
+    return new Date() >= tokenExpiresAt.value
+  }
+  
+  // 토큰 만료 5분 전 확인
+  const isTokenExpiringSoon = () => {
+    if (!tokenExpiresAt.value) return false
+    const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000) // 5분 후
+    return fiveMinutesFromNow >= tokenExpiresAt.value
+  }
+  
   // 초기화 함수
   const initialize = async () => {
     if (token.value) {
       try {
         // API 헤더 설정
         api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+        
+        // 토큰 만료 시간 복원
+        const expiresAt = localStorage.getItem('token_expires_at')
+        if (expiresAt) {
+          tokenExpiresAt.value = new Date(expiresAt)
+        }
+        
+        // 토큰이 이미 만료되었는지 확인
+        if (isTokenExpired()) {
+          console.log('[AUTH] Token already expired, attempting refresh')
+          await refreshAccessToken()
+        }
         
         // 로컬 스토리지에서 사용자 데이터 복원
         const userData = localStorage.getItem('user_data')
@@ -319,7 +364,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
-        await logout()
+        await logout(true) // 토큰 만료로 인한 로그아웃
       }
     }
   }
@@ -330,6 +375,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isLoading,
     loginAttempts,
+    tokenExpiresAt,
     
     // 계산된 속성
     isAuthenticated,
@@ -350,6 +396,8 @@ export const useAuthStore = defineStore('auth', () => {
     changePassword,
     forgotPassword,
     resetPassword,
-    initialize
+    initialize,
+    isTokenExpired,
+    isTokenExpiringSoon
   }
 })

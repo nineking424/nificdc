@@ -143,6 +143,7 @@ api.interceptors.response.use(
       try {
         // 리프레시 토큰이 있는 경우에만 갱신 시도
         if (authStore.refreshToken) {
+          console.log('[API] Attempting token refresh due to 401 error')
           await authStore.refreshAccessToken()
           
           // 원래 요청 재시도
@@ -154,16 +155,11 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError)
         
-        // 토큰 만료 메시지 표시
-        if (error.response?.data?.message?.includes('expired') || 
-            error.response?.data?.message?.includes('invalid') ||
-            refreshError.message?.includes('expired') ||
-            refreshError.message?.includes('invalid')) {
-          toast.error('로그인이 만료되었습니다. 다시 로그인해주세요.')
-        }
+        // 토큰 만료로 인한 자동 로그아웃 메시지 표시
+        toast.error('로그인이 만료되었습니다. 다시 로그인해주세요.')
         
-        // 리프레시 실패 시 로그아웃
-        await authStore.logout()
+        // 리프레시 실패 시 로그아웃 (토큰 만료 표시)
+        await authStore.logout(true)
         
         // 로그인 페이지로 리다이렉트 (현재 페이지가 홈이 아닌 경우)
         if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
