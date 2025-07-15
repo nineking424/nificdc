@@ -5,8 +5,10 @@
 
 const BaseSystemAdapter = require('./base/BaseAdapter');
 const PostgreSQLAdapter = require('./databases/PostgreSQLAdapter');
+const MySQLAdapter = require('./databases/MySQLAdapter');
 
 module.exports = {
   BaseSystemAdapter,
-  PostgreSQLAdapter
+  PostgreSQLAdapter,
+  MySQLAdapter
 };
