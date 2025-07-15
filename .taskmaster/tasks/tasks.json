@@ -166,7 +166,7 @@
         "dependencies": [
           3
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -174,7 +174,7 @@
             "description": "PostgreSQL 데이터베이스 연결을 위한 Pool 설정과 연결 테스트, 연결 해제 기능을 구현합니다",
             "dependencies": [],
             "details": "backend/services/systemAdapters/databases/PostgreSQLAdapter.js 파일에 pg 라이브러리를 사용하여 연결 풀 생성, SSL 옵션 처리, 연결 상태 확인, 연결 해제 메서드를 구현합니다. 연결 실패 시 적절한 에러 처리와 재시도 로직을 포함합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -185,7 +185,7 @@
               1
             ],
             "details": "information_schema와 pg_catalog를 활용하여 데이터베이스 스키마 구조를 탐색하고, 테이블 목록, 컬럼 정보, 데이터 타입, 기본키, 외래키 관계를 조회하는 메서드를 구현합니다. 결과는 표준화된 형식으로 반환합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -197,7 +197,7 @@
               2
             ],
             "details": "트랜잭션 지원, 배치 작업, 페이지네이션을 포함한 CRUD 메서드를 구현하고, Docker Compose를 사용하여 PostgreSQL 테스트 환경을 구성합니다. Jest를 사용하여 연결, 스키마 탐색, CRUD 작업에 대한 통합 테스트를 작성합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -212,7 +212,7 @@
         "dependencies": [
           3
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -220,7 +220,7 @@
             "description": "mysql2 라이브러리를 사용하여 연결 풀링을 지원하는 MySQL 연결 관리자를 구현합니다",
             "dependencies": [],
             "details": "createPool() 메서드를 사용하여 연결 풀을 생성하고, 최대 연결 수, 대기 시간, 유휴 시간 등의 설정을 구성합니다. 연결 획득/반환 로직과 연결 상태 모니터링 기능을 포함합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -231,7 +231,7 @@
               1
             ],
             "details": "INFORMATION_SCHEMA를 활용하여 데이터베이스 구조를 탐색하고, 테이블 목록, 컬럼 정보, 데이터 타입, 기본키/외래키 정보를 Universal Schema 형식으로 변환합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -242,7 +242,7 @@
               1
             ],
             "details": "페이지네이션, 필터링, 정렬을 지원하는 쿼리 빌더를 구현하고, 대용량 데이터 처리를 위한 스트림 기반 읽기와 배치 처리를 지원합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -253,7 +253,7 @@
               1
             ],
             "details": "배치 삽입, 업서트(UPSERT) 기능을 구현하고, 트랜잭션 시작/커밋/롤백을 지원합니다. 동시성 제어와 데드락 처리 로직을 포함합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -266,7 +266,7 @@
               4
             ],
             "details": "연결 실패, 쿼리 타임아웃, 트랜잭션 충돌 등의 에러 시나리오를 테스트하고, 재시도 로직과 상세한 에러 메시지를 구현합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -328,7 +328,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -336,7 +336,7 @@
             "description": "확장 가능한 변환 파이프라인 아키텍처를 설계하고 인터페이스를 정의합니다",
             "dependencies": [],
             "details": "파이프라인 단계(전처리, 변환, 검증, 후처리) 정의, 플러그인 아키텍처 설계, 파이프라인 빌더 패턴 구현, 비동기 처리 지원",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -347,7 +347,7 @@
               1
             ],
             "details": "스키마 검증, 타입 검증, 비즈니스 규칙 검증, 커스텀 검증기 지원, 검증 결과 리포팅",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1112,7 +1112,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-15T20:08:00.233Z",
+      "updated": "2025-07-15T21:23:12.282Z",
       "description": "Tasks for master context"
     }
   }
