@@ -15,6 +15,11 @@ const {
   ParallelExecutor,
   ExecutionContext
 } = require('./executors');
+const {
+  ErrorRecovery,
+  RollbackManager,
+  RollbackActionType
+} = require('./errorHandling');
 const logger = require('../../src/utils/logger');
 const { performance } = require('perf_hooks');
 
@@ -25,6 +30,17 @@ class MappingValidationError extends Error {
   constructor(message, details) {
     super(message);
     this.name = 'MappingValidationError';
+    this.details = details;
+  }
+}
+
+/**
+ * Mapping Execution Error
+ */
+class MappingExecutionError extends Error {
+  constructor(message, details) {
+    super(message);
+    this.name = 'MappingExecutionError';
     this.details = details;
   }
 }
@@ -60,6 +76,23 @@ class EnhancedMappingEngine extends EventEmitter {
       cacheHits: 0,
       cacheMisses: 0
     };
+    
+    // Initialize error handling components
+    this.errorRecovery = new ErrorRecovery({
+      enableRetry: options.enableRetry !== false,
+      enableCircuitBreaker: options.enableCircuitBreaker !== false,
+      enableDeadLetterQueue: options.enableDeadLetterQueue !== false,
+      maxRetries: options.maxRetries || 3,
+      dlqOptions: options.dlqOptions || {}
+    });
+    
+    this.rollbackManager = new RollbackManager({
+      maxHistorySize: options.rollbackHistorySize || 1000,
+      enableSnapshots: options.enableSnapshots !== false
+    });
+    
+    // Set up error recovery event handlers
+    this.setupErrorHandlingEvents();
 
     // Load built-in transformations
     this.loadBuiltInTransformations();
@@ -70,6 +103,42 @@ class EnhancedMappingEngine extends EventEmitter {
     if (this.options.enableCache) {
       this.setupCacheCleanup();
     }
+  }
+  
+  /**
+   * Setup error handling event listeners
+   */
+  setupErrorHandlingEvents() {
+    // Error recovery events
+    this.errorRecovery.on('errorRecovered', (event) => {
+      logger.info('Error recovered:', event);
+      this.emit('errorRecovered', event);
+    });
+    
+    this.errorRecovery.on('recoveryFailed', (event) => {
+      logger.error('Recovery failed:', event);
+      this.emit('recoveryFailed', event);
+    });
+    
+    this.errorRecovery.on('circuitBreakerOpen', (event) => {
+      logger.warn('Circuit breaker opened:', event);
+      this.emit('circuitBreakerOpen', event);
+    });
+    
+    this.errorRecovery.on('deadLetterQueueFull', (event) => {
+      logger.warn('Dead letter queue full:', event);
+      this.emit('deadLetterQueueFull', event);
+    });
+    
+    // Rollback manager events
+    this.rollbackManager.on('transactionStarted', (event) => {
+      logger.debug('Transaction started:', event);
+    });
+    
+    this.rollbackManager.on('transactionRolledBack', (event) => {
+      logger.info('Transaction rolled back:', event);
+      this.emit('transactionRolledBack', event);
+    });
   }
 
   /**
@@ -161,15 +230,22 @@ class EnhancedMappingEngine extends EventEmitter {
   async executeMapping(mapping, sourceData, options = {}) {
     const startTime = performance.now();
     const executionId = this.generateExecutionId();
+    let context;
+    let transactionId;
     
     try {
       logger.info(`Starting mapping execution: ${executionId}`);
+      
+      // Start transaction for rollback capability
+      if (options.enableRollback !== false) {
+        transactionId = this.rollbackManager.startTransaction(executionId);
+      }
       
       // Validate inputs
       this.validateInputs(mapping, sourceData);
       
       // Create execution context
-      const context = this.createExecutionContext(mapping, options, executionId);
+      context = this.createExecutionContext(mapping, options, executionId);
       
       // Check cache
       if (this.options.enableCache && options.useCache !== false) {
@@ -196,6 +272,19 @@ class EnhancedMappingEngine extends EventEmitter {
         throw new MappingExecutionError(`Unknown executor type: ${executorType}`);
       }
       
+      // Record action for rollback
+      if (transactionId) {
+        this.rollbackManager.recordAction({
+          type: RollbackActionType.RESTORE_STATE,
+          description: 'Pipeline execution',
+          data: { sourceData, mapping: mapping.id },
+          rollbackFunction: async () => {
+            logger.info('Rolling back pipeline execution');
+            // In a real scenario, this would restore the original state
+          }
+        });
+      }
+      
       // Start execution context
       context.start();
       
@@ -204,6 +293,11 @@ class EnhancedMappingEngine extends EventEmitter {
       
       // Complete execution context
       context.complete(result);
+      
+      // Commit transaction on success
+      if (transactionId) {
+        this.rollbackManager.commitTransaction(transactionId);
+      }
       
       // Cache result
       if (this.options.enableCache && options.useCache !== false) {
@@ -238,16 +332,50 @@ class EnhancedMappingEngine extends EventEmitter {
         context.fail(error);
       }
       
+      // Handle error with recovery
+      const recoveryResult = await this.errorRecovery.handleError(error, {
+        executionId,
+        mappingId: mapping ? mapping.id : 'unknown',
+        sourceData,
+        retryFunction: async () => {
+          // Retry the entire mapping execution
+          return await this.executeMapping(mapping, sourceData, {
+            ...options,
+            enableRollback: false // Disable rollback on retry to avoid conflicts
+          });
+        },
+        rollbackFunction: transactionId ? async () => {
+          return await this.rollbackManager.rollbackTransaction(transactionId);
+        } : undefined
+      });
+      
+      // If recovery failed and rollback is enabled
+      if (!recoveryResult.success && transactionId) {
+        try {
+          await this.rollbackManager.rollbackTransaction(transactionId);
+        } catch (rollbackError) {
+          logger.error('Rollback failed:', rollbackError);
+        }
+      }
+      
       // Emit error event
       this.emit('mappingError', {
         executionId,
         mapping: mapping ? mapping.id : 'unknown',
         executionTime,
         error: error.message,
+        recoveryAttempted: true,
+        recoveryResult,
         success: false
       });
       
       logger.error(`Mapping execution failed: ${executionId}`, error);
+      
+      // If recovery succeeded, return the result
+      if (recoveryResult.success && recoveryResult.result) {
+        return recoveryResult.result;
+      }
+      
       throw error;
     }
   }
@@ -481,25 +609,71 @@ class EnhancedMappingEngine extends EventEmitter {
       }));
     }
     
-    // Add error handlers
+    // Add error handlers with recovery
     builder.errorHandler('preprocessing', async (error, data, context) => {
       logger.warn(`Preprocessing error: ${error.message}`);
-      return { continue: false };
+      
+      const recoveryResult = await this.errorRecovery.handleError(error, {
+        stage: 'preprocessing',
+        data,
+        context,
+        fallbackValue: data
+      });
+      
+      return { 
+        continue: recoveryResult.success, 
+        data: recoveryResult.result || data 
+      };
     });
     
     builder.errorHandler('transformation', async (error, data, context) => {
       logger.warn(`Transformation error: ${error.message}`);
-      return { continue: context.config.strictMode ? false : true, data };
+      
+      const recoveryResult = await this.errorRecovery.handleError(error, {
+        stage: 'transformation',
+        data,
+        context,
+        fallbackFunction: async () => {
+          // Try with relaxed rules
+          return data; // Return original data as fallback
+        }
+      });
+      
+      return { 
+        continue: context.config.strictMode ? recoveryResult.success : true, 
+        data: recoveryResult.result || data 
+      };
     });
     
     builder.errorHandler('validation', async (error, data, context) => {
       logger.warn(`Validation error: ${error.message}`);
-      return { continue: false };
+      
+      const recoveryResult = await this.errorRecovery.handleError(error, {
+        stage: 'validation',
+        data,
+        context
+      });
+      
+      return { 
+        continue: recoveryResult.success && recoveryResult.strategy !== 'SKIP_AND_LOG',
+        data: recoveryResult.result || data
+      };
     });
     
     builder.errorHandler('postprocessing', async (error, data, context) => {
       logger.warn(`Postprocessing error: ${error.message}`);
-      return { continue: true, data };
+      
+      const recoveryResult = await this.errorRecovery.handleError(error, {
+        stage: 'postprocessing',
+        data,
+        context,
+        fallbackValue: data // Continue with current data on error
+      });
+      
+      return { 
+        continue: true, 
+        data: recoveryResult.result || data 
+      };
     });
     
     // Add middleware for metrics and logging
@@ -699,6 +873,31 @@ class EnhancedMappingEngine extends EventEmitter {
     this.pipelines.clear();
     logger.info('All caches and pipelines cleared');
   }
+  
+  /**
+   * Process dead letter queue entries
+   * @param {Object} options - Processing options
+   * @returns {Promise<Object>} - Processing results
+   */
+  async processDLQEntries(options = {}) {
+    return await this.errorRecovery.processDLQEntries(options);
+  }
+  
+  /**
+   * Get error recovery metrics
+   * @returns {Object} - Error recovery metrics
+   */
+  getErrorMetrics() {
+    return this.errorRecovery.getMetrics();
+  }
+  
+  /**
+   * Get rollback manager statistics
+   * @returns {Object} - Rollback statistics
+   */
+  getRollbackStats() {
+    return this.rollbackManager.getStatistics();
+  }
 
   /**
    * Register custom transformer
@@ -733,5 +932,6 @@ class EnhancedMappingEngine extends EventEmitter {
 
 module.exports = {
   EnhancedMappingEngine,
-  MappingValidationError
+  MappingValidationError,
+  MappingExecutionError
 };
