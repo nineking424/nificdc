@@ -442,11 +442,455 @@ describe('PostgreSQLAdapter Tests', () => {
     });
   });
 
-  describe('Stub Methods', () => {
-    it('should throw error for discoverSchemas (to be implemented)', async () => {
-      await expect(adapter.discoverSchemas()).rejects.toThrow('discoverSchemas will be implemented in subtask 4.2');
+  describe('Schema Discovery', () => {
+    beforeEach(async () => {
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ version: 'PostgreSQL 14.5' }]
+      });
+      await adapter.connect();
     });
 
+    it('should discover basic schema structure', async () => {
+      // Mock tables query
+      mockClient.query
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'public',
+              table_name: 'users',
+              table_type: 'r',
+              table_comment: 'User accounts',
+              estimated_rows: 1000,
+              table_size: '1024 kB',
+              table_size_bytes: 1048576,
+              owner: 'testuser'
+            }
+          ]
+        })
+        // Mock views query
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'public',
+              view_name: 'user_summary',
+              view_comment: 'User summary view',
+              owner: 'testuser',
+              view_definition: 'SELECT id, name FROM users'
+            }
+          ]
+        })
+        // Mock columns query for table
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              column_name: 'id',
+              ordinal_position: 1,
+              data_type: 'integer',
+              base_type: 'int4',
+              type_category: 'N',
+              max_length: 4,
+              numeric_precision: null,
+              numeric_scale: null,
+              is_not_null: true,
+              has_default: true,
+              default_value: 'nextval(\'users_id_seq\'::regclass)',
+              column_comment: 'Primary key'
+            },
+            {
+              column_name: 'name',
+              ordinal_position: 2,
+              data_type: 'character varying(100)',
+              base_type: 'varchar',
+              type_category: 'S',
+              max_length: 104,
+              numeric_precision: null,
+              numeric_scale: null,
+              is_not_null: false,
+              has_default: false,
+              default_value: null,
+              column_comment: 'User name'
+            }
+          ]
+        })
+        // Mock primary key query for table
+        .mockResolvedValueOnce({
+          rows: [{ column_name: 'id', is_primary: true }]
+        })
+        // Mock foreign key query for table
+        .mockResolvedValueOnce({ rows: [] })
+        // Mock columns query for view
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              column_name: 'id',
+              ordinal_position: 1,
+              data_type: 'integer',
+              base_type: 'int4',
+              type_category: 'N',
+              max_length: 4,
+              numeric_precision: null,
+              numeric_scale: null,
+              is_not_null: true,
+              has_default: false,
+              default_value: null,
+              column_comment: null
+            }
+          ]
+        })
+        // Mock primary key query for view
+        .mockResolvedValueOnce({ rows: [] })
+        // Mock foreign key query for view
+        .mockResolvedValueOnce({ rows: [] })
+        // Mock schema metadata query
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'public',
+              owner: 'testuser',
+              comment: 'Public schema'
+            }
+          ]
+        });
+
+      const schemas = await adapter.discoverSchemas();
+
+      expect(schemas).toHaveLength(1);
+      expect(schemas[0]).toMatchObject({
+        name: 'public',
+        type: 'schema',
+        metadata: {
+          owner: 'testuser',
+          comment: 'Public schema',
+          tableCount: 1,
+          viewCount: 1
+        }
+      });
+
+      const table = schemas[0].tables[0];
+      expect(table).toMatchObject({
+        name: 'users',
+        type: 'table',
+        schema: 'public',
+        comment: 'User accounts',
+        owner: 'testuser',
+        primaryKeys: ['id']
+      });
+
+      expect(table.columns).toHaveLength(2);
+      expect(table.columns[0]).toMatchObject({
+        name: 'id',
+        dataType: 'integer',
+        universalType: 'INTEGER',
+        isPrimaryKey: true,
+        isNullable: false,
+        hasDefault: true
+      });
+
+      const view = schemas[0].views[0];
+      expect(view).toMatchObject({
+        name: 'user_summary',
+        type: 'view',
+        schema: 'public',
+        comment: 'User summary view',
+        metadata: {
+          viewDefinition: 'SELECT id, name FROM users'
+        }
+      });
+    });
+
+    it('should discover schema with specific filters', async () => {
+      // Clear existing mocks from beforeEach
+      mockClient.query.mockClear();
+      
+      // Setup fresh connection
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ version: 'PostgreSQL 14.5' }]
+      });
+      await adapter.connect();
+      
+      mockClient.query
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'custom',
+              table_name: 'products',
+              table_type: 'r',
+              table_comment: null,
+              estimated_rows: 500,
+              table_size: '512 kB',
+              table_size_bytes: 524288,
+              owner: 'testuser'
+            }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [] }) // No views
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              column_name: 'id',
+              ordinal_position: 1,
+              data_type: 'uuid',
+              base_type: 'uuid',
+              type_category: 'U',
+              max_length: 16,
+              numeric_precision: null,
+              numeric_scale: null,
+              is_not_null: true,
+              has_default: true,
+              default_value: 'gen_random_uuid()',
+              column_comment: null
+            }
+          ]
+        })
+        .mockResolvedValueOnce({
+          rows: [{ column_name: 'id', is_primary: true }]
+        })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'custom',
+              owner: 'testuser',
+              comment: null
+            }
+          ]
+        });
+
+      const schemas = await adapter.discoverSchemas({
+        schemaName: 'custom',
+        includeViews: false
+      });
+
+      expect(schemas).toHaveLength(1);
+      expect(schemas[0].name).toBe('custom');
+      expect(schemas[0].views).toHaveLength(0);
+      expect(schemas[0].tables).toHaveLength(1);
+      expect(schemas[0].tables[0].columns[0]).toMatchObject({
+        name: 'id',
+        dataType: 'uuid',
+        universalType: 'STRING',
+        isPrimaryKey: true
+      });
+    });
+
+    it('should discover schema with indexes', async () => {
+      // Clear existing mocks from beforeEach
+      mockClient.query.mockClear();
+      
+      // Setup fresh connection
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ version: 'PostgreSQL 14.5' }]
+      });
+      await adapter.connect();
+      
+      mockClient.query
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'public',
+              table_name: 'users',
+              table_type: 'r',
+              table_comment: null,
+              estimated_rows: 1000,
+              table_size: '1024 kB',
+              table_size_bytes: 1048576,
+              owner: 'testuser'
+            }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [] }) // No views
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              column_name: 'email',
+              ordinal_position: 1,
+              data_type: 'character varying(255)',
+              base_type: 'varchar',
+              type_category: 'S',
+              max_length: 259,
+              numeric_precision: null,
+              numeric_scale: null,
+              is_not_null: false,
+              has_default: false,
+              default_value: null,
+              column_comment: null
+            }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [{ column_name: 'email', is_primary: true }] }) // Primary key
+        .mockResolvedValueOnce({ rows: [] }) // No foreign keys
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              index_name: 'users_email_idx',
+              column_name: 'email',
+              is_unique: true,
+              is_primary: false,
+              index_type: 'btree',
+              index_definition: 'CREATE UNIQUE INDEX users_email_idx ON public.users USING btree (email)'
+            }
+          ]
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'public',
+              owner: 'testuser',
+              comment: null
+            }
+          ]
+        });
+
+      const schemas = await adapter.discoverSchemas({
+        includeViews: false,
+        includeIndexes: true
+      });
+
+      expect(schemas[0].tables[0].indexes).toHaveLength(1);
+      expect(schemas[0].tables[0].indexes[0]).toMatchObject({
+        name: 'users_email_idx',
+        type: 'btree',
+        isUnique: true,
+        columns: ['email']
+      });
+    });
+
+    it('should handle foreign key relationships', async () => {
+      // Clear existing mocks from beforeEach
+      mockClient.query.mockClear();
+      
+      // Setup fresh connection
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ version: 'PostgreSQL 14.5' }]
+      });
+      await adapter.connect();
+      
+      mockClient.query
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'public',
+              table_name: 'orders',
+              table_type: 'r',
+              table_comment: null,
+              estimated_rows: 500,
+              table_size: '512 kB',
+              table_size_bytes: 524288,
+              owner: 'testuser'
+            }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [] }) // No views
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              column_name: 'user_id',
+              ordinal_position: 1,
+              data_type: 'integer',
+              base_type: 'int4',
+              type_category: 'N',
+              max_length: 4,
+              numeric_precision: null,
+              numeric_scale: null,
+              is_not_null: true,
+              has_default: false,
+              default_value: null,
+              column_comment: null
+            }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [] }) // No primary keys
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              column_name: 'user_id',
+              foreign_table: 'users',
+              foreign_schema: 'public',
+              foreign_column: 'id',
+              constraint_name: 'fk_orders_user_id',
+              on_delete: 'a',
+              on_update: 'a'
+            }
+          ]
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              schema_name: 'public',
+              owner: 'testuser',
+              comment: null
+            }
+          ]
+        });
+
+      const schemas = await adapter.discoverSchemas({
+        includeViews: false
+      });
+
+      const table = schemas[0].tables[0];
+      expect(table.columns[0].foreignKeys).toHaveLength(1);
+      expect(table.columns[0].foreignKeys[0]).toMatchObject({
+        constraintName: 'fk_orders_user_id',
+        referencedSchema: 'public',
+        referencedTable: 'users',
+        referencedColumn: 'id'
+      });
+    });
+
+    it('should handle empty schema discovery', async () => {
+      // Clear existing mocks from beforeEach
+      mockClient.query.mockClear();
+      
+      // Setup fresh connection
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ version: 'PostgreSQL 14.5' }]
+      });
+      await adapter.connect();
+      
+      mockClient.query
+        .mockResolvedValueOnce({ rows: [] }) // No tables
+        .mockResolvedValueOnce({ rows: [] }) // No views
+        .mockResolvedValueOnce({ rows: [] }); // No schema metadata
+
+      const schemas = await adapter.discoverSchemas();
+
+      expect(schemas).toHaveLength(0);
+    });
+
+    it('should handle discovery errors gracefully', async () => {
+      mockClient.query.mockRejectedValueOnce(new Error('Database error'));
+
+      await expect(adapter.discoverSchemas()).rejects.toThrow('Database error');
+    });
+  });
+
+  describe('Type Mapping', () => {
+    it('should map PostgreSQL types to universal types correctly', () => {
+      // Test common type mappings
+      expect(adapter._mapPostgreSQLTypeToUniversal('int4')).toBe('INTEGER');
+      expect(adapter._mapPostgreSQLTypeToUniversal('int8')).toBe('LONG');
+      expect(adapter._mapPostgreSQLTypeToUniversal('varchar')).toBe('STRING');
+      expect(adapter._mapPostgreSQLTypeToUniversal('text')).toBe('STRING');
+      expect(adapter._mapPostgreSQLTypeToUniversal('bool')).toBe('BOOLEAN');
+      expect(adapter._mapPostgreSQLTypeToUniversal('timestamp')).toBe('DATETIME');
+      expect(adapter._mapPostgreSQLTypeToUniversal('json')).toBe('JSON');
+      expect(adapter._mapPostgreSQLTypeToUniversal('jsonb')).toBe('JSON');
+      expect(adapter._mapPostgreSQLTypeToUniversal('uuid')).toBe('STRING');
+      expect(adapter._mapPostgreSQLTypeToUniversal('bytea')).toBe('BINARY');
+      expect(adapter._mapPostgreSQLTypeToUniversal('numeric')).toBe('DECIMAL');
+      expect(adapter._mapPostgreSQLTypeToUniversal('float4')).toBe('FLOAT');
+      expect(adapter._mapPostgreSQLTypeToUniversal('float8')).toBe('DOUBLE');
+      expect(adapter._mapPostgreSQLTypeToUniversal('date')).toBe('DATE');
+      expect(adapter._mapPostgreSQLTypeToUniversal('time')).toBe('TIME');
+      expect(adapter._mapPostgreSQLTypeToUniversal('_text')).toBe('ARRAY');
+      expect(adapter._mapPostgreSQLTypeToUniversal('xml')).toBe('XML');
+      
+      // Test unknown type fallback
+      expect(adapter._mapPostgreSQLTypeToUniversal('unknown_type')).toBe('STRING');
+    });
+  });
+
+  describe('Stub Methods', () => {
     it('should throw error for readData (to be implemented)', async () => {
       await expect(adapter.readData({})).rejects.toThrow('readData will be implemented in subtask 4.3');
     });
