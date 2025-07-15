@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const { UNIVERSAL_TYPES, SCHEMA_FORMATS } = require('../constants/schemaTypes');
 
 const DataSchema = sequelize.define('DataSchema', {
   id: {
@@ -39,6 +40,18 @@ const DataSchema = sequelize.define('DataSchema', {
     type: DataTypes.ENUM('table', 'collection', 'file', 'api', 'topic'),
     allowNull: false,
     defaultValue: 'table'
+  },
+  // Universal Schema 지원을 위한 새로운 필드들
+  schemaFormat: {
+    type: DataTypes.ENUM(...Object.values(SCHEMA_FORMATS)),
+    allowNull: false,
+    defaultValue: SCHEMA_FORMATS.RELATIONAL,
+    comment: '스키마 형식 (relational, document, key-value, etc.)'
+  },
+  universalType: {
+    type: DataTypes.ENUM(...Object.values(UNIVERSAL_TYPES)),
+    allowNull: true,
+    comment: '범용 데이터 타입 (컬럼별로 정의됨)'
   },
   columns: {
     type: DataTypes.JSON,
@@ -144,6 +157,13 @@ const DataSchema = sequelize.define('DataSchema', {
         schema.columns.forEach((column, index) => {
           if (!column.name || !column.dataType) {
             throw new Error(`컬럼 ${index + 1}: 이름과 데이터 타입은 필수입니다.`);
+          }
+          
+          // Universal type 자동 설정 (신규 컬럼의 경우)
+          if (!column.universalType && column.dataType) {
+            const { mapToUniversalType } = require('../constants/schemaTypes');
+            // 기본적으로 MySQL 타입으로 가정, 추후 시스템 타입에 따라 동적으로 결정
+            column.universalType = mapToUniversalType('mysql', column.dataType);
           }
         });
       }
@@ -383,5 +403,80 @@ DataSchema.getDataTypes = function() {
     { value: 'ARRAY', label: 'ARRAY', category: 'array' }
   ];
 };
+
+// Universal Schema 관련 새로운 메서드들
+DataSchema.prototype.getColumnWithUniversalType = function(columnName) {
+  const column = this.columns.find(col => col.name === columnName);
+  if (column && !column.universalType) {
+    const { mapToUniversalType } = require('../constants/schemaTypes');
+    column.universalType = mapToUniversalType('mysql', column.dataType);
+  }
+  return column;
+};
+
+DataSchema.prototype.getCompatibleColumns = function(targetUniversalType) {
+  const { isTypeCompatible } = require('../constants/schemaTypes');
+  return this.columns.filter(col => {
+    const colUniversalType = col.universalType || mapToUniversalType('mysql', col.dataType);
+    return isTypeCompatible(colUniversalType, targetUniversalType);
+  });
+};
+
+DataSchema.prototype.transformToUniversalSchema = function() {
+  const { mapToUniversalType } = require('../constants/schemaTypes');
+  const universalColumns = this.columns.map(col => ({
+    ...col,
+    universalType: col.universalType || mapToUniversalType('mysql', col.dataType),
+    originalType: col.dataType
+  }));
+  
+  return {
+    ...this.toJSON(),
+    columns: universalColumns
+  };
+};
+
+DataSchema.getUniversalTypes = function() {
+  const { UNIVERSAL_TYPES } = require('../constants/schemaTypes');
+  return Object.entries(UNIVERSAL_TYPES).map(([key, value]) => ({
+    value,
+    label: key,
+    category: getTypeCategory(value)
+  }));
+};
+
+DataSchema.getSchemaFormats = function() {
+  const { SCHEMA_FORMATS } = require('../constants/schemaTypes');
+  return Object.entries(SCHEMA_FORMATS).map(([key, value]) => ({
+    value,
+    label: key.replace('_', ' ').toLowerCase()
+  }));
+};
+
+// Helper function for categorizing universal types
+function getTypeCategory(universalType) {
+  const { UNIVERSAL_TYPES } = require('../constants/schemaTypes');
+  const categories = {
+    [UNIVERSAL_TYPES.STRING]: 'text',
+    [UNIVERSAL_TYPES.TEXT]: 'text',
+    [UNIVERSAL_TYPES.INTEGER]: 'numeric',
+    [UNIVERSAL_TYPES.LONG]: 'numeric',
+    [UNIVERSAL_TYPES.FLOAT]: 'numeric',
+    [UNIVERSAL_TYPES.DOUBLE]: 'numeric',
+    [UNIVERSAL_TYPES.DECIMAL]: 'numeric',
+    [UNIVERSAL_TYPES.BOOLEAN]: 'boolean',
+    [UNIVERSAL_TYPES.DATE]: 'datetime',
+    [UNIVERSAL_TYPES.TIME]: 'datetime',
+    [UNIVERSAL_TYPES.DATETIME]: 'datetime',
+    [UNIVERSAL_TYPES.TIMESTAMP]: 'datetime',
+    [UNIVERSAL_TYPES.BINARY]: 'binary',
+    [UNIVERSAL_TYPES.ARRAY]: 'complex',
+    [UNIVERSAL_TYPES.OBJECT]: 'complex',
+    [UNIVERSAL_TYPES.MAP]: 'complex',
+    [UNIVERSAL_TYPES.JSON]: 'complex',
+    [UNIVERSAL_TYPES.XML]: 'complex'
+  };
+  return categories[universalType] || 'other';
+}
 
 module.exports = DataSchema;
