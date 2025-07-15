@@ -68,8 +68,19 @@
             
             <!-- 데이터베이스 연결 정보 -->
             <div v-if="isDatabaseType" class="connection-form">
+              <v-alert
+                v-if="isSQLiteType"
+                type="info"
+                variant="tonal"
+                density="compact"
+                class="mb-4"
+              >
+                <v-icon size="small" class="mr-2">mdi-information</v-icon>
+                SQLite는 파일 기반 데이터베이스로 호스트/포트 정보가 필요하지 않습니다. 데이터베이스 파일 경로만 입력하세요.
+              </v-alert>
+              
               <v-row>
-                <v-col cols="12" md="6">
+                <v-col v-if="!isSQLiteType" cols="12" md="6">
                   <v-text-field
                     v-model="formData.connectionInfo.host"
                     :label="$t('systems.connection.host')"
@@ -80,7 +91,7 @@
                   />
                 </v-col>
                 
-                <v-col cols="12" md="6">
+                <v-col v-if="!isSQLiteType" cols="12" md="6">
                   <v-text-field
                     v-model.number="formData.connectionInfo.port"
                     :label="$t('systems.connection.port')"
@@ -95,10 +106,12 @@
                   <v-text-field
                     v-model="formData.connectionInfo.username"
                     :label="$t('systems.connection.username')"
-                    :rules="requiredRules"
+                    :rules="isSQLiteType ? [] : requiredRules"
                     variant="outlined"
-                    required
+                    :required="!isSQLiteType"
                     :disabled="saving"
+                    :hint="isSQLiteType ? 'SQLite에서는 선택사항입니다' : ''"
+                    persistent-hint
                   />
                 </v-col>
                 
@@ -106,16 +119,18 @@
                   <v-text-field
                     v-model="formData.connectionInfo.password"
                     :label="$t('systems.connection.password')"
-                    :rules="requiredRules"
+                    :rules="isSQLiteType ? [] : requiredRules"
                     type="password"
                     variant="outlined"
-                    required
+                    :required="!isSQLiteType"
                     :disabled="saving"
+                    :hint="isSQLiteType ? 'SQLite에서는 선택사항입니다' : ''"
+                    persistent-hint
                   />
                 </v-col>
                 
                 <!-- 데이터베이스 특정 필드 -->
-                <v-col v-if="needsDatabase" cols="12" md="6">
+                <v-col v-if="needsDatabase" :cols="12" :md="isSQLiteType ? 12 : 6">
                   <v-text-field
                     v-model="formData.connectionInfo.database"
                     :label="formData.type === 'sqlite' ? '데이터베이스 파일 경로' : $t('systems.connection.database')"
@@ -124,6 +139,9 @@
                     variant="outlined"
                     required
                     :disabled="saving"
+                    :prepend-inner-icon="isSQLiteType ? 'mdi-database' : undefined"
+                    :hint="isSQLiteType ? '절대 경로 또는 상대 경로를 입력하세요. 예: /var/lib/app/data.db, ./data/app.sqlite' : ''"
+                    :persistent-hint="isSQLiteType"
                   />
                 </v-col>
                 
@@ -563,6 +581,10 @@ const isFileSystemType = computed(() => {
 
 const isAPIType = computed(() => {
   return ['api_rest'].includes(formData.value.type)
+})
+
+const isSQLiteType = computed(() => {
+  return formData.value.type === 'sqlite'
 })
 
 const needsDatabase = computed(() => {

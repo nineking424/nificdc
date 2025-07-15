@@ -223,7 +223,15 @@ class ConnectionTester {
    */
   static async testSQLiteConnection(connectionInfo) {
     return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(connectionInfo.path, connectionInfo.readonly ? sqlite3.OPEN_READONLY : sqlite3.OPEN_READWRITE, (err) => {
+      // database 필드 또는 path 필드 사용 (frontend에서는 database 필드를 사용)
+      const dbPath = connectionInfo.database || connectionInfo.path;
+      
+      if (!dbPath) {
+        reject(new Error('데이터베이스 파일 경로가 필요합니다.'));
+        return;
+      }
+      
+      const db = new sqlite3.Database(dbPath, connectionInfo.readonly ? sqlite3.OPEN_READONLY : sqlite3.OPEN_READWRITE, (err) => {
         if (err) {
           reject(err);
         } else {
@@ -233,7 +241,7 @@ class ConnectionTester {
             } else {
               resolve({
                 version: row.version,
-                path: connectionInfo.path,
+                path: dbPath,
                 serverInfo: 'SQLite 데이터베이스 연결 성공'
               });
             }
