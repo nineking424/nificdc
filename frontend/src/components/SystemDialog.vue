@@ -111,7 +111,7 @@
                     :required="!isSQLiteType"
                     :disabled="saving"
                     :hint="isSQLiteType ? 'SQLite에서는 선택사항입니다' : ''"
-                    persistent-hint
+                    :persistent-hint="isSQLiteType"
                   />
                 </v-col>
                 
@@ -125,7 +125,7 @@
                     :required="!isSQLiteType"
                     :disabled="saving"
                     :hint="isSQLiteType ? 'SQLite에서는 선택사항입니다' : ''"
-                    persistent-hint
+                    :persistent-hint="isSQLiteType"
                   />
                 </v-col>
                 

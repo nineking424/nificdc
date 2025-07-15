@@ -317,6 +317,10 @@ export default {
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
   backdrop-filter: blur(2px);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* 모바일 사이드바 */
@@ -888,6 +892,24 @@ export default {
   
   .nav-link:hover::before {
     opacity: 0;
+  }
+  
+  /* 모바일에서 요소가 사라지지 않도록 강제 표시 */
+  .user-dropdown,
+  .v-menu__content,
+  .dropdown,
+  .sidebar-user-dropdown {
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  /* 터치 후에도 요소가 보이도록 유지 */
+  *:focus,
+  *:active {
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 }
 </style>

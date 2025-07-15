@@ -21,6 +21,9 @@ export default {
 </script>
 
 <style>
+/* 모바일 터치 문제 수정 */
+@import '@/styles/mobile-fix.css';
+
 /* 글로벌 스타일 리셋 */
 * {
   box-sizing: border-box;

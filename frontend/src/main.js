@@ -5,6 +5,7 @@ import router from './router'
 import vuetify from './plugins/vuetify'
 import i18n from './plugins/i18n'
 import toast from './plugins/toast'
+import vuetifyMobileFix from './plugins/vuetify-mobile-fix'
 import './assets/styles/main.scss'
 import './styles/design-system.css'
 import './styles/mobile.css'
@@ -32,6 +33,8 @@ app.use(router)
 app.use(vuetify)
 app.use(i18n)
 app.use(toast)
+// Vuetify Mobile Fix는 Vuetify 초기화 이후에 로드
+app.use(vuetifyMobileFix)
 
 // 글로벌 프로퍼티 추가
 app.config.globalProperties.$filters = {

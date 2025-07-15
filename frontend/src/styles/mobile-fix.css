@@ -1,0 +1,221 @@
+/* Mobile Touch Interaction Fixes */
+/* Targeted fixes for components disappearing on touch in mobile devices */
+
+/* Touch-active state from JavaScript */
+.touch-active {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateZ(0);
+}
+
+/* Optimized ripple for mobile */
+.v-ripple--mobile .v-ripple__animation {
+  animation-duration: 300ms !important;
+}
+
+/* Smooth touch scrolling */
+@media (hover: none) and (pointer: coarse) {
+  .v-main,
+  .v-navigation-drawer__content,
+  .v-data-table__wrapper {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Force hardware acceleration to prevent rendering issues */
+@media (hover: none) and (pointer: coarse) {
+  /* Apply hardware acceleration only to problematic components */
+  .v-card,
+  .v-list-item,
+  .v-field,
+  .v-field__input {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* Create a touch-active state to handle visibility during touch */
+  body:active .v-card,
+  body:active .v-list-item,
+  body:active .v-field,
+  .v-card:active,
+  .v-list-item:active,
+  .v-field:active {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* Fix for specific components that disappear on touch */
+  .v-overlay__content .v-card {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* Preserve Vuetify animations but ensure visibility */
+  .v-card,
+  .v-list-item {
+    /* Allow transitions to work normally */
+    transition-property: transform, box-shadow;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Fix for hover states getting stuck on touch */
+  @media (hover: hover) {
+    /* Only apply hover states on devices that support hover */
+    .v-btn:hover::before,
+    .v-list-item:hover::before,
+    .v-card:hover::before {
+      opacity: 0.08;
+    }
+  }
+
+  /* Disable hover effects on touch devices */
+  .v-card:hover,
+  .v-btn:hover {
+    /* Let normal styles apply, no forced overrides */
+  }
+
+  /* Fix for input fields during touch interaction */
+  .v-text-field:active .v-field__overlay,
+  .v-select:active .v-field__overlay {
+    opacity: 0.12;
+  }
+
+  /* Keep ripple effects but ensure they don't break visibility */
+  .v-ripple__container {
+    /* Allow ripples to work normally */
+    pointer-events: none;
+  }
+
+  /* Fix for persistent hints - only when active */
+  .v-field--persistent-hint .v-messages {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Allow transform animations but ensure stability during touch */
+  .v-field__input:active,
+  .v-field__field:active,
+  .v-input__control:active {
+    transform: translateZ(0);
+  }
+
+  /* iOS specific fixes */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS Safari rendering fixes - only during interaction */
+    .v-card:active,
+    .v-list-item:active,
+    .v-field:active {
+      -webkit-transform: translate3d(0, 0, 0);
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  /* Fix z-index layering without forcing values */
+  .v-overlay--active {
+    z-index: 2000;
+  }
+
+  .v-menu__content {
+    z-index: 2001;
+  }
+
+  /* Ensure touch targets use proper touch handling */
+  .v-btn,
+  .v-list-item,
+  .v-field,
+  .v-card {
+    touch-action: manipulation;
+  }
+
+  /* Fix for dialog components - maintain visibility without breaking animations */
+  .v-dialog > .v-overlay__content > .v-card {
+    /* Ensure dialogs remain visible */
+    opacity: 1;
+    visibility: visible;
+    /* Allow transform animations */
+  }
+
+  /* Prevent tap highlight color from causing issues */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Natural active states without forcing opacity */
+  .v-btn:active {
+    opacity: 0.85;
+  }
+
+  /* Ensure form elements stay visible during interaction */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Additional mobile-specific fixes */
+@media (max-width: 768px) {
+  /* Speed up transitions on mobile but don't disable them */
+  .v-enter-active,
+  .v-leave-active {
+    transition-duration: 150ms !important;
+  }
+
+  /* Maintain overlay scrim visibility */
+  .v-overlay__scrim {
+    opacity: 0.32;
+  }
+
+  /* Fix for dropdown menus - ensure visibility */
+  .v-menu__content,
+  .v-select__content {
+    opacity: 1;
+  }
+
+  /* Navigation drawer scrim */
+  .v-navigation-drawer__scrim {
+    opacity: 0.5;
+  }
+
+  /* Fix for expansion panels */
+  .v-expansion-panel-text__wrapper {
+    visibility: visible;
+  }
+}
+
+/* Fix for specific problematic components */
+.v-field--persistent-hint .v-field__details {
+  /* Already handled in the main section */
+}
+
+/* Ensure data table cells handle touch properly */
+@media (hover: none) {
+  .v-data-table tbody tr:active td {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Targeted fixes for components that commonly disappear */
+@media (hover: none) and (pointer: coarse) {
+  /* Fix for components during touch interaction */
+  .v-card:active,
+  .v-list-item:active,
+  .v-field:active,
+  .v-overlay__content:active > * {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  
+  /* Ensure field details remain visible when persistent */
+  .v-field--persistent-hint .v-field__details,
+  .v-field--persistent-hint .v-messages {
+    opacity: 1;
+    visibility: visible;
+  }
+}

@@ -221,17 +221,34 @@
     min-width: 44px !important;
   }
   
-  /* Remove hover effects on touch devices */
+  /* Remove hover effects on touch devices but ensure visibility */
   .v-btn:hover::before,
-  .v-list-item:hover::before,
-  .v-card:hover {
+  .v-list-item:hover::before {
     opacity: 0 !important;
+  }
+  
+  /* Ensure cards and other elements remain visible */
+  .v-card,
+  .v-btn,
+  .v-list-item,
+  .v-tab,
+  .v-menu__content,
+  .v-dialog {
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
   
   /* Optimize scrolling */
   .v-data-table__wrapper {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+  }
+  
+  /* Prevent stuck states */
+  *:active {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
