@@ -598,19 +598,578 @@ class PostgreSQLAdapter extends BaseSystemAdapter {
   }
 
   /**
-   * 데이터 읽기 (스텁 - subtask 4.3에서 구현)
+   * 데이터 읽기
    */
   async readData(schema, options = {}) {
-    // Will be implemented in subtask 4.3
-    throw new Error('readData will be implemented in subtask 4.3');
+    if (!this.supportsOperation('read')) {
+      throw new Error('Read operation is not supported');
+    }
+
+    const {
+      limit = 1000,
+      offset = 0,
+      orderBy = null,
+      orderDirection = 'ASC',
+      filters = {},
+      columns = null,
+      distinctOn = null,
+      groupBy = null,
+      having = null,
+      join = null
+    } = options;
+
+    const client = await this.pool.connect();
+    try {
+      // Build SELECT clause
+      let selectClause = '*';
+      if (columns && Array.isArray(columns)) {
+        selectClause = columns.map(col => `"${col}"`).join(', ');
+      }
+
+      // Handle DISTINCT ON
+      if (distinctOn) {
+        if (Array.isArray(distinctOn)) {
+          selectClause = `DISTINCT ON (${distinctOn.map(col => `"${col}"`).join(', ')}) ${selectClause}`;
+        } else {
+          selectClause = `DISTINCT ON ("${distinctOn}") ${selectClause}`;
+        }
+      }
+
+      // Build FROM clause
+      let fromClause = `"${schema.schema}"."${schema.name}"`;
+      
+      // Handle JOINs
+      if (join && Array.isArray(join)) {
+        join.forEach(joinSpec => {
+          const { type = 'INNER', table, on, schema: joinSchema } = joinSpec;
+          const joinTable = joinSchema ? `"${joinSchema}"."${table}"` : `"${table}"`;
+          fromClause += ` ${type.toUpperCase()} JOIN ${joinTable} ON ${on}`;
+        });
+      }
+
+      // Build WHERE clause
+      let whereClause = '';
+      const queryParams = [];
+      let paramIndex = 1;
+
+      if (filters && Object.keys(filters).length > 0) {
+        const conditions = [];
+        
+        for (const [column, condition] of Object.entries(filters)) {
+          if (condition === null || condition === undefined) {
+            conditions.push(`"${column}" IS NULL`);
+          } else if (typeof condition === 'object' && condition !== null) {
+            // Handle complex conditions
+            if (condition.eq !== undefined) {
+              conditions.push(`"${column}" = $${paramIndex}`);
+              queryParams.push(condition.eq);
+              paramIndex++;
+            } else if (condition.ne !== undefined) {
+              conditions.push(`"${column}" != $${paramIndex}`);
+              queryParams.push(condition.ne);
+              paramIndex++;
+            } else if (condition.gt !== undefined) {
+              conditions.push(`"${column}" > $${paramIndex}`);
+              queryParams.push(condition.gt);
+              paramIndex++;
+            } else if (condition.gte !== undefined) {
+              conditions.push(`"${column}" >= $${paramIndex}`);
+              queryParams.push(condition.gte);
+              paramIndex++;
+            } else if (condition.lt !== undefined) {
+              conditions.push(`"${column}" < $${paramIndex}`);
+              queryParams.push(condition.lt);
+              paramIndex++;
+            } else if (condition.lte !== undefined) {
+              conditions.push(`"${column}" <= $${paramIndex}`);
+              queryParams.push(condition.lte);
+              paramIndex++;
+            } else if (condition.like !== undefined) {
+              conditions.push(`"${column}" LIKE $${paramIndex}`);
+              queryParams.push(condition.like);
+              paramIndex++;
+            } else if (condition.ilike !== undefined) {
+              conditions.push(`"${column}" ILIKE $${paramIndex}`);
+              queryParams.push(condition.ilike);
+              paramIndex++;
+            } else if (condition.in !== undefined && Array.isArray(condition.in)) {
+              const placeholders = condition.in.map(() => `$${paramIndex++}`).join(', ');
+              conditions.push(`"${column}" IN (${placeholders})`);
+              queryParams.push(...condition.in);
+            } else if (condition.between !== undefined && Array.isArray(condition.between) && condition.between.length === 2) {
+              conditions.push(`"${column}" BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+              queryParams.push(condition.between[0], condition.between[1]);
+              paramIndex += 2;
+            } else if (condition.regex !== undefined) {
+              conditions.push(`"${column}" ~ $${paramIndex}`);
+              queryParams.push(condition.regex);
+              paramIndex++;
+            } else if (condition.jsonContains !== undefined) {
+              conditions.push(`"${column}" @> $${paramIndex}`);
+              queryParams.push(JSON.stringify(condition.jsonContains));
+              paramIndex++;
+            } else if (condition.jsonPath !== undefined) {
+              conditions.push(`"${column}" #> $${paramIndex} IS NOT NULL`);
+              queryParams.push(`{${condition.jsonPath}}`);
+              paramIndex++;
+            }
+          } else {
+            // Simple equality
+            conditions.push(`"${column}" = $${paramIndex}`);
+            queryParams.push(condition);
+            paramIndex++;
+          }
+        }
+        
+        if (conditions.length > 0) {
+          whereClause = `WHERE ${conditions.join(' AND ')}`;
+        }
+      }
+
+      // Build GROUP BY clause
+      let groupByClause = '';
+      if (groupBy) {
+        if (Array.isArray(groupBy)) {
+          groupByClause = `GROUP BY ${groupBy.map(col => `"${col}"`).join(', ')}`;
+        } else {
+          groupByClause = `GROUP BY "${groupBy}"`;
+        }
+      }
+
+      // Build HAVING clause
+      let havingClause = '';
+      if (having) {
+        havingClause = `HAVING ${having}`;
+      }
+
+      // Build ORDER BY clause
+      let orderByClause = '';
+      if (orderBy) {
+        if (Array.isArray(orderBy)) {
+          orderByClause = `ORDER BY ${orderBy.map(col => `"${col}" ${orderDirection}`).join(', ')}`;
+        } else {
+          orderByClause = `ORDER BY "${orderBy}" ${orderDirection}`;
+        }
+      }
+
+      // Build LIMIT and OFFSET
+      let limitClause = '';
+      if (limit > 0) {
+        limitClause = `LIMIT $${paramIndex}`;
+        queryParams.push(limit);
+        paramIndex++;
+      }
+
+      let offsetClause = '';
+      if (offset > 0) {
+        offsetClause = `OFFSET $${paramIndex}`;
+        queryParams.push(offset);
+        paramIndex++;
+      }
+
+      // Construct final query
+      const query = [
+        `SELECT ${selectClause}`,
+        `FROM ${fromClause}`,
+        whereClause,
+        groupByClause,
+        havingClause,
+        orderByClause,
+        limitClause,
+        offsetClause
+      ].filter(clause => clause).join(' ');
+
+      // Execute query with performance tracking
+      const result = await this.measurePerformance('readData', async () => {
+        const startTime = Date.now();
+        const queryResult = await client.query(query, queryParams);
+        const duration = Date.now() - startTime;
+
+        this.emit('dataRead', {
+          schema: schema.name,
+          rowCount: queryResult.rowCount,
+          duration,
+          query: query.substring(0, 200) + (query.length > 200 ? '...' : '')
+        });
+
+        return queryResult;
+      });
+
+      // Get total count if requested
+      let totalCount = null;
+      if (options.includeTotalCount) {
+        const countQuery = `SELECT COUNT(*) as total FROM ${fromClause} ${whereClause}`;
+        const countResult = await client.query(countQuery, queryParams.slice(0, -2)); // Remove limit/offset params
+        totalCount = parseInt(countResult.rows[0].total);
+      }
+
+      return {
+        data: result.rows,
+        rowCount: result.rowCount,
+        totalCount,
+        metadata: {
+          schema: schema.name,
+          table: schema.name,
+          columns: result.fields.map(field => ({
+            name: field.name,
+            dataTypeID: field.dataTypeID,
+            dataTypeName: this._getDataTypeName(field.dataTypeID)
+          })),
+          query: {
+            sql: query,
+            parameters: queryParams,
+            executionTime: Date.now() - performance.now()
+          },
+          pagination: {
+            limit,
+            offset,
+            hasMore: result.rowCount === limit
+          }
+        }
+      };
+    } catch (error) {
+      this.emit('error', error);
+      throw new Error(`Failed to read data: ${error.message}`);
+    } finally {
+      client.release();
+    }
   }
 
   /**
-   * 데이터 쓰기 (스텁 - subtask 4.3에서 구현)
+   * 데이터 쓰기
    */
   async writeData(schema, data, options = {}) {
-    // Will be implemented in subtask 4.3
-    throw new Error('writeData will be implemented in subtask 4.3');
+    if (!this.supportsOperation('write')) {
+      throw new Error('Write operation is not supported');
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Data must be a non-empty array');
+    }
+
+    const {
+      mode = 'insert', // insert, update, upsert, replace
+      batchSize = 1000,
+      conflictColumns = null, // for upsert
+      updateColumns = null, // for upsert/update
+      whereConditions = null, // for update
+      returning = null, // columns to return
+      onConflict = 'error', // error, ignore, update
+      validateSchema = true,
+      transaction = true
+    } = options;
+
+    // Validate schema if requested
+    if (validateSchema && schema.columns) {
+      const schemaColumns = schema.columns.map(col => col.name.toLowerCase());
+      const dataColumns = Object.keys(data[0]).map(col => col.toLowerCase());
+      const missingColumns = dataColumns.filter(col => !schemaColumns.includes(col));
+      
+      if (missingColumns.length > 0) {
+        throw new Error(`Unknown columns in data: ${missingColumns.join(', ')}`);
+      }
+    }
+
+    let client;
+    let shouldCommit = false;
+    
+    try {
+      client = await this.pool.connect();
+      
+      // Start transaction if requested
+      if (transaction) {
+        await client.query('BEGIN');
+        shouldCommit = true;
+      }
+
+      const results = [];
+      
+      // Process data in batches
+      for (let i = 0; i < data.length; i += batchSize) {
+        const batch = data.slice(i, i + batchSize);
+        const batchResult = await this._processBatch(client, schema, batch, {
+          mode,
+          conflictColumns,
+          updateColumns,
+          whereConditions,
+          returning,
+          onConflict
+        });
+        
+        results.push(...batchResult);
+        
+        this.emit('batchProgress', {
+          current: Math.floor(i / batchSize) + 1,
+          total: Math.ceil(data.length / batchSize),
+          processed: Math.min(i + batchSize, data.length),
+          totalItems: data.length
+        });
+      }
+
+      // Commit transaction if we started one
+      if (shouldCommit) {
+        await client.query('COMMIT');
+        shouldCommit = false;
+      }
+
+      this.emit('dataWritten', {
+        schema: schema.name,
+        rowCount: results.length,
+        mode,
+        batchCount: Math.ceil(data.length / batchSize)
+      });
+
+      return {
+        written: results.length,
+        data: returning ? results : null,
+        metadata: {
+          schema: schema.name,
+          table: schema.name,
+          mode,
+          batchSize,
+          batchCount: Math.ceil(data.length / batchSize),
+          totalProcessed: data.length
+        }
+      };
+    } catch (error) {
+      // Rollback transaction if we started one
+      if (shouldCommit && client) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          this.emit('error', rollbackError);
+        }
+      }
+      
+      this.emit('error', error);
+      throw new Error(`Failed to write data: ${error.message}`);
+    } finally {
+      if (client) {
+        client.release();
+      }
+    }
+  }
+
+  /**
+   * Process a batch of data for writing
+   */
+  async _processBatch(client, schema, batch, options) {
+    const { mode, conflictColumns, updateColumns, whereConditions, returning, onConflict } = options;
+    
+    if (batch.length === 0) {
+      return [];
+    }
+
+    const tableName = `"${schema.schema}"."${schema.name}"`;
+    const columns = Object.keys(batch[0]);
+    const quotedColumns = columns.map(col => `"${col}"`);
+    
+    let query = '';
+    let queryParams = [];
+    let paramIndex = 1;
+    
+    switch (mode) {
+      case 'insert':
+        query = this._buildInsertQuery(tableName, quotedColumns, batch, returning, onConflict);
+        queryParams = this._buildInsertParams(batch);
+        break;
+        
+      case 'update':
+        if (!whereConditions) {
+          throw new Error('WHERE conditions are required for update mode');
+        }
+        query = this._buildUpdateQuery(tableName, quotedColumns, batch[0], whereConditions, returning);
+        queryParams = this._buildUpdateParams(batch, whereConditions);
+        break;
+        
+      case 'upsert':
+        if (!conflictColumns) {
+          throw new Error('Conflict columns are required for upsert mode');
+        }
+        query = this._buildUpsertQuery(tableName, quotedColumns, batch, conflictColumns, updateColumns, returning);
+        queryParams = this._buildInsertParams(batch);
+        break;
+        
+      case 'replace':
+        // Delete existing and insert new
+        const deleteQuery = this._buildDeleteQuery(tableName, batch, conflictColumns);
+        const deleteParams = this._buildDeleteParams(batch, conflictColumns);
+        await client.query(deleteQuery, deleteParams);
+        
+        query = this._buildInsertQuery(tableName, quotedColumns, batch, returning, 'error');
+        queryParams = this._buildInsertParams(batch);
+        break;
+        
+      default:
+        throw new Error(`Unsupported write mode: ${mode}`);
+    }
+
+    const result = await client.query(query, queryParams);
+    return result.rows || [];
+  }
+
+  /**
+   * Build INSERT query
+   */
+  _buildInsertQuery(tableName, columns, batch, returning, onConflict) {
+    const valuesClause = batch.map((_, index) => {
+      const rowParams = columns.map((_, colIndex) => `$${index * columns.length + colIndex + 1}`);
+      return `(${rowParams.join(', ')})`;
+    }).join(', ');
+
+    let query = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ${valuesClause}`;
+    
+    if (onConflict === 'ignore') {
+      query += ' ON CONFLICT DO NOTHING';
+    }
+    
+    if (returning && Array.isArray(returning)) {
+      query += ` RETURNING ${returning.map(col => `"${col}"`).join(', ')}`;
+    } else if (returning === true) {
+      query += ' RETURNING *';
+    }
+    
+    return query;
+  }
+
+  /**
+   * Build UPDATE query
+   */
+  _buildUpdateQuery(tableName, columns, sampleRow, whereConditions, returning) {
+    const setClause = columns.map((col, index) => `${col} = $${index + 1}`).join(', ');
+    const whereClause = this._buildWhereClause(whereConditions, columns.length + 1);
+    
+    let query = `UPDATE ${tableName} SET ${setClause} WHERE ${whereClause}`;
+    
+    if (returning && Array.isArray(returning)) {
+      query += ` RETURNING ${returning.map(col => `"${col}"`).join(', ')}`;
+    } else if (returning === true) {
+      query += ' RETURNING *';
+    }
+    
+    return query;
+  }
+
+  /**
+   * Build UPSERT query (INSERT ... ON CONFLICT ... DO UPDATE)
+   */
+  _buildUpsertQuery(tableName, columns, batch, conflictColumns, updateColumns, returning) {
+    const valuesClause = batch.map((_, index) => {
+      const rowParams = columns.map((_, colIndex) => `$${index * columns.length + colIndex + 1}`);
+      return `(${rowParams.join(', ')})`;
+    }).join(', ');
+
+    const conflictClause = conflictColumns.map(col => `"${col}"`).join(', ');
+    const updateClause = (updateColumns || columns.filter(col => !conflictColumns.includes(col.replace(/"/g, ''))))
+      .map(col => `${col} = EXCLUDED.${col}`).join(', ');
+
+    let query = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES ${valuesClause} ` +
+                `ON CONFLICT (${conflictClause}) DO UPDATE SET ${updateClause}`;
+    
+    if (returning && Array.isArray(returning)) {
+      query += ` RETURNING ${returning.map(col => `"${col}"`).join(', ')}`;
+    } else if (returning === true) {
+      query += ' RETURNING *';
+    }
+    
+    return query;
+  }
+
+  /**
+   * Build DELETE query for replace mode
+   */
+  _buildDeleteQuery(tableName, batch, conflictColumns) {
+    if (!conflictColumns || conflictColumns.length === 0) {
+      throw new Error('Conflict columns are required for replace mode');
+    }
+
+    const whereConditions = batch.map((row, index) => {
+      const conditions = conflictColumns.map((col, colIndex) => {
+        const paramIndex = index * conflictColumns.length + colIndex + 1;
+        return `"${col}" = $${paramIndex}`;
+      });
+      return `(${conditions.join(' AND ')})`;
+    }).join(' OR ');
+
+    return `DELETE FROM ${tableName} WHERE ${whereConditions}`;
+  }
+
+  /**
+   * Build WHERE clause for queries
+   */
+  _buildWhereClause(whereConditions, startParamIndex) {
+    if (typeof whereConditions === 'string') {
+      return whereConditions;
+    }
+    
+    if (typeof whereConditions === 'object') {
+      const conditions = [];
+      let paramIndex = startParamIndex;
+      
+      for (const [column, value] of Object.entries(whereConditions)) {
+        conditions.push(`"${column}" = $${paramIndex}`);
+        paramIndex++;
+      }
+      
+      return conditions.join(' AND ');
+    }
+    
+    throw new Error('Invalid WHERE conditions format');
+  }
+
+  /**
+   * Build parameters for INSERT queries
+   */
+  _buildInsertParams(batch) {
+    const params = [];
+    const columns = Object.keys(batch[0]);
+    
+    for (const row of batch) {
+      for (const column of columns) {
+        params.push(row[column]);
+      }
+    }
+    
+    return params;
+  }
+
+  /**
+   * Build parameters for UPDATE queries
+   */
+  _buildUpdateParams(batch, whereConditions) {
+    const params = [];
+    const columns = Object.keys(batch[0]);
+    
+    // Add SET clause parameters
+    for (const row of batch) {
+      for (const column of columns) {
+        params.push(row[column]);
+      }
+    }
+    
+    // Add WHERE clause parameters
+    if (typeof whereConditions === 'object') {
+      for (const value of Object.values(whereConditions)) {
+        params.push(value);
+      }
+    }
+    
+    return params;
+  }
+
+  /**
+   * Build parameters for DELETE queries (replace mode)
+   */
+  _buildDeleteParams(batch, conflictColumns) {
+    const params = [];
+    
+    for (const row of batch) {
+      for (const column of conflictColumns) {
+        params.push(row[column]);
+      }
+    }
+    
+    return params;
   }
 
   /**

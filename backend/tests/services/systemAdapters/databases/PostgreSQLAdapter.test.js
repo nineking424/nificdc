@@ -890,13 +890,297 @@ describe('PostgreSQLAdapter Tests', () => {
     });
   });
 
-  describe('Stub Methods', () => {
-    it('should throw error for readData (to be implemented)', async () => {
-      await expect(adapter.readData({})).rejects.toThrow('readData will be implemented in subtask 4.3');
+  describe('Data CRUD Operations', () => {
+    beforeEach(async () => {
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ version: 'PostgreSQL 14.5' }]
+      });
+      await adapter.connect();
     });
 
-    it('should throw error for writeData (to be implemented)', async () => {
-      await expect(adapter.writeData({}, [])).rejects.toThrow('writeData will be implemented in subtask 4.3');
+    describe('Read Data', () => {
+      it('should read data with basic options', async () => {
+        const schema = {
+          name: 'users',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'integer' },
+            { name: 'name', dataType: 'varchar' }
+          ]
+        };
+
+        mockClient.query.mockResolvedValueOnce({
+          rows: [
+            { id: 1, name: 'John Doe' },
+            { id: 2, name: 'Jane Smith' }
+          ],
+          rowCount: 2,
+          fields: [
+            { name: 'id', dataTypeID: 23 },
+            { name: 'name', dataTypeID: 1043 }
+          ]
+        });
+
+        const result = await adapter.readData(schema, { limit: 10 });
+
+        expect(result.data).toHaveLength(2);
+        expect(result.rowCount).toBe(2);
+        expect(result.data[0]).toEqual({ id: 1, name: 'John Doe' });
+        expect(result.metadata.pagination.limit).toBe(10);
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('SELECT * FROM "public"."users" LIMIT $1'),
+          [10]
+        );
+      });
+
+      it('should read data with filters', async () => {
+        const schema = { name: 'users', schema: 'public' };
+
+        mockClient.query.mockResolvedValueOnce({
+          rows: [{ id: 1, name: 'John Doe' }],
+          rowCount: 1,
+          fields: [{ name: 'id', dataTypeID: 23 }]
+        });
+
+        const result = await adapter.readData(schema, {
+          filters: { id: 1, name: 'John Doe' },
+          limit: 10
+        });
+
+        expect(result.rowCount).toBe(1);
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('WHERE "id" = $1 AND "name" = $2'),
+          [1, 'John Doe', 10]
+        );
+      });
+
+      it('should read data with complex filters', async () => {
+        const schema = { name: 'users', schema: 'public' };
+
+        mockClient.query.mockResolvedValueOnce({
+          rows: [{ id: 1, name: 'John Doe' }],
+          rowCount: 1,
+          fields: [{ name: 'id', dataTypeID: 23 }]
+        });
+
+        const result = await adapter.readData(schema, {
+          filters: {
+            id: { gt: 0 },
+            name: { like: 'John%' },
+            age: { between: [18, 65] }
+          },
+          limit: 10
+        });
+
+        expect(result.rowCount).toBe(1);
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('WHERE "id" > $1 AND "name" LIKE $2 AND "age" BETWEEN $3 AND $4'),
+          [0, 'John%', 18, 65, 10]
+        );
+      });
+
+      it('should read data with specific columns', async () => {
+        const schema = { name: 'users', schema: 'public' };
+
+        mockClient.query.mockResolvedValueOnce({
+          rows: [{ id: 1, name: 'John Doe' }],
+          rowCount: 1,
+          fields: [{ name: 'id', dataTypeID: 23 }]
+        });
+
+        const result = await adapter.readData(schema, {
+          columns: ['id', 'name'],
+          limit: 10
+        });
+
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('SELECT "id", "name" FROM "public"."users"'),
+          [10]
+        );
+      });
+
+      it('should read data with ordering', async () => {
+        const schema = { name: 'users', schema: 'public' };
+
+        mockClient.query.mockResolvedValueOnce({
+          rows: [{ id: 1, name: 'John Doe' }],
+          rowCount: 1,
+          fields: [{ name: 'id', dataTypeID: 23 }]
+        });
+
+        const result = await adapter.readData(schema, {
+          orderBy: 'name',
+          orderDirection: 'DESC',
+          limit: 10
+        });
+
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('ORDER BY "name" DESC'),
+          [10]
+        );
+      });
+
+      it('should include total count when requested', async () => {
+        const schema = { name: 'users', schema: 'public' };
+
+        mockClient.query
+          .mockResolvedValueOnce({
+            rows: [{ id: 1, name: 'John Doe' }],
+            rowCount: 1,
+            fields: [{ name: 'id', dataTypeID: 23 }]
+          })
+          .mockResolvedValueOnce({
+            rows: [{ total: '100' }]
+          });
+
+        const result = await adapter.readData(schema, {
+          limit: 10,
+          includeTotalCount: true
+        });
+
+        expect(result.totalCount).toBe(100);
+        expect(mockClient.query).toHaveBeenCalledTimes(3); // +1 for beforeEach connect
+      });
+    });
+
+    describe('Write Data', () => {
+      it('should insert data', async () => {
+        const schema = {
+          name: 'users',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'integer' },
+            { name: 'name', dataType: 'varchar' }
+          ]
+        };
+
+        const data = [
+          { id: 1, name: 'John Doe' },
+          { id: 2, name: 'Jane Smith' }
+        ];
+
+        mockClient.query
+          .mockResolvedValueOnce({}) // BEGIN
+          .mockResolvedValueOnce({
+            rows: [],
+            rowCount: 2
+          }) // INSERT
+          .mockResolvedValueOnce({}); // COMMIT
+
+        const result = await adapter.writeData(schema, data);
+
+        expect(result.written).toBe(0); // No returning clause
+        expect(result.metadata.totalProcessed).toBe(2);
+        expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
+        expect(mockClient.query).toHaveBeenCalledWith(
+          'INSERT INTO "public"."users" ("id", "name") VALUES ($1, $2), ($3, $4)',
+          [1, 'John Doe', 2, 'Jane Smith']
+        );
+        expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+      });
+
+      it('should insert data with returning clause', async () => {
+        const schema = { name: 'users', schema: 'public' };
+        const data = [{ id: 1, name: 'John Doe' }];
+
+        mockClient.query
+          .mockResolvedValueOnce({}) // BEGIN
+          .mockResolvedValueOnce({
+            rows: [{ id: 1, name: 'John Doe' }],
+            rowCount: 1
+          }) // INSERT
+          .mockResolvedValueOnce({}); // COMMIT
+
+        const result = await adapter.writeData(schema, data, {
+          returning: ['id', 'name']
+        });
+
+        expect(result.written).toBe(1);
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0]).toEqual({ id: 1, name: 'John Doe' });
+        expect(mockClient.query).toHaveBeenCalledWith(
+          'INSERT INTO "public"."users" ("id", "name") VALUES ($1, $2) RETURNING "id", "name"',
+          [1, 'John Doe']
+        );
+      });
+
+      it('should upsert data', async () => {
+        const schema = { name: 'users', schema: 'public' };
+        const data = [{ id: 1, name: 'John Doe Updated' }];
+
+        mockClient.query
+          .mockResolvedValueOnce({}) // BEGIN
+          .mockResolvedValueOnce({
+            rows: [{ id: 1, name: 'John Doe Updated' }],
+            rowCount: 1
+          }) // UPSERT
+          .mockResolvedValueOnce({}); // COMMIT
+
+        const result = await adapter.writeData(schema, data, {
+          mode: 'upsert',
+          conflictColumns: ['id'],
+          returning: true
+        });
+
+        expect(result.written).toBe(1);
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name" RETURNING *'),
+          [1, 'John Doe Updated']
+        );
+      });
+
+      it('should handle batch processing', async () => {
+        const schema = { name: 'users', schema: 'public' };
+        const data = Array.from({ length: 2500 }, (_, i) => ({ id: i + 1, name: `User ${i + 1}` }));
+
+        mockClient.query
+          .mockResolvedValueOnce({}) // BEGIN
+          .mockResolvedValue({ rows: [], rowCount: 1000 }) // Batch inserts
+          .mockResolvedValueOnce({}); // COMMIT
+
+        const result = await adapter.writeData(schema, data, {
+          batchSize: 1000
+        });
+
+        expect(result.metadata.batchCount).toBe(3);
+        expect(result.metadata.totalProcessed).toBe(2500);
+        expect(mockClient.query).toHaveBeenCalledTimes(6); // +1 for beforeEach connect + BEGIN + 3 batches + COMMIT
+      });
+
+      it('should validate data against schema', async () => {
+        const schema = {
+          name: 'users',
+          schema: 'public',
+          columns: [
+            { name: 'id', dataType: 'integer' },
+            { name: 'name', dataType: 'varchar' }
+          ]
+        };
+
+        const data = [{ id: 1, name: 'John Doe', invalid_column: 'value' }];
+
+        await expect(adapter.writeData(schema, data)).rejects.toThrow('Unknown columns in data: invalid_column');
+      });
+
+      it('should handle empty data array', async () => {
+        const schema = { name: 'users', schema: 'public' };
+        const data = [];
+
+        await expect(adapter.writeData(schema, data)).rejects.toThrow('Data must be a non-empty array');
+      });
+
+      it('should rollback on error', async () => {
+        const schema = { name: 'users', schema: 'public' };
+        const data = [{ id: 1, name: 'John Doe' }];
+
+        mockClient.query
+          .mockResolvedValueOnce({}) // BEGIN
+          .mockRejectedValueOnce(new Error('Database error'))
+          .mockResolvedValueOnce({}); // ROLLBACK
+
+        await expect(adapter.writeData(schema, data)).rejects.toThrow('Failed to write data: Database error');
+        expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
+      });
     });
   });
 
