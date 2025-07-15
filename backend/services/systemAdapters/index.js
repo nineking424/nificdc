@@ -4,7 +4,9 @@
  */
 
 const BaseSystemAdapter = require('./base/BaseAdapter');
+const PostgreSQLAdapter = require('./databases/PostgreSQLAdapter');
 
 module.exports = {
-  BaseSystemAdapter
+  BaseSystemAdapter,
+  PostgreSQLAdapter
 };
