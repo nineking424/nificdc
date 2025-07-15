@@ -236,7 +236,15 @@ class SchemaValidator extends BaseValidator {
       const actualType = this.getDataType(data);
       const expectedTypes = Array.isArray(schema.type) ? schema.type : [schema.type];
       
-      if (!expectedTypes.includes(actualType)) {
+      // Special handling for integer type
+      let typeMatches = false;
+      if (expectedTypes.includes('integer') && actualType === 'number' && Number.isInteger(data)) {
+        typeMatches = true;
+      } else {
+        typeMatches = expectedTypes.includes(actualType);
+      }
+      
+      if (!typeMatches) {
         if (this.coerceTypes) {
           const coercedData = this.coerceType(data, expectedTypes[0]);
           if (coercedData !== null) {
@@ -325,7 +333,8 @@ class SchemaValidator extends BaseValidator {
       if (schema.required && Array.isArray(schema.required)) {
         for (const requiredProp of schema.required) {
           if (!(requiredProp in data)) {
-            result.addError(`${path}.${requiredProp}`, 'Property is required');
+            const propPath = path ? `${path}.${requiredProp}` : requiredProp;
+            result.addError(propPath, 'Property is required');
           }
         }
       }
@@ -334,7 +343,8 @@ class SchemaValidator extends BaseValidator {
       if (schema.properties) {
         for (const [prop, propSchema] of Object.entries(schema.properties)) {
           if (prop in data) {
-            this.validateAgainstSchema(data[prop], propSchema, `${path}.${prop}`, result);
+            const propPath = path ? `${path}.${prop}` : prop;
+            this.validateAgainstSchema(data[prop], propSchema, propPath, result);
           }
         }
       }
@@ -576,24 +586,34 @@ class BusinessRuleValidator extends BaseValidator {
     }
 
     if (typeof condition === 'object') {
-      return this.evaluateObjectCondition(data, condition, context);
+      return await this.evaluateObjectCondition(data, condition, context);
     }
 
     return Boolean(condition);
   }
 
-  evaluateObjectCondition(data, condition, context) {
+  async evaluateObjectCondition(data, condition, context) {
     // Handle logical operators
     if (condition.$and) {
-      return condition.$and.every(cond => this.evaluateCondition(data, cond, context));
+      for (const cond of condition.$and) {
+        if (!(await this.evaluateCondition(data, cond, context))) {
+          return false;
+        }
+      }
+      return true;
     }
     
     if (condition.$or) {
-      return condition.$or.some(cond => this.evaluateCondition(data, cond, context));
+      for (const cond of condition.$or) {
+        if (await this.evaluateCondition(data, cond, context)) {
+          return true;
+        }
+      }
+      return false;
     }
     
     if (condition.$not) {
-      return !this.evaluateCondition(data, condition.$not, context);
+      return !(await this.evaluateCondition(data, condition.$not, context));
     }
 
     // Handle field comparisons

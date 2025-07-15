@@ -332,7 +332,8 @@ class DataQualityValidator extends BaseValidator {
       const ruleResult = await this.applyQualityRule(record, rule, index, context);
       
       if (!ruleResult.passed) {
-        metrics[rule.dimension] *= (1 - rule.weight);
+        // Reduce the dimension score by the rule's weight
+        metrics[rule.dimension] = Math.max(0, metrics[rule.dimension] - rule.weight);
         metrics.issues.push({
           dimension: rule.dimension,
           rule: rule.name,

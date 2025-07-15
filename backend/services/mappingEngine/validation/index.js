@@ -140,12 +140,18 @@ async function validateMapping(mapping, options = {}) {
   }
   
   // Execute validation
+  if (validators.length === 0) {
+    return new ValidationResult(); // Return valid result if no validators
+  }
+  
   const composite = new CompositeValidator(validators, {
     mode: options.validationMode || 'all',
     stopOnError: options.stopOnError
   });
   
-  return composite.validate(mapping, { schema: mapping.schema });
+  // Validate the mapping rules, not the entire mapping object
+  const dataToValidate = mapping.rules || mapping;
+  return composite.validate(dataToValidate, { schema: mapping.schema });
 }
 
 /**
@@ -157,11 +163,18 @@ async function validateData(data, mapping, options = {}) {
   const config = createValidationConfig(options.preset || 'strict', {
     schema: mapping.targetSchema,
     rules: options.rules,
-    custom: options.customValidator,
-    ...options
+    custom: options.customValidator
   });
   
-  return framework.validate(data, config);
+  // Remove boolean flags that shouldn't be passed directly to validate
+  const validateOptions = {
+    ...config,
+    type: undefined, // Remove type: true flag
+    schema: mapping.targetSchema, // Use the actual schema
+    context: options.context
+  };
+  
+  return framework.validate(data, validateOptions);
 }
 
 /**
