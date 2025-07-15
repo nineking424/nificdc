@@ -2,159 +2,1117 @@
   "master": {
     "tasks": [
       {
-        "id": 28,
-        "title": "연결 테스트 프레임워크 구현",
-        "description": "모든 지원 데이터베이스 유형에 대한 실시간 연결 테스트 기능을 구현하고, 타임아웃 설정, 사용자 정의 테스트 쿼리, SSL/TLS 검증을 포함한 포괄적인 연결 진단 기능을 개발합니다.",
-        "status": "done",
-        "dependencies": [],
+        "id": 1,
+        "title": "Universal Schema 모델 확장",
+        "description": "기존 DataSchema 모델에 Universal Schema 지원을 위한 필드와 타입 시스템을 추가합니다",
+        "details": "backend/models/DataSchema.js 파일을 수정하여 universalType ENUM, schemaFormat ENUM, 그리고 향상된 columns JSON 구조를 추가합니다. 마이그레이션 스크립트를 작성하여 기존 데이터와의 호환성을 유지합니다.\n\n```javascript\n// 추가할 필드들\nuniversalType: {\n  type: DataTypes.ENUM(\n    'STRING', 'INTEGER', 'LONG', 'FLOAT', 'DOUBLE', 'DECIMAL',\n    'BOOLEAN', 'DATE', 'TIME', 'DATETIME', 'TIMESTAMP',\n    'BINARY', 'ARRAY', 'OBJECT', 'MAP', 'JSON', 'XML'\n  ),\n  allowNull: true\n},\nschemaFormat: {\n  type: DataTypes.ENUM('relational', 'document', 'key-value', 'columnar', 'graph'),\n  defaultValue: 'relational'\n}\n```",
+        "testStrategy": "유닛 테스트로 새로운 필드들의 CRUD 작업을 검증하고, 기존 스키마 데이터가 정상적으로 마이그레이션되는지 확인합니다",
         "priority": "high",
-        "details": "1. ConnectionTestService.js 구현 완료:\n```javascript\n// ConnectionTestService.js\nclass ConnectionTestService {\n  async testConnection(systemId, options = {}) {\n    const { timeout = 30000, testQuery, validateSSL = true } = options;\n    const startTime = Date.now();\n    \n    try {\n      // 모든 데이터베이스 유형 지원\n      // - PostgreSQL, MySQL, Oracle, SQLite, MongoDB, Redis\n      // - 파일 시스템: SFTP, FTP, Local FS, AWS S3, Azure Blob\n      // - REST APIs, Kafka\n      const driver = this.getDriver(system.type);\n      const connection = await driver.connect({\n        ...system.connectionConfig,\n        connectTimeout: timeout,\n        ssl: validateSSL ? system.sslConfig : false\n      });\n      \n      // 연결 성능 측정\n      const connectionTime = Date.now() - startTime;\n      \n      // 테스트 쿼리 실행\n      const queryStart = Date.now();\n      await connection.query(testQuery || this.getDefaultTestQuery(system.type));\n      const queryTime = Date.now() - queryStart;\n      \n      return {\n        success: true,\n        connectionTime,\n        queryTime,\n        metrics: await this.collectMetrics(connection)\n      };\n    } catch (error) {\n      return {\n        success: false,\n        error: this.classifyError(error),\n        diagnostics: await this.runDiagnostics(system),\n        recommendations: this.getRecommendations(error)\n      };\n    }\n  }\n}\n```\n\n2. 향상된 Systems API 구현 완료:\n- GET /systems - 검색, 필터링, 페이지네이션 지원\n- POST /systems - 유효성 검사를 통한 생성\n- PUT /systems/:id - 유효성 검사를 통한 업데이트\n- DELETE /systems/:id - 오류 처리를 포함한 삭제\n- POST /systems/:id/test - 기존 시스템 연결 테스트\n- POST /systems/test-connection - 저장 없이 연결 테스트\n\n3. 데이터베이스 통합 - 연결 상태 추적:\n- lastConnectionStatus: 마지막 연결 상태\n- lastConnectionTest: 마지막 테스트 시간\n- lastConnectionMessage: 상세 메시지\n- lastConnectionLatency: 성능 모니터링을 위한 지연 시간\n- 각 테스트 후 결과 자동 저장\n\n4. 설치된 종속성:\n- 기존: pg v8.11.3, mysql2 v3.6.5, oracledb v6.3.0, tedious v16.6.1, mongodb v6.3.0, sqlite3 v5.1.6\n- 추가: ssh2, ftp, aws-sdk (추가 연결 유형 지원)",
-        "testStrategy": "1. 단위 테스트: 각 데이터베이스 드라이버별 연결 테스트 (완료)\n2. 통합 테스트: Docker Compose를 사용한 실제 데이터베이스 연결 테스트 (완료)\n3. 성능 테스트: 실제 연결을 통한 동시 연결 테스트 검증\n4. 오류 시나리오 테스트: 실제 오류 처리 및 진단 기능 검증\n5. SSL/TLS 검증 테스트: 다양한 인증서 시나리오 처리 확인",
+        "dependencies": [],
+        "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "ConnectionTestService.js 핵심 구현",
-            "description": "모든 데이터베이스 유형을 지원하는 포괄적인 연결 테스트 서비스 구현",
-            "status": "completed",
+            "title": "ENUM 타입 정의 및 상수 설정",
+            "description": "universalType과 schemaFormat ENUM에 사용될 값들을 정의하고, 각 데이터베이스 시스템별 타입 매핑 테이블을 작성합니다",
             "dependencies": [],
-            "details": "",
+            "details": "backend/constants/schemaTypes.js 파일을 생성하여 UNIVERSAL_TYPES, SCHEMA_FORMATS, DATABASE_TYPE_MAPPINGS 상수를 정의합니다. MySQL, PostgreSQL, MongoDB, Oracle 등 주요 데이터베이스의 타입을 Universal Type으로 매핑하는 테이블을 포함합니다",
+            "status": "pending",
             "testStrategy": ""
           },
           {
             "id": 2,
-            "title": "Systems API 엔드포인트 구현",
-            "description": "완전한 CRUD 작업 및 연결 테스트 엔드포인트 구현",
-            "status": "completed",
-            "dependencies": [],
-            "details": "",
+            "title": "DataSchema 모델 수정",
+            "description": "DataSchema 모델에 universalType과 schemaFormat ENUM 필드를 추가하고, columns JSON 구조를 확장합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "backend/models/DataSchema.js 파일을 수정하여 새로운 필드들을 추가합니다. columns 필드는 각 컬럼별로 originalType, universalType, constraints, metadata 등의 정보를 포함하도록 구조를 확장합니다",
+            "status": "pending",
             "testStrategy": ""
           },
           {
             "id": 3,
-            "title": "데이터베이스 스키마 업데이트",
-            "description": "연결 상태 추적을 위한 필드 추가 및 자동 저장 로직 구현",
-            "status": "completed",
-            "dependencies": [],
-            "details": "",
+            "title": "마이그레이션 스크립트 작성",
+            "description": "기존 DataSchema 데이터를 새로운 구조로 변환하는 Sequelize 마이그레이션 스크립트를 작성합니다",
+            "dependencies": [
+              2
+            ],
+            "details": "backend/migrations/add-universal-schema-fields.js 파일을 생성하여 새로운 컬럼 추가와 기존 columns JSON 데이터를 새로운 구조로 변환하는 로직을 구현합니다. 롤백 기능도 포함하여 안전한 마이그레이션을 보장합니다",
+            "status": "pending",
             "testStrategy": ""
           },
           {
             "id": 4,
-            "title": "추가 연결 유형 지원",
-            "description": "파일 시스템, REST API, Kafka 등 추가 연결 유형 구현",
-            "status": "completed",
-            "dependencies": [],
-            "details": "",
+            "title": "데이터 변환 유틸리티 구현",
+            "description": "기존 스키마 데이터를 새로운 Universal Schema 형식으로 변환하는 유틸리티 함수를 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "backend/utils/schemaConverter.js 파일을 생성하여 convertToUniversalSchema(), mapDatabaseTypeToUniversal(), enrichColumnMetadata() 등의 함수를 구현합니다. 각 데이터베이스별 타입 변환 로직을 포함합니다",
+            "status": "pending",
             "testStrategy": ""
           },
           {
             "id": 5,
-            "title": "실제 연결 테스트 검증",
-            "description": "모든 지원 시스템에 대한 실제 연결 테스트 및 오류 처리 검증",
-            "status": "completed",
-            "dependencies": [],
-            "details": "",
+            "title": "테스트 및 검증",
+            "description": "모델 변경사항과 마이그레이션 스크립트에 대한 유닛 테스트와 통합 테스트를 작성합니다",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "backend/tests/models/DataSchema.test.js와 backend/tests/migrations/universal-schema.test.js 파일을 작성합니다. 새로운 필드의 CRUD 작업, 마이그레이션 전후 데이터 무결성, 타입 변환 정확성을 검증합니다",
+            "status": "pending",
             "testStrategy": ""
           }
         ]
       },
       {
-        "id": 29,
-        "title": "실시간 연결 상태 모니터링 시스템 구축",
-        "description": "백그라운드 헬스 체크, 실시간 상태 표시기, 연결 성능 메트릭 수집 및 자동 재시도 메커니즘을 포함한 포괄적인 모니터링 시스템을 구현합니다.",
-        "details": "1. 헬스 체크 스케줄러 구현 (Bull Queue v4.12.0 사용):\n```javascript\n// HealthCheckScheduler.js\nconst Queue = require('bull');\nconst healthCheckQueue = new Queue('health-checks', {\n  redis: { host: 'localhost', port: 6379 }\n});\n\nhealthCheckQueue.process(async (job) => {\n  const { systemId, interval } = job.data;\n  const result = await connectionTestService.testConnection(systemId);\n  \n  // 상태 업데이트 및 메트릭 저장\n  await systemService.updateStatus(systemId, result);\n  await metricsService.recordHealthCheck(systemId, result);\n  \n  // WebSocket으로 실시간 업데이트 전송\n  io.to(`system:${systemId}`).emit('status-update', result);\n  \n  // 다음 체크 스케줄링\n  await healthCheckQueue.add(\n    { systemId, interval },\n    { delay: interval * 1000 }\n  );\n});\n```\n\n2. WebSocket 서버 구현 (Socket.io v4.6.1):\n```javascript\nconst io = require('socket.io')(server, {\n  cors: { origin: '*' },\n  transports: ['websocket', 'polling']\n});\n\nio.on('connection', (socket) => {\n  socket.on('subscribe-system', (systemId) => {\n    socket.join(`system:${systemId}`);\n  });\n});\n```\n\n3. 메트릭 수집 서비스:\n```javascript\nclass MetricsService {\n  async recordHealthCheck(systemId, result) {\n    const metrics = {\n      timestamp: new Date(),\n      systemId,\n      status: result.success ? 'healthy' : 'error',\n      responseTime: result.connectionTime,\n      errorRate: await this.calculateErrorRate(systemId),\n      throughput: await this.calculateThroughput(systemId)\n    };\n    \n    // Prometheus 메트릭 업데이트\n    connectionGauge.set({ system: systemId }, result.success ? 1 : 0);\n    responseTimeHistogram.observe({ system: systemId }, result.connectionTime);\n    \n    // 시계열 데이터베이스 저장 (InfluxDB)\n    await influxDB.writePoints([{\n      measurement: 'system_health',\n      tags: { systemId },\n      fields: metrics\n    }]);\n  }\n}\n```\n\n4. 자동 재시도 메커니즘:\n```javascript\nclass RetryManager {\n  async executeWithRetry(fn, options = {}) {\n    const { maxRetries = 3, backoff = 'exponential' } = options;\n    \n    for (let attempt = 1; attempt <= maxRetries; attempt++) {\n      try {\n        return await fn();\n      } catch (error) {\n        if (attempt === maxRetries) throw error;\n        \n        const delay = this.calculateDelay(attempt, backoff);\n        await new Promise(resolve => setTimeout(resolve, delay));\n      }\n    }\n  }\n}\n```",
-        "testStrategy": "1. 헬스 체크 정확도 테스트: 모의 장애 시나리오에서 99% 이상 정확도 검증\n2. WebSocket 연결 테스트: 1000개 이상의 동시 클라이언트 연결 처리\n3. 메트릭 수집 성능 테스트: 시스템 리소스 1% 미만 사용 확인\n4. 재시도 메커니즘 테스트: 다양한 실패 시나리오에서 복구 검증\n5. 부하 테스트: K6를 사용한 대규모 모니터링 시뮬레이션",
-        "priority": "high",
-        "dependencies": [
-          28
-        ],
-        "status": "pending",
-        "subtasks": []
-      },
-      {
-        "id": 30,
-        "title": "고급 보안 및 자격 증명 관리 시스템 구현",
-        "description": "AES-256 암호화, 외부 시크릿 관리 시스템 통합, 자격 증명 로테이션, 감사 로깅 및 역할 기반 액세스 제어를 포함한 엔터프라이즈급 보안 시스템을 구축합니다.",
-        "details": "1. 암호화 서비스 구현 (crypto-js v4.2.0):\n```javascript\n// EncryptionService.js\nconst CryptoJS = require('crypto-js');\nconst { generateKeyPairSync } = require('crypto');\n\nclass EncryptionService {\n  constructor() {\n    this.masterKey = this.deriveMasterKey();\n  }\n  \n  encrypt(plaintext) {\n    const iv = CryptoJS.lib.WordArray.random(16);\n    const encrypted = CryptoJS.AES.encrypt(plaintext, this.masterKey, {\n      iv: iv,\n      mode: CryptoJS.mode.CBC,\n      padding: CryptoJS.pad.Pkcs7\n    });\n    \n    return {\n      ciphertext: encrypted.toString(),\n      iv: iv.toString(CryptoJS.enc.Base64)\n    };\n  }\n  \n  decrypt(ciphertext, iv) {\n    const decrypted = CryptoJS.AES.decrypt(ciphertext, this.masterKey, {\n      iv: CryptoJS.enc.Base64.parse(iv),\n      mode: CryptoJS.mode.CBC,\n      padding: CryptoJS.pad.Pkcs7\n    });\n    \n    return decrypted.toString(CryptoJS.enc.Utf8);\n  }\n}\n```\n\n2. 외부 시크릿 관리 통합:\n```javascript\n// SecretManager.js\nclass SecretManager {\n  constructor() {\n    this.providers = {\n      vault: new HashiCorpVaultProvider(),\n      aws: new AWSSecretsManagerProvider(),\n      azure: new AzureKeyVaultProvider()\n    };\n  }\n  \n  async getSecret(secretPath, provider = 'vault') {\n    const secretProvider = this.providers[provider];\n    return await secretProvider.getSecret(secretPath);\n  }\n  \n  async rotateCredentials(systemId) {\n    const newCredentials = await this.generateNewCredentials();\n    await this.updateSystemCredentials(systemId, newCredentials);\n    await this.auditLog('credential_rotation', { systemId });\n  }\n}\n```\n\n3. 감사 로깅 시스템:\n```javascript\n// AuditLogger.js\nclass AuditLogger {\n  async log(event, details) {\n    const auditEntry = {\n      timestamp: new Date().toISOString(),\n      eventType: event,\n      userId: details.userId,\n      ipAddress: details.ipAddress,\n      userAgent: details.userAgent,\n      resource: details.resource,\n      action: details.action,\n      result: details.result,\n      metadata: details.metadata\n    };\n    \n    // 데이터베이스 저장\n    await db.auditLogs.create(auditEntry);\n    \n    // SIEM 시스템 전송\n    await siemClient.send(auditEntry);\n  }\n}\n```\n\n4. RBAC 구현 (casl v6.5.1):\n```javascript\n// abilities.js\nconst { defineAbility } = require('@casl/ability');\n\nfunction defineAbilitiesFor(user) {\n  return defineAbility((can, cannot) => {\n    if (user.role === 'admin') {\n      can('manage', 'all');\n    } else if (user.role === 'engineer') {\n      can('read', 'System');\n      can('test', 'System');\n      cannot('delete', 'System');\n      cannot('read', 'System', 'credentials');\n    }\n  });\n}\n```",
-        "testStrategy": "1. 암호화 테스트: FIPS 140-2 준수 검증, 암호화/복호화 정확성 테스트\n2. 시크릿 관리 통합 테스트: HashiCorp Vault, AWS Secrets Manager 실제 연동\n3. 감사 로그 완전성 테스트: 100% 이벤트 캡처 확인\n4. RBAC 테스트: 다양한 역할별 권한 시나리오 검증\n5. 보안 취약점 스캔: OWASP ZAP, SonarQube 사용",
+        "id": 2,
+        "title": "SystemAdapter 모델 생성",
+        "description": "다양한 시스템 어댑터를 관리하기 위한 새로운 Sequelize 모델을 생성합니다",
+        "details": "backend/models/SystemAdapter.js 파일을 생성하고 어댑터 타입, 카테고리, 기능, 설정 스키마를 정의합니다.\n\n```javascript\nconst SystemAdapter = sequelize.define('SystemAdapter', {\n  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },\n  name: { type: DataTypes.STRING, allowNull: false, unique: true },\n  type: { type: DataTypes.STRING, allowNull: false },\n  category: { type: DataTypes.ENUM('database', 'file', 'stream', 'api', 'cloud'), allowNull: false },\n  capabilities: { type: DataTypes.JSON, defaultValue: { supportsSchemaDiscovery: false, supportsBatchOperations: false, supportsStreaming: false, supportsTransactions: false } },\n  configSchema: { type: DataTypes.JSON },\n  isActive: { type: DataTypes.BOOLEAN, defaultValue: true }\n});\n```",
+        "testStrategy": "모델 생성, 유효성 검증, 관계 설정을 테스트하고 다양한 어댑터 타입에 대한 테스트 데이터를 생성하여 검증합니다",
         "priority": "high",
         "dependencies": [],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "SystemAdapter 모델 스키마 정의",
+            "description": "SystemAdapter 테이블의 기본 스키마 구조를 정의하고 필요한 필드들을 설계합니다",
+            "dependencies": [],
+            "details": "id(UUID), name(고유 문자열), type(어댑터 타입), category(ENUM: database/file/stream/api/cloud), capabilities(JSON), configuration(JSON), isActive(boolean), version(문자열), createdAt, updatedAt 필드를 포함한 스키마를 설계합니다. 각 필드의 데이터 타입, 제약조건, 기본값을 명확히 정의합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Sequelize 모델 파일 생성 및 구현",
+            "description": "backend/models/SystemAdapter.js 파일을 생성하고 정의된 스키마에 따라 Sequelize 모델을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "Sequelize의 DataTypes를 사용하여 모델을 정의하고, 유효성 검증 규칙을 추가합니다. capabilities 필드에는 지원하는 기능 목록(read, write, stream, batch 등)을, configuration 필드에는 어댑터별 설정 스키마를 JSON으로 저장합니다. 모델 훅(hooks)을 활용하여 데이터 무결성을 보장합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "모델 테스트 및 마이그레이션 작성",
+            "description": "SystemAdapter 모델의 단위 테스트를 작성하고 데이터베이스 마이그레이션 스크립트를 생성합니다",
+            "dependencies": [
+              2
+            ],
+            "details": "Jest를 사용하여 모델의 CRUD 작업, 유효성 검증, 고유 제약조건 테스트를 작성합니다. Sequelize CLI를 사용하여 마이그레이션 파일을 생성하고, 다양한 어댑터 타입(MySQL, PostgreSQL, S3, CSV 등)에 대한 시드 데이터를 준비합니다. 롤백 시나리오도 테스트하여 마이그레이션의 안정성을 확보합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
-        "id": 31,
-        "title": "포괄적인 데이터베이스 지원 확장",
-        "description": "PostgreSQL, MySQL, Oracle, SQL Server, MongoDB, SQLite 및 클라우드 데이터베이스를 포함한 다양한 데이터베이스 유형에 대한 고급 연결 옵션과 특화된 기능을 구현합니다.",
-        "details": "1. 데이터베이스별 어댑터 구현:\n```javascript\n// adapters/PostgreSQLAdapter.js\nclass PostgreSQLAdapter extends BaseAdapter {\n  async connect(config) {\n    const { Pool } = require('pg');\n    \n    const poolConfig = {\n      host: config.host,\n      port: config.port,\n      database: config.database,\n      user: config.user,\n      password: await this.decryptPassword(config.password),\n      ssl: config.ssl ? {\n        rejectUnauthorized: config.sslRejectUnauthorized,\n        ca: config.sslCa,\n        cert: config.sslCert,\n        key: config.sslKey\n      } : false,\n      max: config.poolSize || 20,\n      idleTimeoutMillis: 30000,\n      connectionTimeoutMillis: 2000\n    };\n    \n    this.pool = new Pool(poolConfig);\n    \n    // 연결 이벤트 리스너\n    this.pool.on('error', (err) => {\n      logger.error('PostgreSQL pool error', err);\n    });\n    \n    return this.pool;\n  }\n  \n  async testConnection() {\n    const client = await this.pool.connect();\n    try {\n      const result = await client.query('SELECT version()');\n      return { success: true, version: result.rows[0].version };\n    } finally {\n      client.release();\n    }\n  }\n}\n```\n\n2. Oracle 특화 기능:\n```javascript\n// adapters/OracleAdapter.js\nclass OracleAdapter extends BaseAdapter {\n  async connect(config) {\n    const oracledb = require('oracledb');\n    oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;\n    oracledb.autoCommit = true;\n    \n    // TNS 또는 Easy Connect 지원\n    const connectionString = config.tnsName || \n      `${config.host}:${config.port}/${config.serviceName}`;\n    \n    this.pool = await oracledb.createPool({\n      user: config.user,\n      password: await this.decryptPassword(config.password),\n      connectString: connectionString,\n      poolMin: 10,\n      poolMax: config.poolSize || 40,\n      poolIncrement: 5,\n      poolTimeout: 60\n    });\n    \n    return this.pool;\n  }\n}\n```\n\n3. MongoDB 레플리카셋 지원:\n```javascript\n// adapters/MongoDBAdapter.js\nclass MongoDBAdapter extends BaseAdapter {\n  async connect(config) {\n    const { MongoClient } = require('mongodb');\n    \n    let uri;\n    if (config.replicaSet) {\n      // 레플리카셋 연결 문자열\n      const hosts = config.hosts.map(h => `${h.host}:${h.port}`).join(',');\n      uri = `mongodb://${config.user}:${config.password}@${hosts}/${config.database}?replicaSet=${config.replicaSet}`;\n    } else {\n      uri = `mongodb://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;\n    }\n    \n    this.client = new MongoClient(uri, {\n      maxPoolSize: config.poolSize || 50,\n      serverSelectionTimeoutMS: 5000,\n      socketTimeoutMS: 45000\n    });\n    \n    await this.client.connect();\n    return this.client;\n  }\n}\n```\n\n4. 클라우드 데이터베이스 자동 검색:\n```javascript\n// CloudDatabaseDiscovery.js\nclass CloudDatabaseDiscovery {\n  async discoverAWSRDS() {\n    const AWS = require('aws-sdk');\n    const rds = new AWS.RDS();\n    \n    const instances = await rds.describeDBInstances().promise();\n    return instances.DBInstances.map(instance => ({\n      name: instance.DBInstanceIdentifier,\n      engine: instance.Engine,\n      endpoint: instance.Endpoint.Address,\n      port: instance.Endpoint.Port,\n      status: instance.DBInstanceStatus\n    }));\n  }\n}\n```",
-        "testStrategy": "1. 각 데이터베이스 어댑터 단위 테스트: 연결, 쿼리, 트랜잭션 기능\n2. 통합 테스트: Docker Compose로 모든 데이터베이스 유형 테스트 환경 구성\n3. 클라우드 통합 테스트: LocalStack을 사용한 AWS RDS 시뮬레이션\n4. 성능 벤치마크: 각 데이터베이스별 연결 풀 최적화 검증\n5. 호환성 테스트: 다양한 데이터베이스 버전과의 호환성 확인",
-        "priority": "medium",
+        "id": 3,
+        "title": "Base System Adapter 인터페이스 구현",
+        "description": "모든 시스템 어댑터가 상속받을 기본 추상 클래스를 구현합니다",
+        "details": "backend/services/systemAdapters/base/BaseAdapter.js 파일을 생성하고 connect(), disconnect(), discoverSchemas(), readData(), writeData() 등의 추상 메서드를 정의합니다.\n\n```javascript\nclass BaseSystemAdapter {\n  constructor(config) {\n    this.config = config;\n    this.validateConfig();\n  }\n  \n  async connect() { throw new Error('connect() must be implemented'); }\n  async disconnect() { throw new Error('disconnect() must be implemented'); }\n  async discoverSchemas() { throw new Error('discoverSchemas() must be implemented'); }\n  async readData(schema, options = {}) { throw new Error('readData() must be implemented'); }\n  async writeData(schema, data, options = {}) { throw new Error('writeData() must be implemented'); }\n  \n  getCapabilities() {\n    return {\n      supportsSchemaDiscovery: false,\n      supportsBatchOperations: false,\n      supportsStreaming: false,\n      supportsTransactions: false\n    };\n  }\n}\n```",
+        "testStrategy": "추상 클래스의 메서드 시그니처와 기본 동작을 테스트하고, 상속 구조가 올바르게 작동하는지 확인합니다",
+        "priority": "high",
         "dependencies": [
-          28
+          2
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "BaseAdapter 클래스 구조 설계 및 구현",
+            "description": "모든 시스템 어댑터가 상속받을 기본 추상 클래스의 구조를 설계하고 핵심 메서드를 구현합니다",
+            "dependencies": [],
+            "details": "backend/services/systemAdapters/base/BaseAdapter.js 파일을 생성하고 constructor, validateConfig(), 그리고 connect(), disconnect(), discoverSchemas(), readData(), writeData() 등의 추상 메서드를 정의합니다. 에러 처리와 로깅 기능도 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "어댑터 설정 검증 및 헬퍼 메서드 구현",
+            "description": "BaseAdapter의 설정 검증 로직과 공통으로 사용될 헬퍼 메서드들을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "validateConfig() 메서드를 구현하여 필수 설정값 검증, 타입 체크, 연결 정보 유효성 검사를 수행합니다. 또한 formatError(), logActivity(), getConnectionStatus() 등의 공통 헬퍼 메서드를 구현합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "BaseAdapter 단위 테스트 작성",
+            "description": "추상 클래스의 메서드 시그니처와 기본 동작을 검증하는 단위 테스트를 작성합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "test/services/systemAdapters/base/BaseAdapter.test.js 파일을 생성하고 추상 메서드 호출 시 에러 발생, 설정 검증 로직, 헬퍼 메서드 동작을 테스트합니다. 또한 상속받은 클래스에서 메서드 오버라이드가 올바르게 작동하는지 확인합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
-        "id": 32,
-        "title": "연결 풀링 및 성능 최적화 시스템 구현",
-        "description": "구성 가능한 연결 풀 설정, 연결 수명 주기 관리, 성능 모니터링 및 자동 스케일링을 포함한 고성능 연결 관리 시스템을 구축합니다.",
-        "details": "1. 통합 연결 풀 관리자:\n```javascript\n// ConnectionPoolManager.js\nclass ConnectionPoolManager {\n  constructor() {\n    this.pools = new Map();\n    this.metrics = new PoolMetrics();\n  }\n  \n  async createPool(systemId, config) {\n    const poolConfig = {\n      min: config.minConnections || 2,\n      max: config.maxConnections || 10,\n      acquireTimeoutMillis: config.acquireTimeout || 30000,\n      createTimeoutMillis: config.createTimeout || 30000,\n      destroyTimeoutMillis: config.destroyTimeout || 5000,\n      idleTimeoutMillis: config.idleTimeout || 30000,\n      reapIntervalMillis: config.reapInterval || 1000,\n      createRetryIntervalMillis: 200,\n      propagateCreateError: false\n    };\n    \n    const pool = genericPool.createPool({\n      create: async () => {\n        const connection = await this.createConnection(systemId);\n        this.metrics.recordConnectionCreated(systemId);\n        return connection;\n      },\n      destroy: async (connection) => {\n        await connection.close();\n        this.metrics.recordConnectionDestroyed(systemId);\n      },\n      validate: async (connection) => {\n        return await this.validateConnection(connection);\n      }\n    }, poolConfig);\n    \n    // 풀 이벤트 모니터링\n    pool.on('factoryCreateError', (err) => {\n      logger.error(`Pool creation error for ${systemId}:`, err);\n      this.metrics.recordError(systemId, 'create_error');\n    });\n    \n    pool.on('factoryDestroyError', (err) => {\n      logger.error(`Pool destroy error for ${systemId}:`, err);\n      this.metrics.recordError(systemId, 'destroy_error');\n    });\n    \n    this.pools.set(systemId, pool);\n    return pool;\n  }\n  \n  async getConnection(systemId) {\n    const pool = this.pools.get(systemId);\n    if (!pool) {\n      throw new Error(`No pool found for system ${systemId}`);\n    }\n    \n    const startTime = Date.now();\n    const connection = await pool.acquire();\n    const acquireTime = Date.now() - startTime;\n    \n    this.metrics.recordAcquireTime(systemId, acquireTime);\n    \n    // 연결 래퍼로 자동 반환\n    return new ConnectionWrapper(connection, pool, this.metrics);\n  }\n}\n```\n\n2. 성능 메트릭 수집:\n```javascript\n// PoolMetrics.js\nclass PoolMetrics {\n  constructor() {\n    this.prometheus = new PrometheusClient();\n  }\n  \n  recordAcquireTime(systemId, time) {\n    this.prometheus.histogram('connection_acquire_time', time, { system: systemId });\n  }\n  \n  async getPoolStats(systemId) {\n    const pool = poolManager.getPool(systemId);\n    return {\n      size: pool.size,\n      available: pool.available,\n      borrowed: pool.borrowed,\n      pending: pool.pending,\n      max: pool.max,\n      min: pool.min\n    };\n  }\n  \n  async analyzePerformance(systemId) {\n    const stats = await this.getPoolStats(systemId);\n    const recommendations = [];\n    \n    if (stats.pending > 0 && stats.borrowed === stats.max) {\n      recommendations.push({\n        type: 'increase_pool_size',\n        reason: 'Pool exhaustion detected',\n        suggestion: `Increase max connections to ${stats.max * 1.5}`\n      });\n    }\n    \n    if (stats.available > stats.max * 0.8) {\n      recommendations.push({\n        type: 'decrease_pool_size',\n        reason: 'Pool underutilized',\n        suggestion: `Decrease max connections to ${Math.ceil(stats.max * 0.6)}`\n      });\n    }\n    \n    return recommendations;\n  }\n}\n```\n\n3. 자동 스케일링:\n```javascript\n// AutoScaler.js\nclass PoolAutoScaler {\n  constructor(poolManager, metricsService) {\n    this.poolManager = poolManager;\n    this.metricsService = metricsService;\n    this.scalingPolicies = new Map();\n  }\n  \n  async enableAutoScaling(systemId, policy) {\n    const scalingPolicy = {\n      minSize: policy.minSize || 2,\n      maxSize: policy.maxSize || 100,\n      targetUtilization: policy.targetUtilization || 0.7,\n      scaleUpThreshold: policy.scaleUpThreshold || 0.8,\n      scaleDownThreshold: policy.scaleDownThreshold || 0.3,\n      cooldownPeriod: policy.cooldownPeriod || 300000 // 5분\n    };\n    \n    this.scalingPolicies.set(systemId, scalingPolicy);\n    \n    // 주기적 스케일링 체크\n    setInterval(() => this.checkScaling(systemId), 60000); // 1분마다\n  }\n  \n  async checkScaling(systemId) {\n    const policy = this.scalingPolicies.get(systemId);\n    const metrics = await this.metricsService.getPoolMetrics(systemId);\n    const utilization = metrics.borrowed / metrics.max;\n    \n    if (utilization > policy.scaleUpThreshold) {\n      await this.scaleUp(systemId, policy);\n    } else if (utilization < policy.scaleDownThreshold) {\n      await this.scaleDown(systemId, policy);\n    }\n  }\n}\n```",
-        "testStrategy": "1. 연결 풀 부하 테스트: Apache JMeter로 동시 연결 1000개 이상 처리\n2. 성능 벤치마크: 연결 획득 시간 < 50ms, 풀 효율성 > 80%\n3. 자동 스케일링 테스트: 부하 변화에 따른 풀 크기 조정 검증\n4. 장애 복구 테스트: 연결 실패 시 자동 재생성 및 복구\n5. 메모리 누수 테스트: 장시간 실행 시 메모리 사용량 모니터링",
-        "priority": "medium",
+        "id": 4,
+        "title": "PostgreSQL Adapter 구현",
+        "description": "PostgreSQL 데이터베이스를 위한 시스템 어댑터를 구현합니다",
+        "details": "backend/services/systemAdapters/databases/PostgreSQLAdapter.js 파일을 생성하고 pg 라이브러리를 사용하여 연결, 스키마 탐색, 데이터 읽기/쓰기 기능을 구현합니다.\n\n```javascript\nconst { Pool } = require('pg');\n\nclass PostgreSQLAdapter extends BaseSystemAdapter {\n  async connect() {\n    this.pool = new Pool({\n      host: this.config.host,\n      port: this.config.port,\n      database: this.config.database,\n      user: this.config.username,\n      password: this.config.password,\n      ssl: this.config.ssl\n    });\n    await this.pool.query('SELECT 1');\n  }\n  \n  async discoverSchemas() {\n    const query = `\n      SELECT table_schema, table_name, column_name, data_type, is_nullable\n      FROM information_schema.columns\n      WHERE table_schema NOT IN ('pg_catalog', 'information_schema')\n      ORDER BY table_schema, table_name, ordinal_position\n    `;\n    const result = await this.pool.query(query);\n    return this.groupIntoSchemas(result.rows);\n  }\n}\n```",
+        "testStrategy": "Docker를 사용하여 PostgreSQL 테스트 인스턴스를 생성하고, 연결, 스키마 탐색, CRUD 작업을 통합 테스트로 검증합니다",
+        "priority": "high",
         "dependencies": [
-          28,
-          31
+          3
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "PostgreSQL 연결 및 기본 설정 구현",
+            "description": "PostgreSQL 데이터베이스 연결을 위한 Pool 설정과 연결 테스트, 연결 해제 기능을 구현합니다",
+            "dependencies": [],
+            "details": "backend/services/systemAdapters/databases/PostgreSQLAdapter.js 파일에 pg 라이브러리를 사용하여 연결 풀 생성, SSL 옵션 처리, 연결 상태 확인, 연결 해제 메서드를 구현합니다. 연결 실패 시 적절한 에러 처리와 재시도 로직을 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "스키마 탐색 및 메타데이터 조회 기능 구현",
+            "description": "PostgreSQL 데이터베이스의 테이블, 컬럼, 인덱스, 제약조건 등의 스키마 정보를 조회하는 기능을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "information_schema와 pg_catalog를 활용하여 데이터베이스 스키마 구조를 탐색하고, 테이블 목록, 컬럼 정보, 데이터 타입, 기본키, 외래키 관계를 조회하는 메서드를 구현합니다. 결과는 표준화된 형식으로 반환합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "데이터 CRUD 작업 및 통합 테스트 구현",
+            "description": "데이터 읽기, 쓰기, 수정, 삭제 기능과 Docker 기반 통합 테스트를 구현합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "트랜잭션 지원, 배치 작업, 페이지네이션을 포함한 CRUD 메서드를 구현하고, Docker Compose를 사용하여 PostgreSQL 테스트 환경을 구성합니다. Jest를 사용하여 연결, 스키마 탐색, CRUD 작업에 대한 통합 테스트를 작성합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
-        "id": 33,
-        "title": "사용자 경험 개선 및 UI/UX 향상",
-        "description": "실시간 폼 검증, 연결 설정 마법사, 대량 가져오기/내보내기, 고급 필터링 및 검색, 시스템 분류 및 태깅 기능을 포함한 향상된 사용자 인터페이스를 구현합니다.",
-        "details": "1. React 컴포넌트 개선 (React 18.2.0 + TypeScript):\n```typescript\n// ConnectionWizard.tsx\nimport { useState } from 'react';\nimport { Stepper, Step } from '@mui/material';\nimport { useForm } from 'react-hook-form';\nimport { zodResolver } from '@hookform/resolvers/zod';\n\nconst ConnectionWizard: React.FC = () => {\n  const [activeStep, setActiveStep] = useState(0);\n  \n  const steps = [\n    { label: '데이터베이스 유형 선택', component: DatabaseTypeSelector },\n    { label: '연결 정보 입력', component: ConnectionForm },\n    { label: '고급 설정', component: AdvancedSettings },\n    { label: '연결 테스트', component: ConnectionTest },\n    { label: '완료', component: Summary }\n  ];\n  \n  const { register, handleSubmit, formState: { errors }, watch } = useForm({\n    resolver: zodResolver(connectionSchema),\n    mode: 'onChange'\n  });\n  \n  return (\n    <div className=\"connection-wizard\">\n      <Stepper activeStep={activeStep}>\n        {steps.map((step) => (\n          <Step key={step.label}>\n            <StepLabel>{step.label}</StepLabel>\n          </Step>\n        ))}\n      </Stepper>\n      \n      <div className=\"wizard-content\">\n        {React.createElement(steps[activeStep].component, {\n          register,\n          errors,\n          watch,\n          onNext: () => setActiveStep(prev => prev + 1),\n          onBack: () => setActiveStep(prev => prev - 1)\n        })}\n      </div>\n    </div>\n  );\n};\n```\n\n2. 실시간 폼 검증 (Zod v3.22.4):\n```typescript\n// schemas/connectionSchema.ts\nimport { z } from 'zod';\n\nconst connectionSchema = z.object({\n  name: z.string().min(1, '시스템 이름은 필수입니다'),\n  type: z.enum(['postgresql', 'mysql', 'oracle', 'sqlserver', 'mongodb']),\n  host: z.string().ip('유효한 IP 주소를 입력하세요'),\n  port: z.number().int().positive().max(65535),\n  database: z.string().min(1),\n  username: z.string().min(1),\n  password: z.string().min(8, '비밀번호는 최소 8자 이상이어야 합니다'),\n  ssl: z.boolean().optional(),\n  poolSize: z.number().int().min(1).max(100).optional()\n}).refine(async (data) => {\n  // 실시간 연결 가능성 체크\n  const isReachable = await checkHostReachability(data.host, data.port);\n  return isReachable;\n}, {\n  message: '호스트에 연결할 수 없습니다',\n  path: ['host']\n});\n```\n\n3. 대량 가져오기/내보내기:\n```typescript\n// BulkImportExport.tsx\nconst BulkImportExport: React.FC = () => {\n  const handleImport = async (file: File) => {\n    const reader = new FileReader();\n    reader.onload = async (e) => {\n      const content = e.target?.result as string;\n      const systems = parseImportFile(content);\n      \n      // 검증 및 미리보기\n      const validationResults = await validateSystems(systems);\n      setPreviewData({\n        valid: validationResults.valid,\n        invalid: validationResults.invalid,\n        warnings: validationResults.warnings\n      });\n    };\n    reader.readAsText(file);\n  };\n  \n  const handleExport = async (format: 'json' | 'csv' | 'yaml') => {\n    const systems = await fetchAllSystems();\n    const exportData = formatExportData(systems, format);\n    \n    const blob = new Blob([exportData], { type: getMimeType(format) });\n    const url = URL.createObjectURL(blob);\n    \n    const a = document.createElement('a');\n    a.href = url;\n    a.download = `systems-export-${Date.now()}.${format}`;\n    a.click();\n  };\n};\n```\n\n4. 고급 필터링 및 검색 (Fuse.js v7.0.0):\n```typescript\n// AdvancedSearch.tsx\nimport Fuse from 'fuse.js';\n\nconst AdvancedSearch: React.FC = () => {\n  const [filters, setFilters] = useState({\n    type: [],\n    status: [],\n    tags: [],\n    dateRange: null\n  });\n  \n  const fuseOptions = {\n    keys: ['name', 'description', 'host', 'tags'],\n    threshold: 0.3,\n    includeScore: true\n  };\n  \n  const fuse = new Fuse(systems, fuseOptions);\n  \n  const handleSearch = (query: string) => {\n    const results = fuse.search(query);\n    const filtered = results\n      .filter(result => applyFilters(result.item, filters))\n      .map(result => ({ ...result.item, score: result.score }));\n    \n    setSearchResults(filtered);\n  };\n};\n```\n\n5. 시스템 태깅 및 분류:\n```typescript\n// TagManager.tsx\nconst TagManager: React.FC = () => {\n  const [tags, setTags] = useState<Tag[]>([]);\n  \n  const handleAddTag = (systemId: string, tag: string) => {\n    const color = generateTagColor(tag);\n    api.addSystemTag(systemId, { name: tag, color });\n  };\n  \n  const TagInput = () => (\n    <Autocomplete\n      multiple\n      options={availableTags}\n      freeSolo\n      renderTags={(value, getTagProps) =>\n        value.map((option, index) => (\n          <Chip\n            variant=\"outlined\"\n            label={option}\n            {...getTagProps({ index })}\n            style={{ backgroundColor: getTagColor(option) }}\n          />\n        ))\n      }\n    />\n  );\n};\n```",
-        "testStrategy": "1. 사용성 테스트: 5명 이상의 사용자와 함께 태스크 완료 시간 측정\n2. 접근성 테스트: axe-core로 WCAG 2.1 AA 준수 확인\n3. 성능 테스트: React DevTools Profiler로 렌더링 최적화\n4. 반응형 테스트: 다양한 화면 크기에서 UI 검증\n5. E2E 테스트: Cypress로 전체 사용자 플로우 자동화 테스트",
-        "priority": "medium",
+        "id": 5,
+        "title": "MySQL Adapter 구현",
+        "description": "MySQL 데이터베이스를 위한 시스템 어댑터를 구현합니다",
+        "details": "backend/services/systemAdapters/databases/MySQLAdapter.js 파일을 생성하고 mysql2 라이브러리를 사용하여 구현합니다.\n\n```javascript\nconst mysql = require('mysql2/promise');\n\nclass MySQLAdapter extends BaseSystemAdapter {\n  async connect() {\n    this.connection = await mysql.createConnection({\n      host: this.config.host,\n      port: this.config.port,\n      database: this.config.database,\n      user: this.config.username,\n      password: this.config.password\n    });\n  }\n  \n  async discoverSchemas() {\n    const [rows] = await this.connection.execute(`\n      SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n      FROM INFORMATION_SCHEMA.COLUMNS\n      WHERE TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')\n      ORDER BY TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION\n    `);\n    return this.groupIntoSchemas(rows);\n  }\n}\n```",
+        "testStrategy": "Docker를 사용하여 MySQL 테스트 인스턴스를 생성하고, PostgreSQL 어댑터와 동일한 테스트 시나리오를 적용합니다",
+        "priority": "high",
         "dependencies": [
-          28,
-          29
+          3
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "MySQL 연결 풀 구현",
+            "description": "mysql2 라이브러리를 사용하여 연결 풀링을 지원하는 MySQL 연결 관리자를 구현합니다",
+            "dependencies": [],
+            "details": "createPool() 메서드를 사용하여 연결 풀을 생성하고, 최대 연결 수, 대기 시간, 유휴 시간 등의 설정을 구성합니다. 연결 획득/반환 로직과 연결 상태 모니터링 기능을 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "스키마 메타데이터 조회 기능 구현",
+            "description": "MySQL 데이터베이스의 테이블, 컬럼, 인덱스, 제약조건 등의 메타데이터를 조회하는 기능을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "INFORMATION_SCHEMA를 활용하여 데이터베이스 구조를 탐색하고, 테이블 목록, 컬럼 정보, 데이터 타입, 기본키/외래키 정보를 Universal Schema 형식으로 변환합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "데이터 읽기 기능 구현",
+            "description": "SELECT 쿼리를 실행하고 결과를 스트리밍 방식으로 처리하는 읽기 기능을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "페이지네이션, 필터링, 정렬을 지원하는 쿼리 빌더를 구현하고, 대용량 데이터 처리를 위한 스트림 기반 읽기와 배치 처리를 지원합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "데이터 쓰기 및 트랜잭션 기능 구현",
+            "description": "INSERT, UPDATE, DELETE 작업과 트랜잭션 관리 기능을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "배치 삽입, 업서트(UPSERT) 기능을 구현하고, 트랜잭션 시작/커밋/롤백을 지원합니다. 동시성 제어와 데드락 처리 로직을 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "통합 테스트 및 에러 처리 구현",
+            "description": "Docker 기반 MySQL 테스트 환경을 구성하고 전체 기능에 대한 통합 테스트를 작성합니다",
+            "dependencies": [
+              2,
+              3,
+              4
+            ],
+            "details": "연결 실패, 쿼리 타임아웃, 트랜잭션 충돌 등의 에러 시나리오를 테스트하고, 재시도 로직과 상세한 에러 메시지를 구현합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
-        "id": 34,
-        "title": "오류 처리 및 진단 도구 구현",
-        "description": "포괄적인 오류 분류, 연결 문제 해결 도구, 네트워크 연결성 테스트, 데이터베이스 스키마 검사 및 연결 성능 프로파일링을 포함한 고급 진단 시스템을 구축합니다.",
-        "details": "1. 오류 분류 및 처리 시스템:\n```javascript\n// ErrorClassifier.js\nclass ErrorClassifier {\n  constructor() {\n    this.errorPatterns = [\n      {\n        pattern: /ECONNREFUSED/,\n        type: 'CONNECTION_REFUSED',\n        severity: 'critical',\n        message: '데이터베이스 서버에 연결할 수 없습니다',\n        solutions: [\n          '데이터베이스 서버가 실행 중인지 확인하세요',\n          '방화벽 설정을 확인하세요',\n          '호스트 및 포트 정보가 올바른지 확인하세요'\n        ]\n      },\n      {\n        pattern: /authentication failed/i,\n        type: 'AUTH_FAILED',\n        severity: 'high',\n        message: '인증에 실패했습니다',\n        solutions: [\n          '사용자 이름과 비밀번호를 확인하세요',\n          '사용자 권한을 확인하세요',\n          '계정이 잠겨있는지 확인하세요'\n        ]\n      },\n      {\n        pattern: /SSL/i,\n        type: 'SSL_ERROR',\n        severity: 'medium',\n        message: 'SSL 연결 오류',\n        solutions: [\n          'SSL 인증서가 유효한지 확인하세요',\n          'SSL 모드 설정을 확인하세요',\n          'CA 인증서 경로를 확인하세요'\n        ]\n      }\n    ];\n  }\n  \n  classify(error) {\n    const errorString = error.toString();\n    \n    for (const pattern of this.errorPatterns) {\n      if (pattern.pattern.test(errorString)) {\n        return {\n          ...pattern,\n          originalError: error,\n          timestamp: new Date(),\n          diagnostics: this.runDiagnostics(pattern.type)\n        };\n      }\n    }\n    \n    return {\n      type: 'UNKNOWN',\n      severity: 'medium',\n      message: '알 수 없는 오류가 발생했습니다',\n      originalError: error\n    };\n  }\n}\n```\n\n2. 네트워크 진단 도구:\n```javascript\n// NetworkDiagnostics.js\nconst net = require('net');\nconst dns = require('dns').promises;\nconst ping = require('ping');\n\nclass NetworkDiagnostics {\n  async runFullDiagnostics(host, port) {\n    const results = {\n      dnsResolution: await this.checkDNS(host),\n      ping: await this.checkPing(host),\n      portOpen: await this.checkPort(host, port),\n      traceroute: await this.runTraceroute(host),\n      latency: await this.measureLatency(host, port)\n    };\n    \n    return this.generateReport(results);\n  }\n  \n  async checkPort(host, port) {\n    return new Promise((resolve) => {\n      const socket = new net.Socket();\n      socket.setTimeout(5000);\n      \n      socket.on('connect', () => {\n        socket.destroy();\n        resolve({ open: true, responseTime: Date.now() - startTime });\n      });\n      \n      socket.on('timeout', () => {\n        socket.destroy();\n        resolve({ open: false, error: 'timeout' });\n      });\n      \n      socket.on('error', (err) => {\n        resolve({ open: false, error: err.message });\n      });\n      \n      const startTime = Date.now();\n      socket.connect(port, host);\n    });\n  }\n  \n  async measureLatency(host, port, samples = 10) {\n    const measurements = [];\n    \n    for (let i = 0; i < samples; i++) {\n      const start = Date.now();\n      const result = await this.checkPort(host, port);\n      \n      if (result.open) {\n        measurements.push(Date.now() - start);\n      }\n    }\n    \n    return {\n      min: Math.min(...measurements),\n      max: Math.max(...measurements),\n      avg: measurements.reduce((a, b) => a + b, 0) / measurements.length,\n      samples: measurements\n    };\n  }\n}\n```\n\n3. 데이터베이스 스키마 검사기:\n```javascript\n// SchemaInspector.js\nclass SchemaInspector {\n  async inspectDatabase(connection, dbType) {\n    const inspector = this.getInspector(dbType);\n    return await inspector.inspect(connection);\n  }\n  \n  getInspector(dbType) {\n    const inspectors = {\n      postgresql: {\n        inspect: async (conn) => {\n          const tables = await conn.query(`\n            SELECT table_name, table_type \n            FROM information_schema.tables \n            WHERE table_schema = 'public'\n          `);\n          \n          const schemas = await conn.query(`\n            SELECT schema_name \n            FROM information_schema.schemata\n          `);\n          \n          const size = await conn.query(`\n            SELECT pg_database_size(current_database()) as size\n          `);\n          \n          return {\n            tables: tables.rows,\n            schemas: schemas.rows,\n            size: this.formatBytes(size.rows[0].size),\n            version: await this.getVersion(conn)\n          };\n        }\n      },\n      mysql: {\n        inspect: async (conn) => {\n          const [tables] = await conn.query('SHOW TABLES');\n          const [status] = await conn.query('SHOW STATUS');\n          const [variables] = await conn.query('SHOW VARIABLES');\n          \n          return {\n            tables,\n            status: this.parseStatus(status),\n            configuration: this.parseVariables(variables)\n          };\n        }\n      }\n    };\n    \n    return inspectors[dbType];\n  }\n}\n```\n\n4. 성능 프로파일러:\n```javascript\n// PerformanceProfiler.js\nclass PerformanceProfiler {\n  async profileConnection(systemId, duration = 60000) {\n    const metrics = {\n      queries: [],\n      connectionStats: [],\n      resourceUsage: []\n    };\n    \n    const startTime = Date.now();\n    const interval = setInterval(async () => {\n      // 쿼리 성능 측정\n      const queryMetric = await this.measureQueryPerformance(systemId);\n      metrics.queries.push(queryMetric);\n      \n      // 연결 통계\n      const connStats = await this.getConnectionStats(systemId);\n      metrics.connectionStats.push(connStats);\n      \n      // 리소스 사용량\n      const resources = await this.getResourceUsage(systemId);\n      metrics.resourceUsage.push(resources);\n      \n      if (Date.now() - startTime > duration) {\n        clearInterval(interval);\n      }\n    }, 1000);\n    \n    return new Promise((resolve) => {\n      setTimeout(() => {\n        clearInterval(interval);\n        resolve(this.analyzeMetrics(metrics));\n      }, duration);\n    });\n  }\n  \n  analyzeMetrics(metrics) {\n    return {\n      queryPerformance: {\n        avgResponseTime: this.calculateAverage(metrics.queries, 'responseTime'),\n        p95ResponseTime: this.calculatePercentile(metrics.queries, 'responseTime', 95),\n        throughput: metrics.queries.length / (metrics.duration / 1000)\n      },\n      connectionHealth: {\n        avgActiveConnections: this.calculateAverage(metrics.connectionStats, 'active'),\n        maxConnections: Math.max(...metrics.connectionStats.map(s => s.active)),\n        connectionChurn: this.calculateChurn(metrics.connectionStats)\n      },\n      recommendations: this.generateRecommendations(metrics)\n    };\n  }\n}\n```",
-        "testStrategy": "1. 오류 시나리오 테스트: 50개 이상의 다양한 오류 케이스 시뮬레이션\n2. 진단 도구 정확성: 실제 네트워크 문제 상황에서 진단 결과 검증\n3. 성능 프로파일러 테스트: 부하 상황에서 정확한 메트릭 수집 확인\n4. 스키마 검사기 호환성: 모든 지원 데이터베이스에서 정확한 정보 추출\n5. 사용자 피드백 테스트: 오류 해결 제안의 효과성 측정",
+        "id": 6,
+        "title": "Schema Discovery Service 구현",
+        "description": "다양한 시스템에서 스키마를 탐색하고 Universal Schema 형식으로 변환하는 서비스를 구현합니다",
+        "details": "backend/services/schemaDiscovery/index.js 파일을 생성하고 어댑터 레지스트리, 캐싱, 타입 매핑 기능을 구현합니다.\n\n```javascript\nclass SchemaDiscoveryService {\n  constructor() {\n    this.adapters = new Map();\n    this.cache = new Map();\n  }\n  \n  async discoverSchemas(systemId) {\n    const system = await System.findByPk(systemId);\n    const adapter = this.getAdapter(system.type);\n    const schemas = await adapter.discoverSchemas(system.connectionInfo);\n    \n    const universalSchemas = schemas.map(schema => \n      this.convertToUniversalSchema(schema, system.type)\n    );\n    \n    this.cache.set(systemId, {\n      schemas: universalSchemas,\n      timestamp: new Date()\n    });\n    \n    return universalSchemas;\n  }\n}\n```",
+        "testStrategy": "모킹을 사용하여 다양한 어댑터 타입에 대한 스키마 탐색과 변환을 테스트하고, 캐싱 동작을 검증합니다",
+        "priority": "high",
+        "dependencies": [
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "어댑터 레지스트리 및 기본 구조 구현",
+            "description": "SchemaDiscoveryService의 기본 클래스 구조와 어댑터 레지스트리 시스템을 구현합니다. 다양한 시스템 타입별 어댑터를 등록하고 관리할 수 있는 메커니즘을 구축합니다.",
+            "dependencies": [],
+            "details": "backend/services/schemaDiscovery/index.js 파일에 SchemaDiscoveryService 클래스를 생성하고, 어댑터 Map 구조와 registerAdapter, getAdapter 메서드를 구현합니다. 각 어댑터는 discoverSchemas, getSampleData 등의 공통 인터페이스를 구현해야 합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "스키마 변환 및 타입 매핑 로직 구현",
+            "description": "다양한 시스템의 네이티브 스키마를 Universal Schema 형식으로 변환하는 로직을 구현합니다. 각 시스템별 데이터 타입을 Universal Type으로 매핑하는 규칙을 정의합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "convertToUniversalSchema 메서드를 구현하여 각 어댑터에서 반환한 스키마를 표준화된 형식으로 변환합니다. TypeMapper 클래스를 생성하여 MySQL, PostgreSQL, MongoDB 등의 타입을 Universal Type으로 매핑하는 규칙을 정의합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "캐싱 메커니즘 및 스키마 탐색 메서드 구현",
+            "description": "스키마 탐색 결과를 캐싱하는 메커니즘과 실제 스키마를 탐색하는 discoverSchemas 메서드를 구현합니다. 캐시 만료 시간과 강제 새로고침 옵션을 지원합니다.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Map 기반의 캐시 저장소를 구현하고, TTL(Time To Live) 기능을 추가합니다. discoverSchemas 메서드에서 캐시를 확인하고, 필요시 어댑터를 통해 실제 탐색을 수행한 후 Universal Schema로 변환하여 반환합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Enhanced Mapping Engine 구현",
+        "description": "변환 파이프라인, 검증, 실행 전략을 포함한 향상된 매핑 엔진을 구현합니다",
+        "details": "backend/services/mappingEngine/index.js 파일을 생성하고 기존 매핑 엔진을 확장합니다.\n\n```javascript\nclass EnhancedMappingEngine {\n  constructor() {\n    this.transformers = new Map();\n    this.validators = new Map();\n    this.executors = new Map();\n    this.loadBuiltInTransformations();\n  }\n  \n  async executeMapping(mapping, sourceData, options = {}) {\n    const validation = await this.validateSourceData(mapping, sourceData);\n    if (!validation.valid) {\n      throw new MappingValidationError(validation.errors);\n    }\n    \n    const context = this.createExecutionContext(mapping, options);\n    const executor = this.selectExecutor(mapping.mappingType);\n    const result = await executor.execute(sourceData, mapping, context);\n    \n    return result;\n  }\n}\n```",
+        "testStrategy": "다양한 매핑 시나리오(단순 필드 매핑, 복잡한 변환, 중첩 구조)에 대한 유닛 테스트를 작성하고 성능을 측정합니다",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "변환 파이프라인 아키텍처 설계",
+            "description": "확장 가능한 변환 파이프라인 아키텍처를 설계하고 인터페이스를 정의합니다",
+            "dependencies": [],
+            "details": "파이프라인 단계(전처리, 변환, 검증, 후처리) 정의, 플러그인 아키텍처 설계, 파이프라인 빌더 패턴 구현, 비동기 처리 지원",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "데이터 검증 프레임워크 구현",
+            "description": "입력/출력 데이터 검증을 위한 규칙 기반 검증 프레임워크를 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "스키마 검증, 타입 검증, 비즈니스 규칙 검증, 커스텀 검증기 지원, 검증 결과 리포팅",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "실행 전략 패턴 구현",
+            "description": "배치, 스트리밍, 병렬 처리 등 다양한 실행 전략을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "전략 인터페이스 정의, 배치 실행기, 스트림 실행기, 병렬 실행기, 실행 컨텍스트 관리",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "에러 처리 및 복구 메커니즘",
+            "description": "변환 과정의 에러를 처리하고 복구하는 메커니즘을 구현합니다",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "에러 분류 체계, 재시도 로직, 부분 실패 처리, 에러 로깅 및 알림, 롤백 메커니즘",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "성능 최적화 구현",
+            "description": "캐싱, 메모리 관리, 병렬 처리를 통한 성능 최적화를 구현합니다",
+            "dependencies": [
+              3
+            ],
+            "details": "변환 결과 캐싱, 메모리 풀 관리, 워커 스레드 활용, 스트리밍 처리 최적화, 프로파일링 도구",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "매핑 엔진 통합 및 API 구현",
+            "description": "모든 컴포넌트를 통합하고 외부 인터페이스 API를 구현합니다",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "엔진 파사드 구현, REST API 엔드포인트, 이벤트 기반 인터페이스, SDK 제공, 문서화",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "통합 테스트 및 벤치마크",
+            "description": "전체 시스템의 통합 테스트와 성능 벤치마크를 수행합니다",
+            "dependencies": [
+              6
+            ],
+            "details": "E2E 테스트 시나리오, 부하 테스트, 성능 벤치마크, 메모리 누수 테스트, 테스트 자동화",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Transformation Functions 라이브러리 구현",
+        "description": "문자열, 숫자, 날짜, 배열 등 다양한 데이터 타입에 대한 변환 함수들을 구현합니다",
+        "details": "backend/services/mappingEngine/transformations/ 디렉토리에 카테고리별 변환 함수들을 구현합니다.\n\n```javascript\n// stringTransformations.js\nexports.uppercase = (value) => value.toUpperCase();\nexports.lowercase = (value) => value.toLowerCase();\nexports.trim = (value) => value.trim();\nexports.substring = (value, start, end) => value.substring(start, end);\nexports.replace = (value, search, replace) => value.replace(search, replace);\n\n// dateTransformations.js\nexports.format = (value, format) => moment(value).format(format);\nexports.addDays = (value, days) => moment(value).add(days, 'days').toDate();\nexports.toTimestamp = (value) => new Date(value).getTime();\n```",
+        "testStrategy": "각 변환 함수에 대한 유닛 테스트를 작성하고, 엣지 케이스와 에러 처리를 검증합니다",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "기본 데이터 타입 변환 함수 구현",
+            "description": "문자열, 숫자, 불린 등 기본 데이터 타입에 대한 변환 함수들을 구현합니다. stringTransformations.js, numberTransformations.js, booleanTransformations.js 파일을 생성하고 각 타입별 기본 변환 함수들을 작성합니다.",
+            "dependencies": [],
+            "details": "backend/services/mappingEngine/transformations/ 디렉토리에 기본 타입별 변환 함수 모듈을 생성합니다. 문자열 변환(uppercase, lowercase, trim, substring, replace, split, join), 숫자 변환(round, floor, ceil, toFixed, parseInt, parseFloat), 불린 변환(toBoolean, negate) 등을 구현합니다. 각 함수는 에러 처리와 null/undefined 체크를 포함해야 합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "날짜 및 복합 타입 변환 함수 구현",
+            "description": "날짜/시간 변환과 배열, 객체 등 복합 데이터 타입에 대한 변환 함수들을 구현합니다. dateTransformations.js, arrayTransformations.js, objectTransformations.js 파일을 생성합니다.",
+            "dependencies": [],
+            "details": "날짜 변환 함수(format, parse, addDays, subtractDays, toTimestamp, fromTimestamp), 배열 변환 함수(map, filter, reduce, sort, reverse, slice, concat), 객체 변환 함수(pick, omit, merge, flatten, unflatten) 등을 구현합니다. moment.js 또는 date-fns 라이브러리를 활용하여 날짜 처리를 구현하고, lodash를 활용하여 복잡한 객체 조작을 처리합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "변환 함수 레지스트리 및 테스트 구현",
+            "description": "모든 변환 함수를 중앙에서 관리하는 레지스트리 시스템을 구현하고, 각 변환 함수에 대한 포괄적인 유닛 테스트를 작성합니다.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "transformationRegistry.js 파일을 생성하여 모든 변환 함수를 카테고리별로 등록하고 관리합니다. 함수 메타데이터(이름, 설명, 파라미터, 반환 타입)를 포함하여 프론트엔드에서 활용할 수 있도록 합니다. test/transformations/ 디렉토리에 각 변환 함수별 테스트를 작성하여 정상 케이스, 엣지 케이스, 에러 처리를 검증합니다. 성능 테스트도 포함하여 대용량 데이터 처리 시 성능을 확인합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Schema Discovery API 엔드포인트 구현",
+        "description": "스키마 탐색, 새로고침, 샘플 데이터 조회를 위한 REST API 엔드포인트를 구현합니다",
+        "details": "backend/routes/schemas.js 파일을 수정하여 새로운 엔드포인트를 추가합니다.\n\n```javascript\n// 스키마 탐색\nrouter.get('/discover/:systemId', authenticate, async (req, res) => {\n  try {\n    const schemas = await schemaDiscoveryService.discoverSchemas(req.params.systemId);\n    res.json({ success: true, data: schemas });\n  } catch (error) {\n    res.status(500).json({ success: false, error: error.message });\n  }\n});\n\n// 스키마 새로고침\nrouter.post('/refresh/:schemaId', authenticate, async (req, res) => {\n  const schema = await DataSchema.findByPk(req.params.schemaId);\n  const refreshed = await schemaDiscoveryService.refreshSchema(schema);\n  res.json({ success: true, data: refreshed });\n});\n```",
+        "testStrategy": "Supertest를 사용하여 API 엔드포인트의 인증, 권한, 응답 형식을 테스트합니다",
+        "priority": "medium",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "REST API 엔드포인트 구현",
+            "description": "스키마 탐색(/discover/:systemId), 새로고침(/refresh/:schemaId), 샘플 데이터 조회(/sample/:schemaId) 엔드포인트를 Express 라우터에 구현합니다",
+            "dependencies": [],
+            "details": "backend/routes/schemas.js 파일에 세 가지 엔드포인트를 추가합니다. 각 엔드포인트는 적절한 HTTP 메소드(GET/POST)를 사용하고, 요청 파라미터를 검증하며, schemaDiscoveryService를 호출하여 결과를 반환합니다. 표준 응답 형식({success, data, error})을 사용합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "인증 및 권한 미들웨어 적용",
+            "description": "JWT 기반 인증 미들웨어를 구현하고 각 엔드포인트에 적용합니다. 사용자 권한에 따른 접근 제어를 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "authenticate 미들웨어를 구현하여 JWT 토큰을 검증하고, 사용자 정보를 req.user에 저장합니다. 시스템 소유자나 관리자만 스키마를 새로고침할 수 있도록 권한 검사를 추가합니다. 인증 실패 시 401, 권한 부족 시 403 상태 코드를 반환합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "에러 처리 및 API 테스트 작성",
+            "description": "통합 에러 핸들러를 구현하고 Supertest를 사용한 API 테스트를 작성합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "try-catch 블록으로 각 엔드포인트의 에러를 처리하고, 에러 타입에 따라 적절한 HTTP 상태 코드와 메시지를 반환합니다. Supertest로 성공/실패 시나리오, 인증 테스트, 잘못된 파라미터 테스트 등을 작성합니다. 응답 형식과 데이터 구조를 검증합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Mapping Execution API 엔드포인트 구현",
+        "description": "매핑 실행, 히스토리 조회, 디버깅을 위한 API 엔드포인트를 구현합니다",
+        "details": "backend/routes/mappings.js 파일을 수정하여 새로운 엔드포인트를 추가합니다.\n\n```javascript\n// 매핑 실행\nrouter.post('/:id/execute', authenticate, async (req, res) => {\n  const mapping = await Mapping.findByPk(req.params.id);\n  const result = await mappingEngine.executeMapping(mapping, req.body.data, req.body.options);\n  \n  // 실행 히스토리 저장\n  await MappingHistory.create({\n    mappingId: mapping.id,\n    executedAt: new Date(),\n    recordsProcessed: result.recordCount,\n    status: 'success',\n    executionTime: result.duration\n  });\n  \n  res.json({ success: true, data: result });\n});\n\n// 디버그 모드 실행\nrouter.post('/:id/debug', authenticate, async (req, res) => {\n  const result = await mappingEngine.debugMapping(req.params.id, req.body.sampleData);\n  res.json({ success: true, data: result });\n});\n```",
+        "testStrategy": "다양한 매핑 시나리오에 대한 실행을 테스트하고, 에러 처리와 실행 히스토리 저장을 검증합니다",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "매핑 실행 API 엔드포인트 구현",
+            "description": "비동기 매핑 실행을 위한 REST API 엔드포인트를 구현합니다. POST /mappings/:id/execute 엔드포인트에서 매핑 실행을 시작하고, WebSocket 또는 SSE를 통해 실시간 진행 상황을 전송합니다.",
+            "dependencies": [],
+            "details": "backend/routes/mappings.js에 실행 엔드포인트를 추가하고, 비동기 작업 큐(Bull 또는 BullMQ)를 사용하여 백그라운드 실행을 처리합니다. 실행 상태(pending, running, completed, failed)와 진행률을 추적합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "실행 히스토리 저장 및 조회 기능 구현",
+            "description": "매핑 실행 결과와 메타데이터를 데이터베이스에 저장하고 조회하는 기능을 구현합니다. 실행 시간, 처리된 레코드 수, 에러 정보 등을 포함합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "MappingHistory 모델을 생성하고, 실행 완료 시 자동으로 히스토리를 저장합니다. GET /mappings/:id/history 엔드포인트로 실행 이력을 조회하고, 필터링 및 페이지네이션을 지원합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "디버그 모드 실행 기능 구현",
+            "description": "매핑 실행 과정을 단계별로 추적하고 디버깅할 수 있는 기능을 구현합니다. 각 변환 단계의 입출력 데이터와 실행 시간을 기록합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "디버그 플래그를 받아 상세한 실행 로그를 생성합니다. 각 필드 매핑과 변환 함수의 실행 결과를 추적하고, 에러 발생 시 스택 트레이스와 컨텍스트 정보를 제공합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "진행 상황 추적 및 실시간 업데이트 구현",
+            "description": "대용량 데이터 처리 시 실시간으로 진행 상황을 추적하고 클라이언트에 업데이트를 전송하는 기능을 구현합니다.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Socket.io 또는 Server-Sent Events를 사용하여 실시간 진행률, 처리된 레코드 수, 예상 완료 시간을 전송합니다. 실행 취소 기능도 포함하여 진행 중인 작업을 중단할 수 있도록 합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Mapping Store (Pinia) 구현",
+        "description": "Vue 3 애플리케이션을 위한 매핑 상태 관리 스토어를 구현합니다",
+        "details": "frontend/src/stores/mapping.js 파일을 생성하고 Pinia를 사용하여 매핑 상태를 관리합니다.\n\n```javascript\nimport { defineStore } from 'pinia'\nimport { mappingService } from '@/services/mappingService'\n\nexport const useMapping = defineStore('mapping', {\n  state: () => ({\n    currentMapping: null,\n    sourceSchema: null,\n    targetSchema: null,\n    fieldMappings: [],\n    draggedField: null,\n    loading: false,\n    error: null\n  }),\n  \n  getters: {\n    getSourceFields: (state) => () => {\n      return state.sourceSchema?.columns || []\n    },\n    getTargetFields: (state) => () => {\n      return state.targetSchema?.columns || []\n    }\n  },\n  \n  actions: {\n    async loadMapping(mappingId) {\n      this.loading = true\n      try {\n        const mapping = await mappingService.getMapping(mappingId)\n        this.currentMapping = mapping\n        this.sourceSchema = mapping.sourceSchema\n        this.targetSchema = mapping.targetSchema\n        this.fieldMappings = mapping.fieldMappings || []\n      } catch (error) {\n        this.error = error.message\n      } finally {\n        this.loading = false\n      }\n    }\n  }\n})\n```",
+        "testStrategy": "Vitest를 사용하여 스토어의 상태 변경, 게터, 액션을 테스트하고 API 호출을 모킹합니다",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Pinia 스토어 상태 및 게터 정의",
+            "description": "매핑 관련 상태(currentMapping, schemas, fieldMappings, loading, error 등)를 정의하고, 필요한 게터 함수들을 구현합니다",
+            "dependencies": [],
+            "details": "frontend/src/stores/mapping.js 파일에 state와 getters를 정의합니다. sourceSchema, targetSchema, fieldMappings 배열, 로딩 및 에러 상태를 포함하고, getSourceFields, getTargetFields, getMappingById 등의 게터를 구현합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "API 통신 액션 구현",
+            "description": "매핑 CRUD 작업을 위한 액션들을 구현하고, mappingService를 통해 백엔드 API와 통신합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "loadMapping, saveMapping, deleteMapping, executeMapping 등의 액션을 구현합니다. 각 액션에서 로딩 상태를 관리하고, try-catch로 에러를 처리합니다. API 응답을 받아 상태를 업데이트합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "스토어 테스트 작성",
+            "description": "Vitest를 사용하여 스토어의 상태 변경, 게터, 액션을 테스트하고 API 호출을 모킹합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "frontend/src/stores/__tests__/mapping.spec.js 파일을 생성하여 테스트를 작성합니다. vi.mock으로 mappingService를 모킹하고, 상태 초기화, 게터 동작, 액션 실행 시 상태 변경, 에러 처리 등을 검증합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Schema Panel 컴포넌트 구현",
+        "description": "소스와 타겟 스키마를 표시하고 드래그 앤 드롭을 지원하는 Vue 컴포넌트를 구현합니다",
+        "details": "frontend/src/components/mapping/SchemaPanel.vue 파일을 생성합니다.\n\n```vue\n<template>\n  <v-card class=\"schema-panel\">\n    <v-card-title>{{ title }}</v-card-title>\n    <v-card-text>\n      <v-treeview\n        :items=\"treeItems\"\n        item-key=\"id\"\n        item-text=\"name\"\n        dense\n        hoverable\n      >\n        <template v-slot:label=\"{ item }\">\n          <div\n            class=\"field-item\"\n            :draggable=\"isDraggable\"\n            @dragstart=\"handleDragStart(item)\"\n            @drop=\"handleDrop(item)\"\n            @dragover.prevent\n          >\n            <v-icon small>{{ getFieldIcon(item.type) }}</v-icon>\n            <span class=\"ml-2\">{{ item.name }}</span>\n            <v-chip x-small class=\"ml-2\">{{ item.type }}</v-chip>\n          </div>\n        </template>\n      </v-treeview>\n    </v-card-text>\n  </v-card>\n</template>\n\n<script>\nexport default {\n  props: {\n    title: String,\n    schema: Object,\n    fields: Array,\n    isDraggable: Boolean\n  },\n  methods: {\n    handleDragStart(field) {\n      this.$emit('field-drag-start', field)\n    },\n    handleDrop(field) {\n      this.$emit('field-drop', field)\n    }\n  }\n}\n</script>\n```",
+        "testStrategy": "컴포넌트의 렌더링, 드래그 앤 드롭 이벤트, props 전달을 테스트합니다",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "트리뷰 데이터 구조 및 렌더링 구현",
+            "description": "스키마 데이터를 트리뷰 형식으로 변환하고 v-treeview 컴포넌트로 렌더링하는 기능을 구현합니다",
+            "dependencies": [],
+            "details": "스키마 객체를 재귀적으로 순회하여 트리 구조로 변환하는 로직을 구현합니다. 중첩된 객체와 배열 타입을 처리하고, 각 노드에 고유 ID를 부여합니다. v-treeview의 items prop에 맞는 데이터 구조를 생성합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "필드 타입별 아이콘 시스템 구현",
+            "description": "데이터 타입에 따른 아이콘 매핑과 표시 로직을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "STRING, INTEGER, DATE, BOOLEAN 등 각 데이터 타입별로 적절한 Material Design 아이콘을 매핑합니다. 아이콘 컴포넌트를 생성하고 색상 테마를 적용합니다. 커스텀 타입에 대한 기본 아이콘도 설정합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "드래그 앤 드롭 기능 구현",
+            "description": "트리뷰 아이템의 드래그 앤 드롭 인터랙션과 이벤트 처리를 구현합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "dragstart, dragover, drop 이벤트 핸들러를 구현합니다. 드래그 가능한 필드와 드롭 가능한 영역을 정의하고, 드래그 데이터를 DataTransfer 객체로 전달합니다. 부모 컴포넌트로 이벤트를 emit하는 로직을 추가합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "시각적 피드백 및 스타일링 구현",
+            "description": "드래그 앤 드롭 시 시각적 피드백과 호버 효과, 선택 상태 등의 UI 스타일을 구현합니다",
+            "dependencies": [
+              3
+            ],
+            "details": "드래그 중인 아이템의 투명도 조정, 드롭 가능 영역의 하이라이트 효과를 구현합니다. 호버 시 배경색 변경, 선택된 필드의 강조 표시, 드래그 커서 변경 등의 CSS 스타일을 추가합니다. 애니메이션 효과도 적용합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Mapping Canvas 컴포넌트 구현",
+        "description": "필드 간 매핑 관계를 시각적으로 표시하는 캔버스 컴포넌트를 구현합니다",
+        "details": "frontend/src/components/mapping/MappingCanvas.vue 파일을 생성하고 SVG 또는 Canvas API를 사용하여 매핑 라인을 그립니다.\n\n```vue\n<template>\n  <div class=\"mapping-canvas\" ref=\"canvasContainer\">\n    <svg :width=\"width\" :height=\"height\">\n      <g v-for=\"mapping in mappings\" :key=\"mapping.id\">\n        <path\n          :d=\"getPath(mapping)\"\n          class=\"mapping-line\"\n          :class=\"{ selected: mapping.id === selectedMappingId }\"\n          @click=\"selectMapping(mapping)\"\n        />\n        <circle\n          :cx=\"getSourcePoint(mapping).x\"\n          :cy=\"getSourcePoint(mapping).y\"\n          r=\"4\"\n          class=\"connection-point source\"\n        />\n        <circle\n          :cx=\"getTargetPoint(mapping).x\"\n          :cy=\"getTargetPoint(mapping).y\"\n          r=\"4\"\n          class=\"connection-point target\"\n        />\n      </g>\n    </svg>\n  </div>\n</template>\n\n<script>\nexport default {\n  props: {\n    mappings: Array,\n    sourceFields: Array,\n    targetFields: Array\n  },\n  methods: {\n    getPath(mapping) {\n      const source = this.getSourcePoint(mapping)\n      const target = this.getTargetPoint(mapping)\n      return `M ${source.x} ${source.y} C ${source.x + 100} ${source.y}, ${target.x - 100} ${target.y}, ${target.x} ${target.y}`\n    }\n  }\n}\n</script>\n```",
+        "testStrategy": "매핑 라인 렌더링, 클릭 이벤트, 좌표 계산을 테스트합니다",
+        "priority": "medium",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "SVG 캔버스 기본 구조 설정",
+            "description": "SVG 기반 캔버스의 기본 구조와 좌표 시스템을 설정하고, 반응형 크기 조정 기능을 구현합니다",
+            "dependencies": [],
+            "details": "MappingCanvas.vue 컴포넌트에 SVG 엘리먼트를 추가하고, viewBox와 preserveAspectRatio 속성을 설정합니다. ResizeObserver를 사용하여 컨테이너 크기 변경을 감지하고 SVG 크기를 동적으로 조정합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "베지어 곡선 경로 계산 로직 구현",
+            "description": "소스와 타겟 필드 간의 연결선을 베지어 곡선으로 그리기 위한 경로 계산 로직을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "getPath() 메서드를 구현하여 시작점과 끝점을 기반으로 3차 베지어 곡선의 제어점을 계산합니다. 곡선의 부드러운 형태를 위해 제어점 오프셋을 동적으로 조정하는 알고리즘을 적용합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "매핑 라인 렌더링 및 스타일링",
+            "description": "계산된 베지어 경로를 SVG path 엘리먼트로 렌더링하고 시각적 스타일을 적용합니다",
+            "dependencies": [
+              2
+            ],
+            "details": "v-for 디렉티브로 mappings 배열을 순회하며 path 엘리먼트를 생성합니다. stroke, stroke-width, fill 속성을 설정하고, 선택 상태에 따른 CSS 클래스를 적용합니다. 화살표 마커를 추가하여 방향성을 표시합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "인터랙티브 선택 기능 구현",
+            "description": "매핑 라인 클릭 시 선택 상태를 변경하고 시각적 피드백을 제공하는 기능을 구현합니다",
+            "dependencies": [
+              3
+            ],
+            "details": "selectMapping() 메서드를 구현하여 클릭된 매핑의 ID를 selectedMappingId에 저장합니다. 선택된 라인에 하이라이트 효과와 그림자를 적용하고, Pinia 스토어와 상태를 동기화합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "삭제 기능 및 컨텍스트 메뉴 구현",
+            "description": "선택된 매핑 라인을 삭제하는 기능과 우클릭 컨텍스트 메뉴를 구현합니다",
+            "dependencies": [
+              4
+            ],
+            "details": "Delete 키 이벤트 리스너를 추가하여 선택된 매핑을 삭제합니다. 우클릭 시 컨텍스트 메뉴를 표시하고 삭제, 편집 옵션을 제공합니다. 삭제 시 확인 다이얼로그를 표시하고 Pinia 스토어를 통해 상태를 업데이트합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "애니메이션 효과 추가",
+            "description": "매핑 라인의 생성, 삭제, 호버 시 부드러운 애니메이션 효과를 추가합니다",
+            "dependencies": [
+              5
+            ],
+            "details": "CSS transition과 SVG animate 엘리먼트를 사용하여 라인 그리기 애니메이션을 구현합니다. 호버 시 stroke-dasharray 애니메이션으로 흐르는 효과를 추가하고, 삭제 시 페이드아웃 효과를 적용합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Transformation Editor 컴포넌트 구현",
+        "description": "매핑에 적용할 변환 함수를 편집하는 다이얼로그 컴포넌트를 구현합니다",
+        "details": "frontend/src/components/mapping/TransformationEditor.vue 파일을 생성합니다.\n\n```vue\n<template>\n  <v-card>\n    <v-card-title>변환 편집기</v-card-title>\n    <v-card-text>\n      <v-row>\n        <v-col cols=\"6\">\n          <v-card outlined>\n            <v-card-subtitle>소스 필드</v-card-subtitle>\n            <v-card-text>\n              <div>{{ sourceField.name }} ({{ sourceField.type }})</div>\n              <v-text-field\n                v-model=\"sampleValue\"\n                label=\"샘플 값\"\n                outlined\n                dense\n              />\n            </v-card-text>\n          </v-card>\n        </v-col>\n        <v-col cols=\"6\">\n          <v-card outlined>\n            <v-card-subtitle>타겟 필드</v-card-subtitle>\n            <v-card-text>\n              <div>{{ targetField.name }} ({{ targetField.type }})</div>\n              <div class=\"preview-value\">{{ previewValue }}</div>\n            </v-card-text>\n          </v-card>\n        </v-col>\n      </v-row>\n      \n      <v-divider class=\"my-4\" />\n      \n      <div class=\"transformation-pipeline\">\n        <draggable v-model=\"transformations\" item-key=\"id\">\n          <template #item=\"{element}\">\n            <v-card class=\"transformation-item mb-2\">\n              <v-card-text>\n                <v-select\n                  v-model=\"element.type\"\n                  :items=\"availableTransformations\"\n                  label=\"변환 함수\"\n                  @change=\"updatePreview\"\n                />\n                <component\n                  :is=\"getParameterComponent(element.type)\"\n                  v-model=\"element.parameters\"\n                  @update=\"updatePreview\"\n                />\n              </v-card-text>\n            </v-card>\n          </template>\n        </draggable>\n      </div>\n    </v-card-text>\n  </v-card>\n</template>\n```",
+        "testStrategy": "변환 파이프라인 편집, 미리보기 업데이트, 파라미터 입력을 테스트합니다",
+        "priority": "medium",
+        "dependencies": [
+          13
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "변환 함수 선택 UI 구현",
+            "description": "사용 가능한 변환 함수들을 카테고리별로 표시하고 선택할 수 있는 UI 컴포넌트를 구현합니다. 문자열, 숫자, 날짜 등의 카테고리로 분류하여 표시합니다.",
+            "dependencies": [],
+            "details": "v-expansion-panels를 사용하여 카테고리별 변환 함수 목록을 표시하고, 각 함수의 설명과 파라미터 정보를 보여줍니다. 선택된 함수들은 파이프라인에 추가됩니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "변환 파이프라인 편집기 구현",
+            "description": "선택된 변환 함수들을 순서대로 배치하고 파라미터를 설정할 수 있는 파이프라인 편집기를 구현합니다. 드래그 앤 드롭으로 순서를 변경할 수 있습니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "vuedraggable을 활용하여 변환 함수들의 순서를 조정하고, 각 함수의 파라미터를 동적으로 입력받을 수 있는 폼을 생성합니다. 파이프라인 검증 로직도 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "실시간 미리보기 기능 구현",
+            "description": "입력된 샘플 값에 대해 변환 파이프라인을 실시간으로 적용하여 결과를 미리 볼 수 있는 기능을 구현합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "watch를 사용하여 샘플 값이나 파이프라인이 변경될 때마다 백엔드 API를 호출하여 변환 결과를 가져오고 표시합니다. 에러 처리와 로딩 상태 관리를 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Mapping Designer 통합 컴포넌트 구현",
+        "description": "모든 매핑 관련 컴포넌트를 통합하는 메인 디자이너 컴포넌트를 구현합니다",
+        "details": "frontend/src/components/mapping/MappingDesigner.vue 파일을 생성하고 SchemaPanel, MappingCanvas, TransformationEditor를 통합합니다.\n\n```vue\n<template>\n  <div class=\"mapping-designer\">\n    <v-row class=\"fill-height\">\n      <v-col cols=\"3\" class=\"schema-panel\">\n        <SchemaPanel\n          title=\"소스 스키마\"\n          :schema=\"sourceSchema\"\n          :fields=\"sourceFields\"\n          :is-draggable=\"true\"\n          @field-drag-start=\"handleFieldDragStart\"\n        />\n      </v-col>\n      \n      <v-col cols=\"6\" class=\"mapping-canvas-container\">\n        <MappingCanvas\n          :mappings=\"fieldMappings\"\n          :source-fields=\"sourceFields\"\n          :target-fields=\"targetFields\"\n          @mapping-created=\"handleMappingCreated\"\n          @mapping-deleted=\"handleMappingDeleted\"\n          @mapping-selected=\"handleMappingSelected\"\n        />\n      </v-col>\n      \n      <v-col cols=\"3\" class=\"schema-panel\">\n        <SchemaPanel\n          title=\"타겟 스키마\"\n          :schema=\"targetSchema\"\n          :fields=\"targetFields\"\n          @field-drop=\"handleFieldDrop\"\n        />\n      </v-col>\n    </v-row>\n  </div>\n</template>\n```",
+        "testStrategy": "컴포넌트 간 상호작용, 이벤트 전파, 상태 동기화를 통합 테스트로 검증합니다",
+        "priority": "high",
+        "dependencies": [
+          12,
+          13,
+          14
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "컴포넌트 레이아웃 및 상태 관리 구현",
+            "description": "MappingDesigner.vue의 기본 레이아웃을 구성하고 Pinia 스토어와 연동하여 전체 매핑 상태를 관리하는 로직을 구현합니다",
+            "dependencies": [],
+            "details": "v-row와 v-col을 사용한 3단 레이아웃 구성, useMapping 스토어 연동, 컴포넌트 생명주기 관리, 초기 데이터 로딩 로직 구현",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "하위 컴포넌트 통합 및 이벤트 처리",
+            "description": "SchemaPanel, MappingCanvas, TransformationEditor 컴포넌트를 통합하고 컴포넌트 간 이벤트 전파 및 상호작용을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "field-drag-start, mapping-select, transformation-update 등의 이벤트 핸들러 구현, props 전달 로직, emit 이벤트 처리",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "통합 테스트 및 최적화",
+            "description": "전체 매핑 디자이너의 통합 테스트를 작성하고 성능 최적화 및 사용자 경험 개선을 수행합니다",
+            "dependencies": [
+              2
+            ],
+            "details": "Vitest를 사용한 컴포넌트 통합 테스트, 드래그 앤 드롭 시나리오 테스트, 상태 동기화 검증, 렌더링 성능 최적화",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Kafka Adapter 구현",
+        "description": "Apache Kafka를 위한 스트리밍 시스템 어댑터를 구현합니다",
+        "details": "backend/services/systemAdapters/streaming/KafkaAdapter.js 파일을 생성하고 kafkajs 라이브러리를 사용합니다.\n\n```javascript\nconst { Kafka } = require('kafkajs');\n\nclass KafkaAdapter extends BaseSystemAdapter {\n  async connect() {\n    this.kafka = new Kafka({\n      clientId: this.config.clientId || 'nificdc',\n      brokers: this.config.brokers\n    });\n    \n    this.producer = this.kafka.producer();\n    this.consumer = this.kafka.consumer({ groupId: this.config.groupId });\n    \n    await this.producer.connect();\n    await this.consumer.connect();\n  }\n  \n  async discoverSchemas() {\n    const admin = this.kafka.admin();\n    await admin.connect();\n    \n    const topics = await admin.listTopics();\n    const schemas = [];\n    \n    for (const topic of topics) {\n      const metadata = await admin.fetchTopicMetadata({ topics: [topic] });\n      schemas.push({\n        name: topic,\n        type: 'stream',\n        partitions: metadata.topics[0].partitions.length\n      });\n    }\n    \n    await admin.disconnect();\n    return schemas;\n  }\n  \n  async writeData(topic, data, options = {}) {\n    const messages = Array.isArray(data) ? data : [data];\n    await this.producer.send({\n      topic,\n      messages: messages.map(msg => ({ value: JSON.stringify(msg) }))\n    });\n  }\n}\n```",
+        "testStrategy": "Kafka 테스트 컨테이너를 사용하여 토픽 생성, 메시지 발행/구독을 테스트합니다",
         "priority": "low",
         "dependencies": [
-          28,
-          29
+          3
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Kafka 연결 및 초기화 구현",
+            "description": "KafkaAdapter 클래스의 기본 구조를 설정하고 Kafka 클라이언트 연결 로직을 구현합니다. kafkajs 라이브러리를 사용하여 producer와 consumer를 초기화합니다.",
+            "dependencies": [],
+            "details": "backend/services/systemAdapters/streaming/KafkaAdapter.js 파일을 생성하고 BaseSystemAdapter를 상속받는 클래스를 구현합니다. connect() 메서드에서 Kafka 인스턴스를 생성하고 producer/consumer를 설정합니다. 연결 실패 시 재시도 로직과 에러 핸들링을 포함합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Kafka 메시지 발행/구독 기능 구현",
+            "description": "Kafka 토픽에 메시지를 발행하고 구독하는 핵심 기능을 구현합니다. 스트리밍 데이터 처리를 위한 메서드들을 작성합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "publishMessage(), subscribeToTopic(), consumeMessages() 등의 메서드를 구현합니다. 메시지 직렬화/역직렬화, 파티션 할당, 오프셋 관리 기능을 포함합니다. 대용량 데이터 스트리밍을 위한 배치 처리와 백프레셔 제어를 구현합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Kafka 어댑터 테스트 환경 구축 및 테스트 작성",
+            "description": "Kafka 테스트 컨테이너를 설정하고 어댑터의 모든 기능에 대한 통합 테스트를 작성합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "Docker Compose를 사용하여 Kafka 테스트 환경을 구성합니다. 토픽 생성/삭제, 메시지 발행/구독, 에러 처리, 재연결 시나리오 등을 테스트합니다. 성능 테스트를 포함하여 대용량 메시지 처리 능력을 검증합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
-        "id": 35,
-        "title": "외부 시스템 통합 구현",
-        "description": "LDAP/Active Directory 인증, 클라우드 데이터베이스 자동 검색, 구성 관리 도구 통합 및 모니터링 시스템(Prometheus, Grafana) 연동을 구현합니다.",
-        "details": "1. LDAP/AD 통합 (ldapjs v3.0.0):\n```javascript\n// LDAPIntegration.js\nconst ldap = require('ldapjs');\n\nclass LDAPIntegration {\n  constructor(config) {\n    this.client = ldap.createClient({\n      url: config.url,\n      bindDN: config.bindDN,\n      bindCredentials: config.bindPassword,\n      searchBase: config.searchBase,\n      searchFilter: config.searchFilter || '(objectClass=user)',\n      reconnect: true\n    });\n  }\n  \n  async authenticateUser(username, password) {\n    return new Promise((resolve, reject) => {\n      // 사용자 검색\n      const searchOptions = {\n        filter: `(sAMAccountName=${username})`,\n        scope: 'sub',\n        attributes: ['dn', 'mail', 'memberOf']\n      };\n      \n      this.client.search(this.config.searchBase, searchOptions, (err, res) => {\n        if (err) return reject(err);\n        \n        let userDN = null;\n        res.on('searchEntry', (entry) => {\n          userDN = entry.objectName;\n        });\n        \n        res.on('end', () => {\n          if (!userDN) return resolve({ success: false });\n          \n          // 사용자 인증\n          const userClient = ldap.createClient({ url: this.config.url });\n          userClient.bind(userDN, password, (err) => {\n            userClient.unbind();\n            resolve({ success: !err, userDN, error: err });\n          });\n        });\n      });\n    });\n  }\n  \n  async getDatabaseCredentials(username) {\n    // AD에서 데이터베이스 자격 증명 매핑 조회\n    const user = await this.searchUser(username);\n    const dbCredentials = {};\n    \n    // 그룹 멤버십 기반 권한 매핑\n    for (const group of user.memberOf) {\n      if (group.includes('CN=DB_PostgreSQL_Admin')) {\n        dbCredentials.postgresql = {\n          username: user.sAMAccountName,\n          role: 'admin'\n        };\n      }\n    }\n    \n    return dbCredentials;\n  }\n}\n```\n\n2. 클라우드 데이터베이스 자동 검색:\n```javascript\n// CloudDiscovery.js\nclass CloudDatabaseDiscovery {\n  constructor() {\n    this.providers = {\n      aws: new AWSDiscovery(),\n      azure: new AzureDiscovery(),\n      gcp: new GCPDiscovery()\n    };\n  }\n  \n  async discoverAllDatabases() {\n    const discoveries = await Promise.all([\n      this.providers.aws.discover(),\n      this.providers.azure.discover(),\n      this.providers.gcp.discover()\n    ]);\n    \n    return this.normalizeDiscoveries(discoveries.flat());\n  }\n}\n\n// AWS RDS Discovery\nclass AWSDiscovery {\n  async discover() {\n    const AWS = require('aws-sdk');\n    const rds = new AWS.RDS();\n    const redshift = new AWS.Redshift();\n    \n    const [rdsInstances, redshiftClusters] = await Promise.all([\n      rds.describeDBInstances().promise(),\n      redshift.describeClusters().promise()\n    ]);\n    \n    return [\n      ...rdsInstances.DBInstances.map(db => ({\n        provider: 'aws',\n        service: 'rds',\n        id: db.DBInstanceIdentifier,\n        engine: db.Engine,\n        version: db.EngineVersion,\n        endpoint: {\n          host: db.Endpoint.Address,\n          port: db.Endpoint.Port\n        },\n        status: db.DBInstanceStatus,\n        size: db.DBInstanceClass,\n        storage: db.AllocatedStorage,\n        multiAZ: db.MultiAZ,\n        tags: db.TagList\n      })),\n      ...redshiftClusters.Clusters.map(cluster => ({\n        provider: 'aws',\n        service: 'redshift',\n        id: cluster.ClusterIdentifier,\n        engine: 'redshift',\n        endpoint: {\n          host: cluster.Endpoint.Address,\n          port: cluster.Endpoint.Port\n        },\n        status: cluster.ClusterStatus,\n        nodeType: cluster.NodeType,\n        numberOfNodes: cluster.NumberOfNodes\n      }))\n    ];\n  }\n}\n```\n\n3. Prometheus 메트릭 익스포터:\n```javascript\n// PrometheusExporter.js\nconst promClient = require('prom-client');\n\nclass PrometheusExporter {\n  constructor() {\n    this.register = new promClient.Registry();\n    \n    // 커스텀 메트릭 정의\n    this.metrics = {\n      connectionStatus: new promClient.Gauge({\n        name: 'nificdc_connection_status',\n        help: 'Database connection status (1=up, 0=down)',\n        labelNames: ['system_id', 'system_name', 'db_type']\n      }),\n      \n      connectionLatency: new promClient.Histogram({\n        name: 'nificdc_connection_latency_ms',\n        help: 'Database connection latency in milliseconds',\n        labelNames: ['system_id', 'system_name', 'db_type'],\n        buckets: [10, 50, 100, 500, 1000, 5000]\n      }),\n      \n      poolUtilization: new promClient.Gauge({\n        name: 'nificdc_pool_utilization',\n        help: 'Connection pool utilization percentage',\n        labelNames: ['system_id', 'system_name']\n      }),\n      \n      errorRate: new promClient.Counter({\n        name: 'nificdc_connection_errors_total',\n        help: 'Total number of connection errors',\n        labelNames: ['system_id', 'system_name', 'error_type']\n      })\n    };\n    \n    // 메트릭 등록\n    Object.values(this.metrics).forEach(metric => {\n      this.register.registerMetric(metric);\n    });\n  }\n  \n  updateMetrics(systemId, metrics) {\n    const labels = {\n      system_id: systemId,\n      system_name: metrics.name,\n      db_type: metrics.type\n    };\n    \n    this.metrics.connectionStatus.set(labels, metrics.isConnected ? 1 : 0);\n    this.metrics.connectionLatency.observe(labels, metrics.latency);\n    this.metrics.poolUtilization.set(\n      { system_id: systemId, system_name: metrics.name },\n      metrics.poolUtilization\n    );\n  }\n  \n  getMetrics() {\n    return this.register.metrics();\n  }\n}\n```\n\n4. Grafana 대시보드 프로비저닝:\n```javascript\n// GrafanaProvisioner.js\nclass GrafanaProvisioner {\n  async provisionDashboard() {\n    const dashboard = {\n      dashboard: {\n        title: 'NiFiCDC System Management',\n        panels: [\n          {\n            title: 'Connection Status Overview',\n            type: 'stat',\n            targets: [{\n              expr: 'sum(nificdc_connection_status) by (db_type)'\n            }]\n          },\n          {\n            title: 'Connection Latency',\n            type: 'graph',\n            targets: [{\n              expr: 'histogram_quantile(0.95, nificdc_connection_latency_ms)'\n            }]\n          },\n          {\n            title: 'Error Rate',\n            type: 'graph',\n            targets: [{\n              expr: 'rate(nificdc_connection_errors_total[5m])'\n            }]\n          }\n        ]\n      }\n    };\n    \n    await this.grafanaAPI.createDashboard(dashboard);\n  }\n}\n```\n\n5. 구성 관리 통합 (Ansible/Terraform):\n```javascript\n// ConfigManagement.js\nclass ConfigManagementIntegration {\n  async exportToAnsible(systems) {\n    const inventory = {\n      all: {\n        children: {\n          databases: {\n            hosts: {}\n          }\n        }\n      }\n    };\n    \n    systems.forEach(system => {\n      inventory.all.children.databases.hosts[system.name] = {\n        ansible_host: system.host,\n        ansible_port: system.port,\n        db_type: system.type,\n        db_name: system.database\n      };\n    });\n    \n    return yaml.dump(inventory);\n  }\n  \n  async exportToTerraform(systems) {\n    const resources = systems.map(system => ({\n      [`database_${system.name}`]: {\n        type: this.mapToTerraformResource(system.type),\n        properties: {\n          name: system.name,\n          host: system.host,\n          port: system.port,\n          database: system.database\n        }\n      }\n    }));\n    \n    return this.generateTerraformConfig(resources);\n  }\n}\n```",
-        "testStrategy": "1. LDAP 통합 테스트: 실제 AD 환경 또는 OpenLDAP 테스트 서버 사용\n2. 클라우드 검색 테스트: LocalStack으로 AWS 서비스 모의\n3. Prometheus 메트릭 검증: 메트릭 정확성 및 성능 영향 측정\n4. Grafana 대시보드 테스트: 자동 프로비저닝 및 시각화 검증\n5. 구성 관리 통합 테스트: Ansible/Terraform 구성 파일 유효성 검증",
+        "id": 17,
+        "title": "S3 Adapter 구현",
+        "description": "AWS S3 클라우드 스토리지를 위한 시스템 어댑터를 구현합니다",
+        "details": "backend/services/systemAdapters/cloud/S3Adapter.js 파일을 생성하고 AWS SDK를 사용합니다.\n\n```javascript\nconst AWS = require('aws-sdk');\nconst csv = require('csv-parser');\nconst { Readable } = require('stream');\n\nclass S3Adapter extends BaseSystemAdapter {\n  async connect() {\n    this.s3 = new AWS.S3({\n      accessKeyId: this.config.accessKeyId,\n      secretAccessKey: this.config.secretAccessKey,\n      region: this.config.region\n    });\n    \n    // 연결 테스트\n    await this.s3.listBuckets().promise();\n  }\n  \n  async discoverSchemas() {\n    const buckets = await this.s3.listBuckets().promise();\n    const schemas = [];\n    \n    for (const bucket of buckets.Buckets) {\n      const objects = await this.s3.listObjectsV2({\n        Bucket: bucket.Name,\n        MaxKeys: 10\n      }).promise();\n      \n      schemas.push({\n        name: bucket.Name,\n        type: 'bucket',\n        objects: objects.Contents.map(obj => ({\n          key: obj.Key,\n          size: obj.Size,\n          lastModified: obj.LastModified\n        }))\n      });\n    }\n    \n    return schemas;\n  }\n  \n  async readData(bucket, key, options = {}) {\n    const params = { Bucket: bucket, Key: key };\n    const object = await this.s3.getObject(params).promise();\n    \n    if (key.endsWith('.csv')) {\n      return this.parseCSV(object.Body);\n    } else if (key.endsWith('.json')) {\n      return JSON.parse(object.Body.toString());\n    }\n    \n    return object.Body;\n  }\n}\n```",
+        "testStrategy": "LocalStack을 사용하여 S3 API를 모킹하고 파일 업로드/다운로드를 테스트합니다",
         "priority": "low",
         "dependencies": [
-          30,
-          31
+          3
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "S3 연결 및 인증 구현",
+            "description": "AWS SDK를 사용하여 S3 버킷에 연결하고 인증을 처리하는 기본 로직을 구현합니다",
+            "dependencies": [],
+            "details": "AWS SDK v3를 사용하여 S3Client를 초기화하고, accessKeyId, secretAccessKey, region 설정을 통한 인증을 구현합니다. 연결 테스트를 위해 listBuckets 메서드를 호출하여 연결 상태를 확인합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "객체 목록 조회 기능 구현",
+            "description": "S3 버킷 내의 객체 목록을 조회하고 필터링하는 기능을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "listObjectsV2 메서드를 사용하여 버킷 내 객체를 조회하고, prefix와 delimiter를 활용한 폴더 구조 탐색을 지원합니다. 페이지네이션 처리와 메타데이터 추출 기능을 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "CSV 파일 파싱 로직 구현",
+            "description": "S3에서 CSV 파일을 읽어 파싱하는 기능을 구현합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "csv-parser 라이브러리를 사용하여 S3 객체 스트림을 CSV로 파싱합니다. 헤더 자동 감지, 구분자 설정, 인코딩 처리 등의 옵션을 지원하고 대용량 파일을 위한 스트리밍 처리를 구현합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "JSON 및 Parquet 파일 파싱 구현",
+            "description": "JSON과 Parquet 형식의 파일을 읽고 파싱하는 기능을 구현합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "JSON 파일은 스트림 파싱을 통해 대용량 처리를 지원하고, Parquet 파일은 parquetjs 라이브러리를 사용하여 스키마 정보와 데이터를 추출합니다. NDJSON 형식도 지원합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "파일 형식 자동 감지 및 통합 테스트",
+            "description": "파일 확장자와 MIME 타입을 기반으로 파일 형식을 자동 감지하고 적절한 파서를 선택하는 로직을 구현합니다",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "파일 확장자, Content-Type 헤더, 파일 내용 샘플링을 통한 형식 감지를 구현합니다. LocalStack을 사용한 통합 테스트로 다양한 파일 형식의 업로드, 조회, 파싱을 검증합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "매핑 실행 모니터링 구현",
+        "description": "매핑 실행 상태와 성능을 모니터링하는 서비스를 구현합니다",
+        "details": "backend/services/monitoring/MappingMonitor.js 파일을 생성하고 메트릭 수집 및 분석 기능을 구현합니다.\n\n```javascript\nclass MappingMonitor {\n  constructor() {\n    this.metrics = new Map();\n    this.alerts = [];\n  }\n  \n  trackExecution(mappingId, metrics) {\n    const executionData = {\n      mappingId,\n      timestamp: new Date(),\n      duration: metrics.duration,\n      recordsProcessed: metrics.recordCount,\n      recordsPerSecond: metrics.recordCount / (metrics.duration / 1000),\n      errors: metrics.errors || [],\n      memoryUsage: process.memoryUsage(),\n      status: metrics.errors?.length > 0 ? 'failed' : 'success'\n    };\n    \n    // 메트릭 저장\n    if (!this.metrics.has(mappingId)) {\n      this.metrics.set(mappingId, []);\n    }\n    this.metrics.get(mappingId).push(executionData);\n    \n    // 성능 알림 체크\n    if (executionData.recordsPerSecond < 100) {\n      this.alerts.push({\n        type: 'performance',\n        mappingId,\n        message: '처리 속도가 느립니다',\n        timestamp: new Date()\n      });\n    }\n    \n    return executionData;\n  }\n  \n  getPerformanceReport(mappingId, period = '24h') {\n    const metrics = this.metrics.get(mappingId) || [];\n    const cutoff = this.getCutoffTime(period);\n    \n    const recentMetrics = metrics.filter(m => m.timestamp > cutoff);\n    \n    return {\n      totalExecutions: recentMetrics.length,\n      successRate: recentMetrics.filter(m => m.status === 'success').length / recentMetrics.length,\n      averageDuration: recentMetrics.reduce((sum, m) => sum + m.duration, 0) / recentMetrics.length,\n      totalRecordsProcessed: recentMetrics.reduce((sum, m) => sum + m.recordsProcessed, 0)\n    };\n  }\n}\n```",
+        "testStrategy": "메트릭 수집, 알림 생성, 성능 보고서 생성을 테스트합니다",
+        "priority": "low",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "모니터링 메트릭 수집 시스템 구현",
+            "description": "매핑 실행 시 발생하는 다양한 메트릭(실행 시간, 처리 레코드 수, 오류율 등)을 수집하고 저장하는 시스템을 구현합니다",
+            "dependencies": [],
+            "details": "MappingMonitor 클래스의 trackExecution 메서드를 완성하고, 메트릭 데이터를 효율적으로 저장하고 조회할 수 있는 구조를 구현합니다. 실시간 메트릭 수집을 위한 이벤트 리스너와 배치 처리 로직을 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "실시간 알림 및 임계값 관리 구현",
+            "description": "성능 저하나 오류 발생 시 실시간으로 알림을 생성하고 전송하는 시스템을 구현합니다",
+            "dependencies": [
+              1
+            ],
+            "details": "임계값 설정 관리, 알림 규칙 정의, 알림 채널(이메일, 웹훅, 슬랙 등) 통합을 구현합니다. 알림 히스토리 관리와 중복 알림 방지 로직도 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "모니터링 대시보드 API 및 보고서 생성",
+            "description": "수집된 메트릭을 기반으로 대시보드용 API와 정기 보고서 생성 기능을 구현합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "실시간 메트릭 조회 API, 히스토리컬 데이터 분석 API, PDF/Excel 형식의 보고서 생성 기능을 구현합니다. 성능 트렌드 분석과 예측 기능도 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "title": "매핑 버전 관리 강화",
+        "description": "기존 매핑 버전 관리 기능을 확장하여 비교, 롤백, 병합 기능을 추가합니다",
+        "details": "backend/services/mappingVersion/index.js 파일을 생성하고 버전 관리 기능을 강화합니다.\n\n```javascript\nclass MappingVersionService {\n  async createVersion(mappingId, description) {\n    const mapping = await Mapping.findByPk(mappingId);\n    const version = await MappingVersion.create({\n      mappingId,\n      version: mapping.version + 1,\n      configuration: mapping.configuration,\n      description,\n      createdBy: mapping.updatedBy\n    });\n    \n    // 현재 매핑 버전 업데이트\n    await mapping.update({ version: version.version });\n    \n    return version;\n  }\n  \n  async compareVersions(mappingId, version1, version2) {\n    const v1 = await MappingVersion.findOne({ where: { mappingId, version: version1 } });\n    const v2 = await MappingVersion.findOne({ where: { mappingId, version: version2 } });\n    \n    const diff = {\n      added: [],\n      removed: [],\n      modified: []\n    };\n    \n    // 필드 매핑 비교\n    const v1Fields = new Map(v1.configuration.fieldMappings.map(f => [f.id, f]));\n    const v2Fields = new Map(v2.configuration.fieldMappings.map(f => [f.id, f]));\n    \n    // 추가된 필드\n    for (const [id, field] of v2Fields) {\n      if (!v1Fields.has(id)) {\n        diff.added.push(field);\n      }\n    }\n    \n    // 제거된 필드\n    for (const [id, field] of v1Fields) {\n      if (!v2Fields.has(id)) {\n        diff.removed.push(field);\n      }\n    }\n    \n    return diff;\n  }\n  \n  async rollbackToVersion(mappingId, targetVersion) {\n    const version = await MappingVersion.findOne({ where: { mappingId, version: targetVersion } });\n    const mapping = await Mapping.findByPk(mappingId);\n    \n    await mapping.update({\n      configuration: version.configuration,\n      version: version.version\n    });\n    \n    return mapping;\n  }\n}\n```",
+        "testStrategy": "버전 생성, 비교, 롤백 기능을 테스트하고 동시성 문제를 검증합니다",
+        "priority": "low",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "매핑 버전 생성 및 저장 구현",
+            "description": "매핑의 새로운 버전을 생성하고 데이터베이스에 저장하는 기능을 구현합니다. 버전 번호 자동 증가, 설정 스냅샷 저장, 메타데이터 관리를 포함합니다.",
+            "dependencies": [],
+            "details": "MappingVersion 모델을 활용하여 createVersion 메서드를 구현하고, 트랜잭션을 사용하여 데이터 일관성을 보장합니다. 버전 생성 시 현재 매핑 설정의 전체 스냅샷을 저장하고, 생성자 정보와 타임스탬프를 기록합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "버전 간 비교 알고리즘 개발",
+            "description": "두 매핑 버전 간의 차이점을 분석하고 시각화할 수 있는 비교 알고리즘을 구현합니다. 설정 변경사항, 필드 매핑 차이, 변환 규칙 변경을 감지합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "JSON diff 알고리즘을 구현하여 configuration 객체의 변경사항을 추적하고, 추가/삭제/수정된 필드를 구분합니다. 변경사항을 구조화된 형태로 반환하여 UI에서 시각화할 수 있도록 합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "버전 롤백 기능 구현",
+            "description": "이전 버전으로 매핑을 복원하는 롤백 기능을 구현합니다. 롤백 시 새로운 버전으로 기록하고, 롤백 이력을 추적합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "rollbackToVersion 메서드를 구현하여 특정 버전의 설정을 현재 매핑에 적용합니다. 롤백도 새로운 버전으로 기록하여 이력을 유지하고, 롤백 사유와 수행자 정보를 저장합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "동시성 제어 및 충돌 해결 구현",
+            "description": "여러 사용자가 동시에 매핑을 수정할 때 발생하는 충돌을 감지하고 해결하는 메커니즘을 구현합니다. 낙관적 잠금과 버전 충돌 감지 로직을 포함합니다.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "낙관적 잠금을 사용하여 동시 수정을 방지하고, 충돌 발생 시 자동 병합 또는 수동 해결 옵션을 제공합니다. 버전 체크를 통해 오래된 버전 기반의 수정을 감지하고, 충돌 해결 전략을 적용합니다.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "통합 테스트 및 문서화",
+        "description": "전체 시스템의 통합 테스트를 작성하고 API 문서를 생성합니다",
+        "details": "test/integration/ 디렉토리에 엔드투엔드 테스트를 작성하고, Swagger/OpenAPI 문서를 생성합니다.\n\n```javascript\n// test/integration/mappingFlow.test.js\ndescribe('매핑 플로우 통합 테스트', () => {\n  it('PostgreSQL에서 MySQL로 데이터 매핑', async () => {\n    // 1. 시스템 연결 생성\n    const sourceSystem = await createSystem({ type: 'postgresql', ...pgConfig });\n    const targetSystem = await createSystem({ type: 'mysql', ...mysqlConfig });\n    \n    // 2. 스키마 탐색\n    const sourceSchemas = await discoverSchemas(sourceSystem.id);\n    const targetSchemas = await discoverSchemas(targetSystem.id);\n    \n    // 3. 매핑 생성\n    const mapping = await createMapping({\n      sourceSchemaId: sourceSchemas[0].id,\n      targetSchemaId: targetSchemas[0].id,\n      fieldMappings: [\n        { source: 'id', target: 'user_id', transformations: [] },\n        { source: 'name', target: 'full_name', transformations: [{ type: 'uppercase' }] }\n      ]\n    });\n    \n    // 4. 매핑 실행\n    const result = await executeMapping(mapping.id, { data: testData });\n    \n    // 5. 결과 검증\n    expect(result.recordsProcessed).toBe(testData.length);\n    expect(result.errors).toHaveLength(0);\n  });\n});\n\n// Swagger 문서 설정\nconst swaggerSpec = {\n  openapi: '3.0.0',\n  info: {\n    title: 'NiFiCDC Mapping Management API',\n    version: '1.0.0',\n    description: 'Universal schema mapping and data transformation API'\n  },\n  servers: [{ url: '/api' }],\n  components: {\n    securitySchemes: {\n      bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }\n    }\n  }\n};\n```",
+        "testStrategy": "전체 매핑 플로우를 테스트하고, API 문서의 정확성을 검증합니다",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "통합 테스트 환경 구성 및 테스트 시나리오 작성",
+            "description": "전체 시스템의 통합 테스트를 위한 테스트 환경을 구성하고, 주요 사용자 시나리오에 대한 엔드투엔드 테스트 케이스를 작성합니다",
+            "dependencies": [],
+            "details": "test/integration/ 디렉토리 구조를 설정하고, 테스트 데이터베이스 초기화, 모의 시스템 연결 설정, 그리고 전체 매핑 플로우(시스템 연결 → 스키마 탐색 → 매핑 생성 → 실행 → 검증)에 대한 테스트 시나리오를 작성합니다. Jest와 Supertest를 사용하여 API 엔드포인트 테스트도 포함합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "API 문서 자동 생성 시스템 구축",
+            "description": "Swagger/OpenAPI 3.0 스펙을 기반으로 API 문서를 자동으로 생성하고 호스팅하는 시스템을 구축합니다",
+            "dependencies": [],
+            "details": "swagger-jsdoc과 swagger-ui-express를 설정하여 API 엔드포인트에 대한 문서를 자동 생성합니다. 각 라우트에 JSDoc 주석을 추가하고, 요청/응답 스키마, 에러 코드, 인증 요구사항을 명시합니다. /api-docs 엔드포인트에서 대화형 문서를 제공하고, OpenAPI 스펙 파일을 별도로 export할 수 있도록 구성합니다",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "통합 테스트 실행 및 문서 검증",
+            "description": "작성된 통합 테스트를 실행하여 시스템의 안정성을 검증하고, 생성된 API 문서의 정확성과 완전성을 확인합니다",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "CI/CD 파이프라인에 통합 테스트를 추가하고, 테스트 커버리지 리포트를 생성합니다. API 문서와 실제 구현 간의 일치성을 검증하는 contract 테스트를 작성하고, 문서에 누락된 엔드포인트나 파라미터가 없는지 확인합니다. 테스트 결과와 문서를 README.md에 연결하여 프로젝트 문서화를 완성합니다",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-14T06:58:56.244Z",
+      "updated": "2025-07-15T18:52:38.141Z",
       "description": "Tasks for master context"
     }
   }

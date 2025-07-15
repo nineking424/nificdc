@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapping Management Implementation - Gantt Chart</title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        #chart_div {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .legend {
+            margin: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .legend h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .legend-item {
+            display: inline-block;
+            margin: 5px 15px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            vertical-align: middle;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mapping Management Feature - Development Timeline</h1>
+    
+    <div class="legend">
+        <h3>Development Teams</h3>
+        <div class="legend-item">
+            <span class="legend-color" style="background-color: #3366cc;"></span>
+            <span>Backend Team 1 (Data Models & Core Engine)</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color" style="background-color: #dc3912;"></span>
+            <span>Backend Team 2 (Adapters & Discovery)</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color" style="background-color: #ff9900;"></span>
+            <span>Backend Team 3 (API Layer)</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color" style="background-color: #109618;"></span>
+            <span>Frontend Team</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color" style="background-color: #990099;"></span>
+            <span>QA & Documentation</span>
+        </div>
+    </div>
+
+    <div id="chart_div" style="height: 800px;"></div>
+
+    <script type="text/javascript">
+        google.charts.load('current', {'packages':['gantt']});
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'Task ID');
+            data.addColumn('string', 'Task Name');
+            data.addColumn('string', 'Resource');
+            data.addColumn('date', 'Start Date');
+            data.addColumn('date', 'End Date');
+            data.addColumn('number', 'Duration');
+            data.addColumn('number', 'Percent Complete');
+            data.addColumn('string', 'Dependencies');
+
+            // Week 1-2: Foundation
+            data.addRows([
+                ['T1', '[1] Universal Schema 모델 확장', 'Backend Team 1',
+                 new Date(2025, 0, 20), new Date(2025, 0, 24), null, 0, null],
+                ['T2', '[2] SystemAdapter 모델 생성', 'Backend Team 1',
+                 new Date(2025, 0, 24), new Date(2025, 0, 28), null, 0, 'T1'],
+                ['T11', '[11] Mapping Store (Pinia) 구현', 'Frontend Team',
+                 new Date(2025, 0, 20), new Date(2025, 0, 23), null, 0, null],
+            ]);
+
+            // Week 2-3: Core Infrastructure
+            data.addRows([
+                ['T3', '[3] Base System Adapter 인터페이스', 'Backend Team 2',
+                 new Date(2025, 0, 28), new Date(2025, 0, 31), null, 0, 'T2'],
+                ['T7', '[7] Enhanced Mapping Engine 구현', 'Backend Team 1',
+                 new Date(2025, 0, 28), new Date(2025, 1, 5), null, 0, 'T1'],
+            ]);
+
+            // Week 3-4: Adapter Implementation
+            data.addRows([
+                ['T4', '[4] PostgreSQL Adapter 구현', 'Backend Team 2',
+                 new Date(2025, 0, 31), new Date(2025, 1, 5), null, 0, 'T3'],
+                ['T5', '[5] MySQL Adapter 구현', 'Backend Team 2',
+                 new Date(2025, 1, 5), new Date(2025, 1, 10), null, 0, 'T3'],
+                ['T8', '[8] Transformation Functions 라이브러리', 'Backend Team 1',
+                 new Date(2025, 1, 5), new Date(2025, 1, 8), null, 0, 'T7'],
+                ['T12', '[12] Schema Panel 컴포넌트 구현', 'Frontend Team',
+                 new Date(2025, 0, 23), new Date(2025, 0, 28), null, 0, 'T11'],
+            ]);
+
+            // Week 4-5: Service Layer & UI Components
+            data.addRows([
+                ['T6', '[6] Schema Discovery Service 구현', 'Backend Team 2',
+                 new Date(2025, 1, 10), new Date(2025, 1, 13), null, 0, 'T4,T5'],
+                ['T9', '[9] Schema Discovery API 엔드포인트', 'Backend Team 3',
+                 new Date(2025, 1, 13), new Date(2025, 1, 16), null, 0, 'T6'],
+                ['T10', '[10] Mapping Execution API 엔드포인트', 'Backend Team 3',
+                 new Date(2025, 1, 8), new Date(2025, 1, 12), null, 0, 'T7'],
+                ['T13', '[13] Mapping Canvas 컴포넌트 구현', 'Frontend Team',
+                 new Date(2025, 0, 28), new Date(2025, 1, 5), null, 0, 'T11'],
+            ]);
+
+            // Week 5-6: Advanced Features
+            data.addRows([
+                ['T18', '[18] 매핑 실행 모니터링 구현', 'Backend Team 1',
+                 new Date(2025, 1, 8), new Date(2025, 1, 12), null, 0, 'T7'],
+                ['T19', '[19] 매핑 버전 관리 강화', 'Backend Team 1',
+                 new Date(2025, 1, 12), new Date(2025, 1, 17), null, 0, 'T1'],
+                ['T14', '[14] Transformation Editor 컴포넌트', 'Frontend Team',
+                 new Date(2025, 1, 5), new Date(2025, 1, 9), null, 0, 'T13'],
+                ['T15', '[15] Mapping Designer 통합', 'Frontend Team',
+                 new Date(2025, 1, 9), new Date(2025, 1, 13), null, 0, 'T12,T13,T14'],
+            ]);
+
+            // Week 6-7: Additional Adapters (Lower Priority)
+            data.addRows([
+                ['T16', '[16] Kafka Adapter 구현', 'Backend Team 2',
+                 new Date(2025, 1, 13), new Date(2025, 1, 17), null, 0, 'T3'],
+                ['T17', '[17] S3 Adapter 구현', 'Backend Team 2',
+                 new Date(2025, 1, 17), new Date(2025, 1, 22), null, 0, 'T3'],
+            ]);
+
+            // Week 7-8: Integration & Testing
+            data.addRows([
+                ['T20', '[20] 통합 테스트 및 문서화', 'QA & Documentation',
+                 new Date(2025, 1, 17), new Date(2025, 1, 26), null, 0, 'T15,T9,T10'],
+            ]);
+
+            var options = {
+                height: 800,
+                gantt: {
+                    trackHeight: 30,
+                    barHeight: 20,
+                    criticalPathEnabled: true,
+                    criticalPathStyle: {
+                        stroke: '#e64a19',
+                        strokeWidth: 5
+                    },
+                    innerGridTrack: {fill: '#fff3e0'},
+                    innerGridDarkTrack: {fill: '#ffecb3'},
+                    palette: [
+                        {
+                            "color": "#3366cc",
+                            "dark": "#2952a3",
+                            "light": "#4d80d9"
+                        },
+                        {
+                            "color": "#dc3912",
+                            "dark": "#b02c0e",
+                            "light": "#e35935"
+                        },
+                        {
+                            "color": "#ff9900",
+                            "dark": "#cc7a00",
+                            "light": "#ffad33"
+                        },
+                        {
+                            "color": "#109618",
+                            "dark": "#0b6b11",
+                            "light": "#17c423"
+                        },
+                        {
+                            "color": "#990099",
+                            "dark": "#7a007a",
+                            "light": "#cc00cc"
+                        }
+                    ]
+                }
+            };
+
+            var chart = new google.visualization.Gantt(document.getElementById('chart_div'));
+            chart.draw(data, options);
+        }
+    </script>
+
+    <div class="legend">
+        <h3>Timeline Summary</h3>
+        <ul>
+            <li><strong>Week 1-2:</strong> Foundation setup - Data models and basic state management</li>
+            <li><strong>Week 2-3:</strong> Core infrastructure - Base adapters and mapping engine</li>
+            <li><strong>Week 3-4:</strong> Primary adapters (PostgreSQL, MySQL) and UI components</li>
+            <li><strong>Week 4-5:</strong> Service layer, API endpoints, and UI integration</li>
+            <li><strong>Week 5-6:</strong> Advanced features - Monitoring, versioning, additional adapters</li>
+            <li><strong>Week 7-8:</strong> Integration testing and documentation</li>
+        </ul>
+        <p><strong>Total Duration:</strong> Approximately 8 weeks with 4 parallel teams</p>
+        <p><strong>Critical Path:</strong> T1 → T7 → T10 → T20 (shown in orange when dependencies are met)</p>
+    </div>
+</body>
+</html>

@@ -1,109 +1,293 @@
 {
 	"meta": {
-		"generatedAt": "2025-07-11T19:08:59.911Z",
-		"tasksAnalyzed": 12,
-		"totalTasks": 12,
-		"analysisCount": 12,
+		"generatedAt": "2025-07-15T19:02:43.919Z",
+		"tasksAnalyzed": 20,
+		"totalTasks": 20,
+		"analysisCount": 35,
 		"thresholdScore": 5,
 		"projectName": "Taskmaster",
 		"usedResearch": false
 	},
 	"complexityAnalysis": [
 		{
-			"taskId": 1,
-			"taskTitle": "프로젝트 초기 설정 및 개발 환경 구축",
-			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Docker 기반 마이크로서비스 환경 구축을 위해 다음 하위 작업으로 분해하세요: 1) 프로젝트 디렉토리 구조 생성 및 Git 초기화, 2) Docker 및 Docker Compose 설정 파일 작성, 3) 개발/운영 환경별 환경변수 설정, 4) CI/CD 파이프라인 기본 구성, 5) 개발 가이드 문서 작성",
-			"reasoning": "여러 서비스(프론트엔드, 백엔드, DB, Redis)의 컨테이너화와 환경 설정이 필요하며, CI/CD 파이프라인 구성까지 포함되어 중간 정도의 복잡도를 가집니다."
+			"taskId": 36,
+			"taskTitle": "프로젝트 기본 구조 및 개발 환경 설정",
+			"complexityScore": 8,
+			"recommendedSubtasks": 12,
+			"expansionPrompt": "모노레포 구조 설정, 개발 환경 구성, 코드 품질 도구 설정, Docker 환경 구축 등을 포함한 12개의 세부 작업으로 분해하세요. 각 작업은 독립적으로 완료 가능하며 명확한 검증 기준을 포함해야 합니다.",
+			"reasoning": "모노레포 설정은 프로젝트 전체 아키텍처의 기반이 되며, 여러 패키지와 앱의 의존성 관리, Docker 환경 구성, 개발 도구 설정 등 복잡한 작업들이 포함됩니다. 특히 pnpm workspace와 Nx/Lerna 설정은 신중한 계획이 필요합니다."
 		},
 		{
-			"taskId": 2,
-			"taskTitle": "백엔드 API 서버 기본 구조 구현",
+			"taskId": 37,
+			"taskTitle": "Universal Schema 모델 및 데이터베이스 스키마 구현",
 			"complexityScore": 7,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "RESTful API 서버 구현을 위해 다음 하위 작업으로 분해하세요: 1) Express.js 기본 설정 및 미들웨어 구성, 2) JWT 기반 인증 시스템 구현, 3) RBAC 권한 관리 시스템 구현, 4) 에러 처리 및 로깅 시스템 구축, 5) API 라우터 모듈화 및 구조화, 6) Swagger/OpenAPI 문서화 설정",
-			"reasoning": "인증, 권한 관리, 에러 처리, 로깅 등 여러 핵심 기능을 포함하고 있으며, 보안과 확장성을 고려한 설계가 필요하여 복잡도가 높습니다."
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "TypeScript 타입 정의, 데이터베이스 엔티티 구현, 마이그레이션 스크립트 작성, 인덱스 최적화, CRUD 레포지토리 구현 등 8개의 세부 작업으로 분해하세요. 각 작업은 테스트 가능한 단위로 구성되어야 합니다.",
+			"reasoning": "Universal Schema는 시스템의 핵심 데이터 모델로, TypeScript 타입과 데이터베이스 스키마 간의 일관성 유지가 중요합니다. JSONB 필드 처리와 인덱스 최적화는 성능에 직접적인 영향을 미치므로 세심한 구현이 필요합니다."
 		},
 		{
-			"taskId": 3,
-			"taskTitle": "데이터베이스 스키마 설계 및 구현",
-			"complexityScore": 8,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "데이터베이스 설계 및 구현을 위해 다음 하위 작업으로 분해하세요: 1) PostgreSQL 스키마 설계 및 ERD 작성, 2) Sequelize/TypeORM 모델 정의 및 관계 설정, 3) 마이그레이션 스크립트 작성 및 버전 관리, 4) 접속 정보 암호화/복호화 유틸리티 구현, 5) 시드 데이터 및 테스트 데이터 생성 스크립트 작성",
-			"reasoning": "복잡한 관계형 데이터 모델 설계, 암호화 처리, 마이그레이션 관리 등이 포함되어 있고, 시스템의 핵심 데이터 구조를 정의하는 중요한 작업입니다."
+			"taskId": 38,
+			"taskTitle": "System Adapter 인터페이스 및 플러그인 아키텍처 구현",
+			"complexityScore": 9,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "추상 인터페이스 정의, 플러그인 레지스트리 구현, 동적 모듈 로딩 시스템, 의존성 주입 설정, 어댑터 생명주기 관리 등 10개의 세부 작업으로 분해하세요. 확장성과 유지보수성을 고려한 설계가 필요합니다.",
+			"reasoning": "플러그인 아키텍처는 시스템의 확장성을 결정하는 핵심 요소입니다. NestJS의 동적 모듈과 의존성 주입을 활용한 구현은 복잡도가 높으며, 향후 다양한 어댑터 추가를 고려한 견고한 설계가 필요합니다."
 		},
 		{
-			"taskId": 4,
-			"taskTitle": "NiFi API 연동 모듈 개발",
-			"complexityScore": 8,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "NiFi API 통합을 위해 다음 하위 작업으로 분해하세요: 1) NiFi REST API 클라이언트 기본 구조 구현, 2) 인증 및 토큰 관리 시스템 구현, 3) 프로세스 그룹 및 프로세서 CRUD 기능 구현, 4) 연결 풀 및 재시도 로직 구현, 5) Circuit Breaker 패턴 적용, 6) NiFi 버전별 호환성 레이어 구현",
-			"reasoning": "외부 시스템과의 통합, 에러 처리, 버전 호환성, 연결 관리 등 복잡한 요구사항이 있으며, 안정적인 통신을 위한 고급 패턴 구현이 필요합니다."
-		},
-		{
-			"taskId": 5,
-			"taskTitle": "Vue.js 프론트엔드 기본 구조 및 라우팅 설정",
+			"taskId": 39,
+			"taskTitle": "PostgreSQL 및 MySQL 어댑터 구현",
 			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Vue.js SPA 구축을 위해 다음 하위 작업으로 분해하세요: 1) Vue 3 프로젝트 초기화 및 Vuetify UI 프레임워크 설정, 2) Vue Router 설정 및 네비게이션 가드 구현, 3) Pinia 상태 관리 스토어 구조 설계, 4) Axios 인터셉터 및 API 통신 모듈 구현, 5) 반응형 레이아웃 및 다국어 지원 설정",
-			"reasoning": "프론트엔드 아키텍처 설계, 상태 관리, 라우팅, API 통신 등 여러 측면을 다루지만, 표준적인 Vue.js 패턴을 따르므로 중간 정도의 복잡도입니다."
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "PostgreSQL 어댑터 구현, MySQL 어댑터 구현, 스키마 디스커버리 로직, 타입 매핑 시스템, 연결 풀 관리, 에러 처리 등 8개의 세부 작업으로 분해하세요. 두 데이터베이스의 차이점을 고려한 구현이 필요합니다.",
+			"reasoning": "관계형 데이터베이스 어댑터는 비교적 표준화된 패턴을 따르지만, 각 데이터베이스의 고유한 타입 시스템과 메타데이터 구조를 처리해야 합니다. Information Schema 쿼리와 타입 매핑이 주요 복잡도 요인입니다."
 		},
 		{
-			"taskId": 6,
-			"taskTitle": "시스템 정의서 CRUD 기능 구현",
+			"taskId": 40,
+			"taskTitle": "Transformation Engine 핵심 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "변환 엔진 코어 구현, 기본 변환 함수 세트, 파이프라인 실행기, 컴파일러 최적화, 에러 처리 시스템, 타입 변환 로직 등 10개의 세부 작업으로 분해하세요. 성능과 확장성을 모두 고려해야 합니다.",
+			"reasoning": "변환 엔진은 데이터 처리의 핵심으로, 함수형 프로그래밍 패러다임과 성능 최적화가 중요합니다. 특히 컴파일된 변환 함수 생성과 대용량 데이터 처리를 위한 최적화가 복잡도를 높입니다."
+		},
+		{
+			"taskId": 41,
+			"taskTitle": "Mapping Service 및 비즈니스 로직 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 9,
+			"expansionPrompt": "매핑 CRUD 서비스, 스키마 호환성 검증, 실행 컨텍스트 관리, 스트리밍 처리, Redis 캐싱 로직, 트랜잭션 관리 등 9개의 세부 작업으로 분해하세요. 비즈니스 규칙과 성능을 균형있게 고려해야 합니다.",
+			"reasoning": "매핑 서비스는 여러 컴포넌트를 조율하는 중심 역할을 하며, 스키마 호환성 검증, 캐싱, 스트리밍 처리 등 다양한 기능을 통합해야 합니다. 트랜잭션 일관성과 성능 최적화가 주요 과제입니다."
+		},
+		{
+			"taskId": 42,
+			"taskTitle": "RESTful API 엔드포인트 구현",
 			"complexityScore": 5,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "시스템 관리 기능을 위해 다음 하위 작업으로 분해하세요: 1) 백엔드 시스템 CRUD API 엔드포인트 구현, 2) 시스템 타입별 접속 정보 검증 로직 구현, 3) 프론트엔드 시스템 관리 UI 컴포넌트 개발, 4) 연결 테스트 기능 구현 및 에러 처리",
-			"reasoning": "기본적인 CRUD 작업이지만 시스템 타입별 처리, 암호화된 접속 정보 관리, 연결 테스트 등의 추가 기능이 필요합니다."
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "매핑 컨트롤러, 스키마 컨트롤러, 시스템 컨트롤러, 인증 미들웨어, OpenAPI 문서화, 입력 검증, 에러 핸들링 등 7개의 세부 작업으로 분해하세요. RESTful 원칙과 보안을 준수해야 합니다.",
+			"reasoning": "REST API 구현은 비교적 표준화된 패턴을 따르지만, 인증/인가, 입력 검증, OpenAPI 문서화 등이 포함되어 중간 정도의 복잡도를 가집니다. NestJS의 데코레이터 기반 접근이 구현을 단순화합니다."
+		},
+		{
+			"taskId": 43,
+			"taskTitle": "Vue.js 프론트엔드 기본 구조 설정",
+			"complexityScore": 6,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Vue 3 프로젝트 초기화, 라우터 설정, Pinia 스토어 구성, API 클라이언트 설정, UI 컴포넌트 라이브러리 통합, 국제화 설정 등 8개의 세부 작업으로 분해하세요. 확장 가능한 구조 설계가 중요합니다.",
+			"reasoning": "Vue 3 Composition API와 TypeScript를 함께 사용하는 설정은 중간 정도의 복잡도를 가지며, 상태 관리, 라우팅, API 통신 등 프론트엔드의 기본 구조를 잘 설계해야 향후 개발이 원활합니다."
+		},
+		{
+			"taskId": 44,
+			"taskTitle": "Mapping Designer UI 컴포넌트 구현",
+			"complexityScore": 9,
+			"recommendedSubtasks": 12,
+			"expansionPrompt": "스키마 패널 컴포넌트, 드래그 앤 드롭 시스템, SVG 연결선 렌더링, 필드 매핑 관리, 시각적 피드백 시스템, 반응형 레이아웃, 성능 최적화 등 12개의 세부 작업으로 분해하세요. 사용자 경험과 성능을 모두 고려해야 합니다.",
+			"reasoning": "시각적 매핑 디자이너는 복잡한 상호작용과 실시간 렌더링이 필요한 고난도 UI 컴포넌트입니다. 드래그 앤 드롭, SVG 렌더링, 대량 데이터 처리 시 성능 최적화 등이 주요 도전 과제입니다."
+		},
+		{
+			"taskId": 45,
+			"taskTitle": "Transformation Builder 컴포넌트 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 9,
+			"expansionPrompt": "변환 단계 컴포넌트, 파이프라인 관리 UI, 실시간 미리보기 시스템, 변환 라이브러리 UI, 지능형 제안 시스템, 에러 표시 UI 등 9개의 세부 작업으로 분해하세요. 직관적인 UX와 실시간 피드백이 핵심입니다.",
+			"reasoning": "변환 빌더는 복잡한 로직을 시각적으로 표현해야 하며, 실시간 미리보기와 지능형 제안 기능이 포함되어 있습니다. 사용자가 쉽게 이해하고 사용할 수 있는 UI/UX 설계가 중요합니다."
+		},
+		{
+			"taskId": 46,
+			"taskTitle": "WebSocket 실시간 업데이트 구현",
+			"complexityScore": 6,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Socket.io 서버 설정, 클라이언트 연결 관리, 이벤트 핸들러 구현, 인증 미들웨어, 재연결 로직, 이벤트 버스 통합 등 7개의 세부 작업으로 분해하세요. 안정적인 실시간 통신이 목표입니다.",
+			"reasoning": "WebSocket 구현은 실시간 통신의 복잡성과 연결 관리, 인증, 재연결 처리 등을 포함합니다. Socket.io가 많은 부분을 추상화하지만, 대규모 동시 연결 처리와 이벤트 관리가 도전 과제입니다."
+		},
+		{
+			"taskId": 47,
+			"taskTitle": "Validation Service 및 에러 처리 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "타입 호환성 검증 시스템, 필드 매핑 검증, 순환 참조 감지, 에러 분류 체계, 다국어 에러 메시지, 자동 수정 제안 시스템 등 8개의 세부 작업으로 분해하세요. 포괄적이고 사용자 친화적인 검증이 목표입니다.",
+			"reasoning": "검증 서비스는 복잡한 비즈니스 규칙과 타입 시스템을 다루며, 사용자에게 유용한 에러 메시지와 해결 방안을 제시해야 합니다. 다양한 엣지 케이스 처리와 성능 최적화가 필요합니다."
+		},
+		{
+			"taskId": 48,
+			"taskTitle": "Kafka 및 메시지 큐 어댑터 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "Kafka 어댑터 구현, RabbitMQ 어댑터 구현, Schema Registry 통합, 스키마 추론 시스템, 스트리밍 처리, 오프셋 관리, 에러 처리 등 10개의 세부 작업으로 분해하세요. 스트리밍 시스템의 특성을 고려해야 합니다.",
+			"reasoning": "메시지 큐 어댑터는 스트리밍 데이터의 특성상 복잡도가 높으며, Schema Registry 통합, 스키마 추론, 오프셋 관리 등 고유한 도전 과제가 있습니다. 비동기 처리와 에러 복구가 중요합니다."
+		},
+		{
+			"taskId": 49,
+			"taskTitle": "S3 및 클라우드 스토리지 어댑터 구현",
+			"complexityScore": 7,
+			"recommendedSubtasks": 9,
+			"expansionPrompt": "S3 어댑터 구현, Azure Blob 어댑터, GCS 어댑터, 파일 패턴 분석, 다양한 파일 형식 파서, 스키마 추론 엔진, 대용량 파일 처리 등 9개의 세부 작업으로 분해하세요. 클라우드별 특성을 고려해야 합니다.",
+			"reasoning": "클라우드 스토리지 어댑터는 다양한 파일 형식과 대용량 데이터 처리가 필요하며, 각 클라우드 제공자의 SDK와 특성을 이해해야 합니다. 파일 패턴 인식과 스키마 추론이 주요 복잡도 요인입니다."
+		},
+		{
+			"taskId": 50,
+			"taskTitle": "보안 및 인증/인가 시스템 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "JWT 인증 시스템, RBAC 구현, CASL 권한 관리, 필드 레벨 보안, OAuth2 통합, 토큰 관리, 보안 미들웨어, 감사 로깅 등 10개의 세부 작업으로 분해하세요. 보안은 타협할 수 없는 요소입니다.",
+			"reasoning": "보안 시스템은 인증, 인가, 필드 레벨 보안, OAuth 통합 등 다양한 측면을 포함하며, 시스템 전체에 걸쳐 일관되게 적용되어야 합니다. CASL을 사용한 세밀한 권한 관리가 복잡도를 높입니다."
+		},
+		{
+			"taskId": 1,
+			"taskTitle": "Universal Schema 모델 확장",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "DataSchema 모델에 universalType과 schemaFormat ENUM 필드를 추가하고, 기존 데이터 마이그레이션을 위한 스크립트를 작성하세요. columns JSON 구조를 확장하여 다양한 데이터베이스 시스템의 타입을 지원하도록 구현하세요.",
+			"reasoning": "데이터베이스 모델 변경과 마이그레이션이 필요하며, 다양한 데이터 타입 시스템을 통합해야 하므로 복잡도가 높습니다. ENUM 타입 정의, 모델 수정, 마이그레이션 스크립트, 테스트, 문서화 등 5개의 서브태스크가 적절합니다."
 		},
 		{
 			"taskId": 7,
-			"taskTitle": "데이터 정의서 및 스키마 관리 기능 구현",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "스키마 관리 기능을 위해 다음 하위 작업으로 분해하세요: 1) 스키마 CRUD API 및 버전 관리 로직 구현, 2) 데이터베이스 스키마 자동 탐색 기능 개발, 3) 스키마 정의 UI 컴포넌트 및 컬럼 편집기 구현, 4) 스키마 버전 비교 및 변경 이력 추적 기능, 5) 스키마 유효성 검증 로직 구현",
-			"reasoning": "스키마 버전 관리, 자동 탐색, 다양한 데이터 타입 지원 등 복잡한 기능이 포함되어 있으며, UI/UX 측면에서도 정교한 구현이 필요합니다."
+			"taskTitle": "Enhanced Mapping Engine 구현",
+			"complexityScore": 9,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "변환 파이프라인 아키텍처를 설계하고, 데이터 검증 로직과 실행 전략 패턴을 구현하세요. 에러 처리와 성능 최적화를 포함하여 확장 가능한 매핑 엔진을 개발하세요.",
+			"reasoning": "핵심 비즈니스 로직이며 변환, 검증, 실행 전략 등 복잡한 기능들이 포함됩니다. 아키텍처 설계, 변환기 구현, 검증기 구현, 실행기 구현, 에러 처리, 성능 최적화, 테스트 등 7개의 서브태스크가 필요합니다."
 		},
 		{
-			"taskId": 8,
-			"taskTitle": "맵핑 정의서 관리 및 변환 규칙 구현",
-			"complexityScore": 9,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "데이터 맵핑 기능을 위해 다음 하위 작업으로 분해하세요: 1) 맵핑 규칙 데이터 모델 및 API 구현, 2) 다양한 맵핑 관계(1:1, 1:N, N:1) 처리 로직 개발, 3) 변환 스크립트 실행 엔진 구현, 4) 드래그앤드롭 맵핑 UI 컴포넌트 개발, 5) 맵핑 검증 및 미리보기 기능 구현, 6) 변환 함수 라이브러리 구축",
-			"reasoning": "복잡한 데이터 변환 로직, 다양한 맵핑 관계 처리, 스크립트 실행 보안, 직관적인 UI 구현 등 기술적으로 가장 도전적인 작업 중 하나입니다."
+			"taskId": 19,
+			"taskTitle": "매핑 버전 관리 강화",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "매핑 버전 생성, 버전 간 비교 알고리즘, 롤백 기능을 구현하세요. 동시성 제어와 버전 충돌 해결 로직을 포함하세요.",
+			"reasoning": "버전 관리는 중간 정도의 복잡도를 가지며, 비교 알고리즘과 동시성 처리가 필요합니다. 버전 생성, 비교 로직, 롤백 기능, 동시성 처리 등 4개의 서브태스크가 적절합니다."
 		},
 		{
 			"taskId": 9,
-			"taskTitle": "작업 정의서 및 스케줄링 기능 구현",
-			"complexityScore": 8,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "작업 스케줄링 시스템을 위해 다음 하위 작업으로 분해하세요: 1) 작업 정의 CRUD API 구현, 2) Cron 기반 스케줄러 엔진 개발, 3) 작업 큐 및 우선순위 관리 시스템 구현, 4) NiFi 프로세스 그룹 자동 생성 및 실행 로직, 5) 작업 실행 모니터링 및 상태 추적, 6) 스케줄 설정 UI 컴포넌트 개발",
-			"reasoning": "스케줄링 엔진, 작업 큐 관리, NiFi 통합, 실행 모니터링 등 여러 복잡한 시스템이 연동되어야 하며, 안정성과 확장성이 중요합니다."
-		},
-		{
-			"taskId": 10,
-			"taskTitle": "모니터링 대시보드 및 실시간 상태 추적 구현",
-			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "실시간 모니터링 시스템을 위해 다음 하위 작업으로 분해하세요: 1) WebSocket 서버 구현 및 실시간 데이터 스트리밍, 2) 성능 메트릭 수집 및 집계 서비스 개발, 3) 대시보드 UI 컴포넌트 및 차트 구현, 4) 에러 로그 분석 및 알림 시스템 구축, 5) 대시보드 커스터마이징 기능 개발",
-			"reasoning": "실시간 데이터 처리, WebSocket 통신, 복잡한 차트 렌더링, 대용량 로그 처리 등 성능과 사용성 측면에서 도전적인 작업입니다."
-		},
-		{
-			"taskId": 11,
-			"taskTitle": "보안 강화 및 감사 로그 구현",
-			"complexityScore": 8,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "보안 시스템 강화를 위해 다음 하위 작업으로 분해하세요: 1) RBAC 권한 시스템 고도화 및 세밀한 권한 제어, 2) 감사 로그 시스템 구현 및 중요 이벤트 알림, 3) SSL/TLS 설정 및 보안 헤더 구성, 4) 보안 취약점 스캔 자동화 도구 통합, 5) 브루트포스 방어 및 Rate Limiting 구현",
-			"reasoning": "보안은 시스템 전반에 걸쳐 영향을 미치며, 다양한 공격 벡터를 고려한 포괄적인 방어 전략이 필요하여 복잡도가 높습니다."
+			"taskTitle": "Schema Discovery API 엔드포인트 구현",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "스키마 탐색, 새로고침, 샘플 데이터 조회를 위한 REST API 엔드포인트를 구현하세요. 인증과 에러 처리를 포함하세요.",
+			"reasoning": "표준적인 REST API 구현으로 복잡도가 낮습니다. 엔드포인트 구현, 인증/권한 처리, 테스트 작성 등 3개의 서브태스크면 충분합니다."
 		},
 		{
 			"taskId": 12,
-			"taskTitle": "성능 최적화 및 캐싱 구현",
+			"taskTitle": "Schema Panel 컴포넌트 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "트리뷰 구조로 스키마를 표시하고, 드래그 앤 드롭 기능을 구현하세요. 필드 타입별 아이콘과 시각적 피드백을 추가하세요.",
+			"reasoning": "Vue 컴포넌트 구현과 드래그 앤 드롭 인터랙션이 필요하여 중간 복잡도입니다. UI 구현, 드래그 앤 드롭 로직, 이벤트 처리, 스타일링 등 4개의 서브태스크가 필요합니다."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "MySQL Adapter 구현",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "MySQL 연결 관리, 스키마 메타데이터 조회, 데이터 읽기/쓰기 기능을 구현하세요. 연결 풀링과 트랜잭션 지원을 포함하세요.",
+			"reasoning": "데이터베이스 어댑터 구현은 연결 관리, 쿼리 작성, 에러 처리 등이 필요합니다. 연결 구현, 스키마 탐색, 데이터 읽기, 데이터 쓰기, 테스트 등 5개의 서브태스크가 적절합니다."
+		},
+		{
+			"taskId": 17,
+			"taskTitle": "S3 Adapter 구현",
 			"complexityScore": 7,
 			"recommendedSubtasks": 5,
-			"expansionPrompt": "시스템 성능 최적화를 위해 다음 하위 작업으로 분해하세요: 1) Redis 캐싱 레이어 구현 및 캐시 전략 수립, 2) 데이터베이스 쿼리 최적화 및 인덱스 설계, 3) 프론트엔드 번들 최적화 및 코드 스플리팅, 4) API 응답 압축 및 페이지네이션 구현, 5) 성능 모니터링 및 병목 지점 분석 도구 통합",
-			"reasoning": "전체 시스템의 성능을 향상시키기 위해 백엔드, 프론트엔드, 데이터베이스 등 모든 레이어에서 최적화가 필요하며, 측정과 개선의 반복이 필요합니다."
+			"expansionPrompt": "S3 버킷 연결, 객체 목록 조회, 파일 형식별 파싱 로직을 구현하세요. CSV, JSON, Parquet 등 다양한 파일 형식을 지원하세요.",
+			"reasoning": "클라우드 스토리지 연동과 다양한 파일 형식 처리가 필요하여 복잡도가 높습니다. 연결 구현, 스키마 탐색, 파일 파싱, 데이터 읽기/쓰기, 테스트 등 5개의 서브태스크가 필요합니다."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Mapping Execution API 엔드포인트 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "매핑 실행, 히스토리 저장, 디버그 모드 실행 API를 구현하세요. 비동기 실행과 진행 상황 추적을 지원하세요.",
+			"reasoning": "API 구현과 함께 실행 히스토리 관리가 필요하여 중간 복잡도입니다. 실행 API, 히스토리 관리, 디버그 모드, 테스트 등 4개의 서브태스크가 적절합니다."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Mapping Canvas 컴포넌트 구현",
+			"complexityScore": 8,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "SVG 기반 캔버스에 매핑 라인을 그리고, 인터랙티브한 선택/삭제 기능을 구현하세요. 베지어 곡선과 애니메이션 효과를 추가하세요.",
+			"reasoning": "SVG 렌더링, 좌표 계산, 인터랙션 처리 등 복잡한 UI 로직이 필요합니다. SVG 구조, 라인 렌더링, 인터랙션, 애니메이션, 상태 관리, 테스트 등 6개의 서브태스크가 필요합니다."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Mapping Store (Pinia) 구현",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Pinia 스토어로 매핑 상태를 관리하고, API 통신을 위한 액션들을 구현하세요. 로딩 상태와 에러 처리를 포함하세요.",
+			"reasoning": "표준적인 상태 관리 구현으로 복잡도가 낮습니다. 상태 정의, 액션 구현, 테스트 작성 등 3개의 서브태스크면 충분합니다."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "SystemAdapter 모델 생성",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on systemadapter 모델 생성.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Base System Adapter 인터페이스 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on base system adapter 인터페이스 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "PostgreSQL Adapter 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on postgresql adapter 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Schema Discovery Service 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on schema discovery service 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Transformation Functions 라이브러리 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on transformation functions 라이브러리 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "Transformation Editor 컴포넌트 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on transformation editor 컴포넌트 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Mapping Designer 통합 컴포넌트 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on mapping designer 통합 컴포넌트 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Kafka Adapter 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on kafka adapter 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 18,
+			"taskTitle": "매핑 실행 모니터링 구현",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on 매핑 실행 모니터링 구현.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
+		},
+		{
+			"taskId": 20,
+			"taskTitle": "통합 테스트 및 문서화",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down this task with a focus on 통합 테스트 및 문서화.",
+			"reasoning": "Automatically added due to missing analysis in AI response."
 		}
 	]
 }
