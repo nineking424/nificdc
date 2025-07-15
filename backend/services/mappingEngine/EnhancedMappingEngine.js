@@ -8,6 +8,13 @@ const {
   DataQualityCheckStage,
   DataEnrichmentStage
 } = require('./stages');
+const {
+  SequentialExecutor,
+  BatchExecutor,
+  StreamExecutor,
+  ParallelExecutor,
+  ExecutionContext
+} = require('./executors');
 const logger = require('../../src/utils/logger');
 const { performance } = require('perf_hooks');
 
@@ -96,10 +103,50 @@ class EnhancedMappingEngine extends EventEmitter {
    * Load built-in execution strategies
    */
   loadBuiltInExecutors() {
-    this.executors.set('batch', this.createBatchExecutor());
-    this.executors.set('stream', this.createStreamExecutor());
-    this.executors.set('parallel', this.createParallelExecutor());
-    this.executors.set('sequential', this.createSequentialExecutor());
+    // Sequential executor - processes records one by one
+    this.executors.set('sequential', new SequentialExecutor({
+      stopOnError: this.options.stopOnError
+    }));
+    
+    // Batch executor - processes records in batches
+    this.executors.set('batch', new BatchExecutor({
+      batchSize: this.options.batchSize || 100,
+      maxBatches: this.options.maxBatches,
+      delayBetweenBatches: this.options.batchDelay || 0,
+      stopOnBatchError: this.options.stopOnError,
+      skipFailedRecords: this.options.skipFailedRecords
+    }));
+    
+    // Stream executor - processes records as a stream
+    this.executors.set('stream', new StreamExecutor({
+      highWaterMark: this.options.streamHighWaterMark || 16,
+      backpressureThreshold: this.options.backpressureThreshold || 100,
+      stopOnError: this.options.stopOnError
+    }));
+    
+    // Parallel executor - processes records concurrently
+    this.executors.set('parallel', new ParallelExecutor({
+      maxConcurrency: this.options.maxConcurrency || 10,
+      chunkSize: this.options.chunkSize || 50,
+      timeout: this.options.recordTimeout || 30000,
+      stopOnChunkError: this.options.stopOnError,
+      skipFailedRecords: this.options.skipFailedRecords
+    }));
+    
+    // Set up event handlers for executors
+    this.executors.forEach((executor, name) => {
+      executor.on('progress', (progress) => {
+        this.emit('executorProgress', { executor: name, ...progress });
+      });
+      
+      executor.on('executionComplete', (stats) => {
+        this.emit('executorComplete', { executor: name, ...stats });
+      });
+      
+      executor.on('executionError', (error) => {
+        this.emit('executorError', { executor: name, ...error });
+      });
+    });
     
     logger.info(`Loaded ${this.executors.size} built-in executors`);
   }
@@ -141,13 +188,22 @@ class EnhancedMappingEngine extends EventEmitter {
       // Get or create pipeline
       const pipeline = await this.getOrCreatePipeline(mapping, context);
       
-      // Execute pipeline
-      const result = await pipeline.execute(sourceData, {
-        id: executionId,
-        metadata: context.metadata,
-        config: context.config,
-        progressCallback: options.progressCallback
-      });
+      // Select execution strategy
+      const executorType = options.executorType || this.selectExecutor(mapping, options);
+      const executor = this.executors.get(executorType);
+      
+      if (!executor) {
+        throw new MappingExecutionError(`Unknown executor type: ${executorType}`);
+      }
+      
+      // Start execution context
+      context.start();
+      
+      // Execute pipeline with selected strategy
+      const result = await executor.execute(sourceData, pipeline, context);
+      
+      // Complete execution context
+      context.complete(result);
       
       // Cache result
       if (this.options.enableCache && options.useCache !== false) {
@@ -176,6 +232,11 @@ class EnhancedMappingEngine extends EventEmitter {
     } catch (error) {
       const executionTime = performance.now() - startTime;
       this.updateMetrics(executionTime, false);
+      
+      // Fail the execution context if it was created
+      if (context) {
+        context.fail(error);
+      }
       
       // Emit error event
       this.emit('mappingError', {
@@ -212,22 +273,42 @@ class EnhancedMappingEngine extends EventEmitter {
     this.validateInputs(mapping, dataArray);
     
     // Create execution context
-    const context = this.createExecutionContext(mapping, options);
+    const context = this.createExecutionContext(mapping, { 
+      ...options,
+      executorType: 'batch' 
+    });
     
     // Get or create pipeline
     const pipeline = await this.getOrCreatePipeline(mapping, context);
     
+    // Get batch executor
+    const batchExecutor = this.executors.get('batch');
+    
+    // Configure batch executor with options
+    if (batchSize) {
+      batchExecutor.batchSize = batchSize;
+    }
+    
+    // Start execution context
+    context.start();
+    
     // Execute in batches
-    const result = await pipeline.executeBatch(dataArray, {
-      batchSize,
-      parallelism,
-      continueOnError,
-      progressCallback
-    });
+    const result = await batchExecutor.execute(dataArray, pipeline, context);
     
-    logger.info(`Batch mapping execution completed: ${result.totalProcessed} items processed`);
+    // Complete execution context
+    context.complete(result);
     
-    return result;
+    const summary = context.getSummary();
+    logger.info(`Batch mapping execution completed: ${summary.recordsProcessed} items processed`);
+    
+    return {
+      totalProcessed: summary.recordsProcessed,
+      successful: summary.recordsProcessed - summary.errors,
+      failed: summary.errors,
+      results: result,
+      executionTime: summary.duration,
+      errors: context.state.errors
+    };
   }
 
   /**
@@ -287,15 +368,16 @@ class EnhancedMappingEngine extends EventEmitter {
    * @returns {Object} - Execution context
    */
   createExecutionContext(mapping, options, executionId) {
-    return {
+    return new ExecutionContext({
       id: executionId,
-      mapping,
-      startTime: Date.now(),
+      source: mapping.sourceSchema?.name || 'unknown',
+      target: mapping.targetSchema?.name || 'unknown',
+      mappingId: mapping.id,
+      executorType: options.executorType || this.selectExecutor(mapping, options),
+      userId: options.userId,
       metadata: {
-        mappingId: mapping.id,
         mappingVersion: mapping.version,
         executionMode: options.executionMode || 'standard',
-        userId: options.userId,
         ...options.metadata
       },
       config: {
@@ -304,8 +386,12 @@ class EnhancedMappingEngine extends EventEmitter {
         validateOutput: options.validateOutput !== false,
         enableProfiling: options.enableProfiling || false,
         ...options.config
-      }
-    };
+      },
+      onProgress: options.onProgress,
+      onError: options.onError,
+      onComplete: options.onComplete,
+      onStateChange: options.onStateChange
+    });
   }
 
   /**
@@ -492,57 +578,6 @@ class EnhancedMappingEngine extends EventEmitter {
     }
   }
 
-  /**
-   * Create batch executor
-   * @returns {Object} - Batch executor
-   */
-  createBatchExecutor() {
-    return {
-      execute: async (sourceData, mapping, context) => {
-        // Implement batch execution logic
-        return sourceData;
-      }
-    };
-  }
-
-  /**
-   * Create stream executor
-   * @returns {Object} - Stream executor
-   */
-  createStreamExecutor() {
-    return {
-      execute: async (sourceData, mapping, context) => {
-        // Implement stream execution logic
-        return sourceData;
-      }
-    };
-  }
-
-  /**
-   * Create parallel executor
-   * @returns {Object} - Parallel executor
-   */
-  createParallelExecutor() {
-    return {
-      execute: async (sourceData, mapping, context) => {
-        // Implement parallel execution logic
-        return sourceData;
-      }
-    };
-  }
-
-  /**
-   * Create sequential executor
-   * @returns {Object} - Sequential executor
-   */
-  createSequentialExecutor() {
-    return {
-      execute: async (sourceData, mapping, context) => {
-        // Implement sequential execution logic
-        return sourceData;
-      }
-    };
-  }
 
   /**
    * Generate execution ID
