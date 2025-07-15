@@ -75,7 +75,7 @@
         "testStrategy": "모델 생성, 유효성 검증, 관계 설정을 테스트하고 다양한 어댑터 타입에 대한 테스트 데이터를 생성하여 검증합니다",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -83,7 +83,7 @@
             "description": "SystemAdapter 테이블의 기본 스키마 구조를 정의하고 필요한 필드들을 설계합니다",
             "dependencies": [],
             "details": "id(UUID), name(고유 문자열), type(어댑터 타입), category(ENUM: database/file/stream/api/cloud), capabilities(JSON), configuration(JSON), isActive(boolean), version(문자열), createdAt, updatedAt 필드를 포함한 스키마를 설계합니다. 각 필드의 데이터 타입, 제약조건, 기본값을 명확히 정의합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -94,7 +94,7 @@
               1
             ],
             "details": "Sequelize의 DataTypes를 사용하여 모델을 정의하고, 유효성 검증 규칙을 추가합니다. capabilities 필드에는 지원하는 기능 목록(read, write, stream, batch 등)을, configuration 필드에는 어댑터별 설정 스키마를 JSON으로 저장합니다. 모델 훅(hooks)을 활용하여 데이터 무결성을 보장합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -105,7 +105,7 @@
               2
             ],
             "details": "Jest를 사용하여 모델의 CRUD 작업, 유효성 검증, 고유 제약조건 테스트를 작성합니다. Sequelize CLI를 사용하여 마이그레이션 파일을 생성하고, 다양한 어댑터 타입(MySQL, PostgreSQL, S3, CSV 등)에 대한 시드 데이터를 준비합니다. 롤백 시나리오도 테스트하여 마이그레이션의 안정성을 확보합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1112,7 +1112,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-15T19:47:35.146Z",
+      "updated": "2025-07-15T19:56:14.447Z",
       "description": "Tasks for master context"
     }
   }

@@ -88,6 +88,15 @@ const System = sequelize.define('System', {
       model: 'Users',
       key: 'id'
     }
+  },
+  adapterId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'SystemAdapters',
+      key: 'id'
+    },
+    comment: '사용하는 시스템 어댑터 ID'
   }
 }, {
   tableName: 'systems',
@@ -135,6 +144,12 @@ System.associate = (models) => {
   System.hasMany(models.Mapping, {
     foreignKey: 'targetSystemId',
     as: 'targetMappings'
+  });
+  
+  // 시스템은 어댑터를 참조함
+  System.belongsTo(models.SystemAdapter, {
+    foreignKey: 'adapterId',
+    as: 'adapter'
   });
 };
 
