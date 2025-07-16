@@ -116,6 +116,18 @@ class BaseSystemAdapter extends EventEmitter {
   }
 
   /**
+   * Get sample data from a specific table
+   * @abstract
+   * @param {string} schemaName - Schema name
+   * @param {string} tableName - Table name
+   * @param {Object} options - Sampling options (limit, offset, etc.)
+   * @returns {Promise<Array>} Sample data array
+   */
+  async getSampleData(schemaName, tableName, options = {}) {
+    throw new Error(`${this.constructor.name} must implement getSampleData() method`);
+  }
+
+  /**
    * Common Methods - Can be overridden if needed
    */
 

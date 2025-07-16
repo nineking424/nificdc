@@ -282,7 +282,7 @@
           4,
           5
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -290,7 +290,7 @@
             "description": "SchemaDiscoveryService의 기본 클래스 구조와 어댑터 레지스트리 시스템을 구현합니다. 다양한 시스템 타입별 어댑터를 등록하고 관리할 수 있는 메커니즘을 구축합니다.",
             "dependencies": [],
             "details": "backend/services/schemaDiscovery/index.js 파일에 SchemaDiscoveryService 클래스를 생성하고, 어댑터 Map 구조와 registerAdapter, getAdapter 메서드를 구현합니다. 각 어댑터는 discoverSchemas, getSampleData 등의 공통 인터페이스를 구현해야 합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -301,7 +301,7 @@
               1
             ],
             "details": "convertToUniversalSchema 메서드를 구현하여 각 어댑터에서 반환한 스키마를 표준화된 형식으로 변환합니다. TypeMapper 클래스를 생성하여 MySQL, PostgreSQL, MongoDB 등의 타입을 Universal Type으로 매핑하는 규칙을 정의합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -313,7 +313,7 @@
               2
             ],
             "details": "Map 기반의 캐시 저장소를 구현하고, TTL(Time To Live) 기능을 추가합니다. discoverSchemas 메서드에서 캐시를 확인하고, 필요시 어댑터를 통해 실제 탐색을 수행한 후 Universal Schema로 변환하여 반환합니다.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -328,7 +328,7 @@
         "dependencies": [
           1
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -358,7 +358,7 @@
               1
             ],
             "details": "전략 인터페이스 정의, 배치 실행기, 스트림 실행기, 병렬 실행기, 실행 컨텍스트 관리",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -371,7 +371,7 @@
               3
             ],
             "details": "에러 분류 체계, 재시도 로직, 부분 실패 처리, 에러 로깅 및 알림, 롤백 메커니즘",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -382,7 +382,7 @@
               3
             ],
             "details": "변환 결과 캐싱, 메모리 풀 관리, 워커 스레드 활용, 스트리밍 처리 최적화, 프로파일링 도구",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -397,7 +397,7 @@
               5
             ],
             "details": "엔진 파사드 구현, REST API 엔드포인트, 이벤트 기반 인터페이스, SDK 제공, 문서화",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -408,7 +408,7 @@
               6
             ],
             "details": "E2E 테스트 시나리오, 부하 테스트, 성능 벤치마크, 메모리 누수 테스트, 테스트 자동화",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1112,7 +1112,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-15T21:23:12.282Z",
+      "updated": "2025-07-16T05:41:09.862Z",
       "description": "Tasks for master context"
     }
   }
