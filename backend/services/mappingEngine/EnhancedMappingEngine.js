@@ -20,6 +20,11 @@ const {
   RollbackManager,
   RollbackActionType
 } = require('./errorHandling');
+const {
+  PerformanceOptimizer,
+  DataStreamOptimizer,
+  ConnectionPoolManager
+} = require('./performance');
 const logger = require('../../src/utils/logger');
 const { performance } = require('perf_hooks');
 
@@ -89,6 +94,38 @@ class EnhancedMappingEngine extends EventEmitter {
     this.rollbackManager = new RollbackManager({
       maxHistorySize: options.rollbackHistorySize || 1000,
       enableSnapshots: options.enableSnapshots !== false
+    });
+    
+    // Initialize performance optimization components
+    this.performanceOptimizer = new PerformanceOptimizer({
+      enableMemoryManagement: options.enableMemoryManagement !== false,
+      enableDataCompression: options.enableDataCompression !== false,
+      enableConnectionPooling: options.enableConnectionPooling !== false,
+      enableBatchOptimization: options.enableBatchOptimization !== false,
+      enableCaching: options.enableCaching || this.options.enableCache,
+      memoryThreshold: options.memoryThreshold || 0.8,
+      maxCacheSize: options.maxCacheSize || this.options.cacheSize,
+      compressionThreshold: options.compressionThreshold || 1024,
+      batchSizeOptimization: options.batchSizeOptimization !== false,
+      adaptiveBatchSizing: options.adaptiveBatchSizing !== false
+    });
+    
+    this.streamOptimizer = new DataStreamOptimizer({
+      highWaterMark: options.streamHighWaterMark || 16384,
+      maxConcurrency: this.options.maxConcurrency,
+      enableMetrics: this.options.enableMetrics,
+      chunkSize: options.chunkSize || 100,
+      enableBackpressureControl: options.enableBackpressureControl !== false,
+      enableAdaptiveBuffering: options.enableAdaptiveBuffering !== false
+    });
+    
+    this.connectionPoolManager = new ConnectionPoolManager({
+      minConnections: options.minConnections || 2,
+      maxConnections: options.maxConnections || 20,
+      acquireTimeoutMillis: options.acquireTimeoutMillis || 10000,
+      idleTimeoutMillis: options.idleTimeoutMillis || 30000,
+      enableHealthCheck: options.enableHealthCheck !== false,
+      healthCheckIntervalMs: options.healthCheckIntervalMs || 60000
     });
     
     // Set up error recovery event handlers
@@ -247,6 +284,13 @@ class EnhancedMappingEngine extends EventEmitter {
       // Create execution context
       context = this.createExecutionContext(mapping, options, executionId);
       
+      // Optimize data processing
+      if (options.enablePerformanceOptimization !== false) {
+        sourceData = await this.performanceOptimizer.optimizeDataProcessing(sourceData, {
+          cacheKey: this.generateCacheKey(mapping, sourceData)
+        });
+      }
+      
       // Check cache
       if (this.options.enableCache && options.useCache !== false) {
         const cacheKey = this.generateCacheKey(mapping, sourceData);
@@ -264,8 +308,37 @@ class EnhancedMappingEngine extends EventEmitter {
       // Get or create pipeline
       const pipeline = await this.getOrCreatePipeline(mapping, context);
       
-      // Select execution strategy
-      const executorType = options.executorType || this.selectExecutor(mapping, options);
+      // Select execution strategy with performance optimization
+      let executorType = options.executorType;
+      
+      if (!executorType && options.enablePerformanceOptimization !== false) {
+        // Get performance-optimized execution strategy
+        const dataSize = Array.isArray(sourceData) ? sourceData.length : 1;
+        const complexity = this.calculateMappingComplexity(mapping);
+        const resources = this.getSystemResources();
+        
+        const recommendation = this.performanceOptimizer.optimizeExecutionStrategy(
+          dataSize, 
+          complexity, 
+          resources
+        );
+        
+        executorType = recommendation.executorType;
+        
+        // Apply recommended optimizations
+        if (recommendation.batchSize && this.executors.get('batch')) {
+          this.executors.get('batch').batchSize = recommendation.batchSize;
+        }
+        
+        if (recommendation.parallelism && this.executors.get('parallel')) {
+          this.executors.get('parallel').maxConcurrency = recommendation.parallelism;
+        }
+        
+        logger.debug(`Performance optimizer recommended: ${executorType}`, recommendation);
+      } else {
+        executorType = executorType || this.selectExecutor(mapping, options);
+      }
+      
       const executor = this.executors.get(executorType);
       
       if (!executor) {
@@ -861,7 +934,10 @@ class EnhancedMappingEngine extends EventEmitter {
       },
       pipelines: Array.from(this.pipelines.values()).map(pipeline => 
         pipeline.getMetrics()
-      )
+      ),
+      performance: this.performanceOptimizer ? this.performanceOptimizer.getMetrics() : null,
+      streams: this.streamOptimizer ? this.streamOptimizer.getMetrics() : null,
+      connectionPools: this.connectionPoolManager ? this.connectionPoolManager.getMetrics() : null
     };
   }
 
@@ -927,6 +1003,158 @@ class EnhancedMappingEngine extends EventEmitter {
   registerExecutor(name, executor) {
     this.executors.set(name, executor);
     logger.info(`Registered custom executor: ${name}`);
+  }
+
+  /**
+   * Calculate mapping complexity score
+   * @param {Object} mapping - Mapping configuration
+   * @returns {number} - Complexity score (0-1)
+   */
+  calculateMappingComplexity(mapping) {
+    let complexity = 0;
+    let factors = 0;
+    
+    // Rule complexity
+    if (mapping.rules && Array.isArray(mapping.rules)) {
+      complexity += Math.min(mapping.rules.length / 50, 0.3); // Max 0.3 for rules
+      factors++;
+    }
+    
+    // Transformation complexity
+    if (mapping.transformations && Array.isArray(mapping.transformations)) {
+      complexity += Math.min(mapping.transformations.length / 20, 0.2); // Max 0.2 for transformations
+      factors++;
+    }
+    
+    // Validation complexity
+    if (mapping.validationRules && Array.isArray(mapping.validationRules)) {
+      complexity += Math.min(mapping.validationRules.length / 30, 0.2); // Max 0.2 for validations
+      factors++;
+    }
+    
+    // Aggregation complexity
+    if (mapping.aggregation) {
+      complexity += 0.15; // Fixed complexity for aggregation
+      factors++;
+    }
+    
+    // Quality rules complexity
+    if (mapping.qualityRules && Array.isArray(mapping.qualityRules)) {
+      complexity += Math.min(mapping.qualityRules.length / 25, 0.15); // Max 0.15 for quality rules
+      factors++;
+    }
+    
+    // Normalize by number of factors if any exist
+    return factors > 0 ? Math.min(complexity, 1) : 0.1; // Default low complexity
+  }
+
+  /**
+   * Get current system resources
+   * @returns {Object} - System resource information
+   */
+  getSystemResources() {
+    const memoryUsage = process.memoryUsage();
+    const cpuUsage = process.cpuUsage();
+    
+    // Estimate available memory (simplified)
+    const totalMemory = memoryUsage.heapTotal + memoryUsage.external;
+    const usedMemory = memoryUsage.heapUsed;
+    const availableMemory = totalMemory > 0 ? (totalMemory - usedMemory) / totalMemory : 0.5;
+    
+    // Estimate CPU usage (simplified - would need more sophisticated monitoring in production)
+    const estimatedCpuUsage = 0.5; // Default moderate usage
+    
+    return {
+      availableMemory: Math.max(0.1, Math.min(1.0, availableMemory)),
+      cpuUsage: estimatedCpuUsage,
+      totalMemory,
+      usedMemory,
+      memoryPressure: usedMemory / totalMemory
+    };
+  }
+
+  /**
+   * Create connection pool for external services
+   * @param {string} name - Pool name
+   * @param {Object} factory - Connection factory
+   * @param {Object} options - Pool options
+   * @returns {Object} - Connection pool
+   */
+  createConnectionPool(name, factory, options = {}) {
+    return this.connectionPoolManager.createPool(name, factory, options);
+  }
+
+  /**
+   * Get connection pool
+   * @param {string} name - Pool name
+   * @returns {Object} - Connection pool
+   */
+  getConnectionPool(name) {
+    return this.connectionPoolManager.getPool(name);
+  }
+
+  /**
+   * Execute with database connection
+   * @param {string} poolName - Pool name
+   * @param {Function} queryFunction - Function to execute with connection
+   * @returns {Promise<*>} - Query result
+   */
+  async executeWithConnection(poolName, queryFunction) {
+    return await this.connectionPoolManager.executeWithConnection(poolName, queryFunction);
+  }
+
+  /**
+   * Process data with streaming optimization
+   * @param {*} data - Data to process
+   * @param {Function} transformFunction - Transform function
+   * @param {Object} options - Processing options
+   * @returns {Promise<Object>} - Processing result
+   */
+  async processWithStreaming(data, transformFunction, options = {}) {
+    return await this.streamOptimizer.processWithStreaming(data, transformFunction, options);
+  }
+
+  /**
+   * Reset performance metrics
+   */
+  resetPerformanceMetrics() {
+    if (this.performanceOptimizer) {
+      this.performanceOptimizer.resetMetrics();
+    }
+    
+    if (this.streamOptimizer) {
+      this.streamOptimizer.resetMetrics();
+    }
+  }
+
+  /**
+   * Shutdown enhanced mapping engine
+   */
+  async shutdown() {
+    logger.info('Shutting down Enhanced Mapping Engine...');
+    
+    // Shutdown performance components
+    if (this.performanceOptimizer) {
+      await this.performanceOptimizer.shutdown();
+    }
+    
+    if (this.streamOptimizer) {
+      await this.streamOptimizer.shutdown();
+    }
+    
+    if (this.connectionPoolManager) {
+      await this.connectionPoolManager.shutdown();
+    }
+    
+    // Clear intervals and cleanup
+    if (this.cacheCleanupInterval) {
+      clearInterval(this.cacheCleanupInterval);
+    }
+    
+    // Clear caches and pipelines
+    this.clearCaches();
+    
+    logger.info('Enhanced Mapping Engine shutdown complete');
   }
 }
 
