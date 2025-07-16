@@ -329,7 +329,8 @@ class CircuitBreaker extends EventEmitter {
       failureThreshold: options.failureThreshold || 5,
       resetTimeout: options.resetTimeout || 60000, // 1 minute
       monitoringPeriod: options.monitoringPeriod || 10000, // 10 seconds
-      minimumRequests: options.minimumRequests || 10
+      minimumRequests: options.minimumRequests || 10,
+      disableMonitoring: options.disableMonitoring || false
     };
     
     this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
@@ -338,9 +339,12 @@ class CircuitBreaker extends EventEmitter {
     this.requests = 0;
     this.lastFailureTime = null;
     this.nextAttemptTime = null;
+    this.monitoringInterval = null;
     
     // Start monitoring
-    this.startMonitoring();
+    if (!this.options.disableMonitoring) {
+      this.startMonitoring();
+    }
   }
 
   /**
@@ -422,7 +426,7 @@ class CircuitBreaker extends EventEmitter {
    * Start monitoring period
    */
   startMonitoring() {
-    setInterval(() => {
+    this.monitoringInterval = setInterval(() => {
       this.resetCounters();
     }, this.options.monitoringPeriod);
   }
@@ -460,6 +464,16 @@ class CircuitBreaker extends EventEmitter {
     this.failures = 0;
     this.nextAttemptTime = null;
     this.emit('stateChange', { from: this.state, to: 'CLOSED' });
+  }
+
+  /**
+   * Shutdown and cleanup
+   */
+  shutdown() {
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = null;
+    }
   }
 }
 

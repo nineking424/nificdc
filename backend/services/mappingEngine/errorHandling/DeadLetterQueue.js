@@ -65,6 +65,10 @@ class DeadLetterQueue extends EventEmitter {
     try {
       await fs.mkdir(this.options.filePath, { recursive: true });
       
+      // Clear existing in-memory state
+      this.queue = [];
+      this.metadata.clear();
+      
       // Load existing entries if any
       const files = await fs.readdir(this.options.filePath);
       for (const file of files) {
@@ -468,17 +472,21 @@ class DeadLetterQueue extends EventEmitter {
    */
   startBackgroundTasks() {
     // Periodic cleanup
-    this.cleanupInterval = setInterval(() => {
-      this.clearExpired().catch(error => {
-        logger.error('Failed to clear expired DLQ entries:', error);
-      });
-    }, this.options.flushInterval);
+    if (this.options.flushInterval > 0) {
+      this.cleanupInterval = setInterval(() => {
+        this.clearExpired().catch(error => {
+          logger.error('Failed to clear expired DLQ entries:', error);
+        });
+      }, this.options.flushInterval);
+    }
     
-    // Periodic stats logging
-    this.statsInterval = setInterval(() => {
-      const stats = this.getStatistics();
-      logger.info('Dead Letter Queue statistics:', stats);
-    }, 300000); // Every 5 minutes
+    // Periodic stats logging - only if explicitly enabled
+    if (this.options.enableStatsLogging) {
+      this.statsInterval = setInterval(() => {
+        const stats = this.getStatistics();
+        logger.info('Dead Letter Queue statistics:', stats);
+      }, 300000); // Every 5 minutes
+    }
   }
 
   /**

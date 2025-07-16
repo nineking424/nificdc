@@ -4,7 +4,6 @@ describe('RetryManager', () => {
   let retryManager;
 
   beforeEach(() => {
-    jest.useFakeTimers();
     retryManager = new RetryManager({
       maxRetries: 3,
       initialDelay: 10,
@@ -12,10 +11,6 @@ describe('RetryManager', () => {
       factor: 2,
       jitter: false
     });
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   describe('execute', () => {
@@ -30,17 +25,16 @@ describe('RetryManager', () => {
     });
 
     it('should retry on failure and succeed', async () => {
-      const fn = jest.fn()
-        .mockRejectedValueOnce(new Error('First failure'))
-        .mockRejectedValueOnce(new Error('Second failure'))
-        .mockResolvedValue('success');
+      let attempts = 0;
+      const fn = jest.fn().mockImplementation(() => {
+        attempts++;
+        if (attempts <= 2) {
+          return Promise.reject(new Error(`Network timeout ${attempts}`));
+        }
+        return Promise.resolve('success');
+      });
 
-      const promise = retryManager.execute(fn);
-      
-      // Fast-forward through delays
-      await jest.runAllTimersAsync();
-      
-      const result = await promise;
+      const result = await retryManager.execute(fn);
 
       expect(result).toBe('success');
       expect(fn).toHaveBeenCalledTimes(3);
@@ -49,20 +43,16 @@ describe('RetryManager', () => {
     });
 
     it('should throw error after max retries', async () => {
-      const fn = jest.fn().mockRejectedValue(new Error('Always fails'));
+      const fn = jest.fn().mockImplementation(() => 
+        Promise.reject(new Error('Network timeout always fails'))
+      );
 
-      const promise = retryManager.execute(fn);
-      
-      // Fast-forward through all retry delays
-      await jest.runAllTimersAsync();
-      
-      await expect(promise).rejects.toThrow('Always fails');
+      await expect(retryManager.execute(fn)).rejects.toThrow('Operation failed after 4 attempts: Network timeout always fails');
       expect(fn).toHaveBeenCalledTimes(4); // Initial + 3 retries
       expect(retryManager.stats.retryFailures).toBe(1);
     });
 
     it('should respect timeout option', async () => {
-      jest.useRealTimers(); // Use real timers for this test
       const fn = jest.fn().mockImplementation(() => 
         new Promise(resolve => setTimeout(() => resolve('success'), 200))
       );
@@ -70,8 +60,6 @@ describe('RetryManager', () => {
       await expect(
         retryManager.execute(fn, { timeout: 100 })
       ).rejects.toThrow('Operation timed out');
-      
-      jest.useFakeTimers(); // Restore fake timers
     });
 
     it('should check if error is retryable', async () => {
@@ -89,19 +77,19 @@ describe('RetryManager', () => {
 
     it('should call onRetry callback', async () => {
       const onRetry = jest.fn();
-      const fn = jest.fn()
-        .mockRejectedValueOnce(new Error('Failure'))
-        .mockResolvedValue('success');
+      let attempts = 0;
+      const fn = jest.fn().mockImplementation(() => {
+        attempts++;
+        if (attempts === 1) {
+          return Promise.reject(new Error('Network timeout failure'));
+        }
+        return Promise.resolve('success');
+      });
 
-      const promise = retryManager.execute(fn, { onRetry });
-      
-      // Fast-forward through delays
-      await jest.runAllTimersAsync();
-      
-      await promise;
+      await retryManager.execute(fn, { onRetry });
 
       expect(onRetry).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Failure' }),
+        expect.objectContaining({ message: 'Network timeout failure' }),
         1
       );
     });
@@ -163,17 +151,17 @@ describe('RetryManager', () => {
 
   describe('wrap', () => {
     it('should create a wrapped function with retry', async () => {
-      const originalFn = jest.fn()
-        .mockRejectedValueOnce(new Error('Failure'))
-        .mockResolvedValue('success');
+      let attempts = 0;
+      const originalFn = jest.fn().mockImplementation(() => {
+        attempts++;
+        if (attempts === 1) {
+          return Promise.reject(new Error('Network timeout failure'));
+        }
+        return Promise.resolve('success');
+      });
 
       const wrappedFn = retryManager.wrap(originalFn);
-      const promise = wrappedFn('arg1', 'arg2');
-      
-      // Fast-forward through delays
-      await jest.runAllTimersAsync();
-      
-      const result = await promise;
+      const result = await wrappedFn('arg1', 'arg2');
 
       expect(result).toBe('success');
       expect(originalFn).toHaveBeenCalledWith('arg1', 'arg2');
@@ -184,15 +172,17 @@ describe('RetryManager', () => {
   describe('getStats', () => {
     it('should return correct statistics', async () => {
       const fn1 = jest.fn().mockResolvedValue('success');
-      const fn2 = jest.fn()
-        .mockRejectedValueOnce(new Error('Failure'))
-        .mockResolvedValue('success');
+      let attempts = 0;
+      const fn2 = jest.fn().mockImplementation(() => {
+        attempts++;
+        if (attempts === 1) {
+          return Promise.reject(new Error('Network timeout failure'));
+        }
+        return Promise.resolve('success');
+      });
 
       await retryManager.execute(fn1);
-      
-      const promise2 = retryManager.execute(fn2);
-      await jest.runAllTimersAsync();
-      await promise2;
+      await retryManager.execute(fn2);
 
       const stats = retryManager.getStats();
       expect(stats.totalAttempts).toBe(3);
@@ -206,18 +196,21 @@ describe('RetryManager', () => {
 
 describe('CircuitBreaker', () => {
   let circuitBreaker;
-  let clock;
 
   beforeEach(() => {
     jest.useFakeTimers();
     circuitBreaker = new CircuitBreaker({
       failureThreshold: 3,
       resetTimeout: 1000,
-      minimumRequests: 5
+      minimumRequests: 5,
+      disableMonitoring: true // Disable background monitoring for tests
     });
   });
 
   afterEach(() => {
+    if (circuitBreaker) {
+      circuitBreaker.shutdown();
+    }
     jest.useRealTimers();
   });
 

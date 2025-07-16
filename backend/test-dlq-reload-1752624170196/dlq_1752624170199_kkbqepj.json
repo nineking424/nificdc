@@ -1,0 +1,18 @@
+{
+  "id": "dlq_1752624170199_kkbqepj",
+  "record": {
+    "id": 42,
+    "name": "test"
+  },
+  "error": {
+    "message": "Test error",
+    "name": "Error",
+    "stack": "Error: Test error\n    at Object.<anonymous> (/home/nineking/workspace/app/nificdc/backend/tests/services/mappingEngine/errorHandling/DeadLetterQueue.test.js:253:56)"
+  },
+  "context": {
+    "enqueuedAt": "2025-07-16T00:02:50.212Z",
+    "retryCount": 0
+  },
+  "status": "pending",
+  "attempts": []
+}
