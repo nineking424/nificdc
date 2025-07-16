@@ -22,7 +22,7 @@ const mockAuthenticateToken = jest.fn((req, res, next) => {
 
 const mockAuthorize = jest.fn(() => (req, res, next) => next());
 
-jest.mock('../../middleware/auth', () => ({
+jest.mock('../../../src/middleware/auth', () => ({
   authenticateToken: mockAuthenticateToken,
   authorize: mockAuthorize
 }));

@@ -8,14 +8,14 @@ jest.mock('../../../services/mappingEngine/EnhancedMappingEngine');
 jest.mock('../../../services/mappingEngine/validation', () => ({
   ValidationFramework: jest.fn()
 }));
-jest.mock('../../models', () => ({
+jest.mock('../../../src/models', () => ({
   Mapping: {
     findByPk: jest.fn()
   },
   System: {},
   DataSchema: {}
 }));
-jest.mock('../../src/utils/logger', () => ({
+jest.mock('../../../src/utils/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),
@@ -30,7 +30,7 @@ const mockAuthenticateToken = jest.fn((req, res, next) => {
 
 const mockAuthorize = jest.fn(() => (req, res, next) => next());
 
-jest.mock('../../../routes/middleware/auth', () => ({
+jest.mock('../../../src/middleware/auth', () => ({
   authenticateToken: mockAuthenticateToken,
   authorize: mockAuthorize
 }));

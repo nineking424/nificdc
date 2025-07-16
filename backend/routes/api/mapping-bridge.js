@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, authorize } = require('../../middleware/auth');
+const { authenticateToken, authorize } = require('../../src/middleware/auth');
 const { EnhancedMappingService } = require('../../services/enhanced-mapping');
 const logger = require('../../src/utils/logger');
 

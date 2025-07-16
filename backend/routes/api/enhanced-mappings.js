@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, authorize } = require('../../middleware/auth');
+const { authenticateToken, authorize } = require('../../src/middleware/auth');
 const { EnhancedMappingEngine } = require('../../services/mappingEngine/EnhancedMappingEngine');
 const { ValidationFramework } = require('../../services/mappingEngine/validation');
-const { Mapping, System, DataSchema } = require('../../models');
+const { Mapping, System, DataSchema } = require('../../src/models');
 const logger = require('../../src/utils/logger');
 const { Op } = require('sequelize');
 
