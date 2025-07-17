@@ -472,6 +472,90 @@ class TypeMapper {
       }))
     };
   }
+
+  /**
+   * Check if two types are compatible for mapping
+   * @param {string} sourceType - Source universal type
+   * @param {string} targetType - Target universal type
+   * @returns {boolean} True if types are compatible
+   */
+  areTypesCompatible(sourceType, targetType) {
+    // Exact match
+    if (sourceType === targetType) {
+      return true;
+    }
+
+    // Define compatibility rules
+    const compatibilityRules = {
+      [UNIVERSAL_TYPES.INTEGER]: [
+        UNIVERSAL_TYPES.BIGINT,
+        UNIVERSAL_TYPES.DECIMAL,
+        UNIVERSAL_TYPES.FLOAT,
+        UNIVERSAL_TYPES.DOUBLE,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.BIGINT]: [
+        UNIVERSAL_TYPES.DECIMAL,
+        UNIVERSAL_TYPES.FLOAT,
+        UNIVERSAL_TYPES.DOUBLE,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.FLOAT]: [
+        UNIVERSAL_TYPES.DOUBLE,
+        UNIVERSAL_TYPES.DECIMAL,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.DOUBLE]: [
+        UNIVERSAL_TYPES.DECIMAL,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.DECIMAL]: [
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.BOOLEAN]: [
+        UNIVERSAL_TYPES.INTEGER,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.DATE]: [
+        UNIVERSAL_TYPES.DATETIME,
+        UNIVERSAL_TYPES.TIMESTAMP,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.TIME]: [
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.DATETIME]: [
+        UNIVERSAL_TYPES.TIMESTAMP,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.TIMESTAMP]: [
+        UNIVERSAL_TYPES.DATETIME,
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.VARCHAR]: [
+        UNIVERSAL_TYPES.TEXT,
+        UNIVERSAL_TYPES.CLOB
+      ],
+      [UNIVERSAL_TYPES.TEXT]: [
+        UNIVERSAL_TYPES.CLOB
+      ],
+      [UNIVERSAL_TYPES.JSON]: [
+        UNIVERSAL_TYPES.TEXT,
+        UNIVERSAL_TYPES.VARCHAR,
+        UNIVERSAL_TYPES.CLOB
+      ],
+      [UNIVERSAL_TYPES.UUID]: [
+        UNIVERSAL_TYPES.VARCHAR
+      ],
+      [UNIVERSAL_TYPES.BINARY]: [
+        UNIVERSAL_TYPES.BLOB
+      ]
+    };
+
+    // Check if source type can be converted to target type
+    const compatibleTypes = compatibilityRules[sourceType] || [];
+    return compatibleTypes.includes(targetType);
+  }
 }
 
 module.exports = { TypeMapper, UNIVERSAL_TYPES };

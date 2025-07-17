@@ -515,6 +515,244 @@ class SchemaDiscoveryService extends EventEmitter {
   }
 
   /**
+   * Refresh a specific schema
+   * @param {string} systemId - System identifier
+   * @param {string} schemaName - Schema name to refresh
+   * @param {Object} options - Refresh options
+   * @returns {Promise<Object>} Refreshed schema
+   */
+  async refreshSchema(systemId, schemaName, options = {}) {
+    try {
+      // Get adapter
+      const adapter = this.adapters.get(systemId);
+      if (!adapter) {
+        throw new Error(`No adapter found for system: ${systemId}`);
+      }
+
+      // Clear cache for this system and rediscover
+      this.clearCache(systemId);
+      
+      // Discover schemas with force refresh
+      const schemas = await this.discoverSchemas(systemId, { 
+        forceRefresh: true,
+        ...options 
+      });
+      
+      return schemas.find(s => s.name === schemaName);
+
+    } catch (error) {
+      logger.error('Schema refresh failed', {
+        systemId,
+        schemaName,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get table statistics
+   * @param {string} systemId - System identifier
+   * @param {string} schemaName - Schema name
+   * @param {string} tableName - Table name
+   * @returns {Promise<Object>} Table statistics
+   */
+  async getTableStatistics(systemId, schemaName, tableName) {
+    try {
+      const adapter = this.adapters.get(systemId);
+      if (!adapter) {
+        throw new Error(`No adapter found for system: ${systemId}`);
+      }
+
+      // Get table statistics using adapter
+      if (typeof adapter.getTableStatistics === 'function') {
+        return await adapter.getTableStatistics(schemaName, tableName);
+      }
+
+      // Fallback: basic statistics from schema
+      const schemas = await this.discoverSchemas(systemId);
+      const schema = schemas.find(s => s.name === schemaName);
+      if (!schema) {
+        throw new Error(`Schema not found: ${schemaName}`);
+      }
+
+      const table = schema.tables.find(t => t.name === tableName);
+      if (!table) {
+        throw new Error(`Table not found: ${tableName}`);
+      }
+
+      return {
+        rowCount: null,
+        sizeInBytes: null,
+        columns: table.columns.length,
+        indexes: table.indexes?.length || 0,
+        lastAnalyzed: null
+      };
+
+    } catch (error) {
+      logger.error('Failed to get table statistics', {
+        systemId,
+        schemaName,
+        tableName,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Compare two schemas for compatibility
+   * @param {Object} sourceSchema - Source schema info
+   * @param {Object} targetSchema - Target schema info
+   * @returns {Promise<Object>} Comparison result
+   */
+  async compareSchemas(sourceSchema, targetSchema) {
+    try {
+      // Get schemas
+      const sourceSchemas = await this.discoverSchemas(sourceSchema.systemId);
+      const targetSchemas = await this.discoverSchemas(targetSchema.systemId);
+
+      const source = sourceSchemas.find(s => s.name === sourceSchema.schemaName);
+      const target = targetSchemas.find(s => s.name === targetSchema.schemaName);
+
+      if (!source) {
+        throw new Error(`Source schema not found: ${sourceSchema.schemaName}`);
+      }
+      if (!target) {
+        throw new Error(`Target schema not found: ${targetSchema.schemaName}`);
+      }
+
+      const sourceTable = source.tables.find(t => t.name === sourceSchema.tableName);
+      const targetTable = target.tables.find(t => t.name === targetSchema.tableName);
+
+      if (!sourceTable) {
+        throw new Error(`Source table not found: ${sourceSchema.tableName}`);
+      }
+      if (!targetTable) {
+        throw new Error(`Target table not found: ${targetSchema.tableName}`);
+      }
+
+      // Compare columns
+      const comparison = {
+        compatibilityScore: 100,
+        issues: [],
+        mappingSuggestions: []
+      };
+
+      const targetColumnMap = new Map(targetTable.columns.map(col => [col.name.toLowerCase(), col]));
+
+      sourceTable.columns.forEach(sourceCol => {
+        const targetCol = targetColumnMap.get(sourceCol.name.toLowerCase());
+        
+        if (!targetCol) {
+          comparison.issues.push({
+            type: 'MISSING_COLUMN',
+            severity: 'warning',
+            source: sourceCol.name,
+            message: `Column '${sourceCol.name}' not found in target table`
+          });
+          comparison.compatibilityScore -= 5;
+        } else {
+          // Check type compatibility
+          if (sourceCol.dataType !== targetCol.dataType) {
+            const compatible = this.typeMapper.areTypesCompatible(
+              sourceCol.dataType, 
+              targetCol.dataType
+            );
+            
+            if (!compatible) {
+              comparison.issues.push({
+                type: 'TYPE_MISMATCH',
+                severity: 'error',
+                source: sourceCol.name,
+                target: targetCol.name,
+                message: `Type mismatch: ${sourceCol.dataType} -> ${targetCol.dataType}`
+              });
+              comparison.compatibilityScore -= 10;
+            } else {
+              comparison.mappingSuggestions.push({
+                source: sourceCol.name,
+                target: targetCol.name,
+                transformation: 'type_conversion'
+              });
+            }
+          }
+          
+          // Check constraints
+          if (sourceCol.isNullable === false && targetCol.isNullable === true) {
+            comparison.issues.push({
+              type: 'CONSTRAINT_MISMATCH',
+              severity: 'warning',
+              source: sourceCol.name,
+              target: targetCol.name,
+              message: 'Source is NOT NULL but target allows NULL'
+            });
+          }
+        }
+      });
+
+      comparison.compatibilityScore = Math.max(0, comparison.compatibilityScore);
+
+      return comparison;
+
+    } catch (error) {
+      logger.error('Schema comparison failed', {
+        sourceSchema,
+        targetSchema,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get cache status
+   * @returns {Object} Cache status and statistics
+   */
+  getCacheStatus() {
+    const cacheEntries = [];
+    let totalSize = 0;
+
+    this.cache.forEach((value, key) => {
+      const size = JSON.stringify(value).length;
+      totalSize += size;
+      
+      cacheEntries.push({
+        key,
+        size,
+        timestamp: value.timestamp,
+        age: Date.now() - value.timestamp,
+        dataType: typeof value.data
+      });
+    });
+
+    return {
+      entries: cacheEntries.length,
+      totalSize,
+      maxSize: this.options.maxCacheSize,
+      ttl: this.options.cacheTimeout,
+      cacheEntries,
+      stats: this.getCacheStats()
+    };
+  }
+
+  /**
+   * Check if data is cached for a system
+   * @param {string} systemId - System identifier
+   * @returns {boolean} True if cached
+   */
+  isCached(systemId) {
+    return this.cache.has(systemId);
+  }
+
+  /**
+   * Clear all cache
+   */
+  clearAllCache() {
+    this.clearCache();
+  }
+
+  /**
    * Shutdown the service and cleanup resources
    */
   async shutdown() {
