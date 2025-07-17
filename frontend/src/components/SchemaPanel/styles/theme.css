@@ -1,0 +1,214 @@
+/* Schema Panel Theme Variables */
+:root {
+  /* Colors */
+  --schema-panel-bg: #ffffff;
+  --schema-panel-header-bg: #f8f9fa;
+  --schema-panel-border: #e1e4e8;
+  --schema-panel-text: #24292e;
+  --schema-panel-text-secondary: #586069;
+  
+  /* Tree view colors */
+  --tree-node-hover-bg: #f6f8fa;
+  --tree-node-selected-bg: #e1f0ff;
+  --tree-node-selected-text: #0366d6;
+  --tree-node-drag-over-bg: #c8e6c9;
+  --tree-node-drag-over-border: #4caf50;
+  
+  /* Icon colors by type */
+  --icon-color-default: #586069;
+  --icon-color-string: #032f62;
+  --icon-color-number: #005cc5;
+  --icon-color-datetime: #6f42c1;
+  --icon-color-boolean: #28a745;
+  --icon-color-json: #fb8500;
+  --icon-color-binary: #d73a49;
+  --icon-color-uuid: #e36209;
+  --icon-color-geometry: #22863a;
+  --icon-color-array: #6a737d;
+  --icon-color-object: #735c0f;
+  
+  /* Badge colors */
+  --badge-primary-bg: #e1f0ff;
+  --badge-primary-text: #0366d6;
+  --badge-required-bg: #ffeef0;
+  --badge-required-text: #d73a49;
+  --badge-unique-bg: #fff8e1;
+  --badge-unique-text: #f9a825;
+  --badge-indexed-bg: #e3f2fd;
+  --badge-indexed-text: #1976d2;
+  
+  /* Spacing */
+  --tree-indent: 20px;
+  --tree-node-padding: 4px 8px;
+  --tree-node-gap: 8px;
+  
+  /* Animations */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Colors */
+    --schema-panel-bg: #0d1117;
+    --schema-panel-header-bg: #161b22;
+    --schema-panel-border: #30363d;
+    --schema-panel-text: #c9d1d9;
+    --schema-panel-text-secondary: #8b949e;
+    
+    /* Tree view colors */
+    --tree-node-hover-bg: #161b22;
+    --tree-node-selected-bg: #1f4788;
+    --tree-node-selected-text: #58a6ff;
+    --tree-node-drag-over-bg: #1b5e20;
+    --tree-node-drag-over-border: #4caf50;
+    
+    /* Icon colors by type */
+    --icon-color-default: #8b949e;
+    --icon-color-string: #79c0ff;
+    --icon-color-number: #58a6ff;
+    --icon-color-datetime: #d2a8ff;
+    --icon-color-boolean: #3fb950;
+    --icon-color-json: #ffa657;
+    --icon-color-binary: #f85149;
+    --icon-color-uuid: #fb8500;
+    --icon-color-geometry: #7ee83f;
+    --icon-color-array: #8b949e;
+    --icon-color-object: #e3b341;
+    
+    /* Badge colors */
+    --badge-primary-bg: rgba(88, 166, 255, 0.15);
+    --badge-primary-text: #58a6ff;
+    --badge-required-bg: rgba(248, 81, 73, 0.15);
+    --badge-required-text: #f85149;
+    --badge-unique-bg: rgba(251, 143, 68, 0.15);
+    --badge-unique-text: #fb8f44;
+    --badge-indexed-bg: rgba(33, 150, 243, 0.15);
+    --badge-indexed-text: #2196f3;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Utility classes */
+.schema-panel-fade-enter {
+  animation: fadeIn var(--transition-normal) ease-out;
+}
+
+.schema-panel-slide-enter {
+  animation: slideIn var(--transition-normal) ease-out;
+}
+
+.schema-panel-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Loading skeleton */
+.schema-panel-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--schema-panel-bg) 25%,
+    var(--schema-panel-header-bg) 50%,
+    var(--schema-panel-bg) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Scrollbar styling */
+.schema-panel .tree-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.schema-panel .tree-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.schema-panel .tree-container::-webkit-scrollbar-thumb {
+  background: var(--schema-panel-border);
+  border-radius: 4px;
+}
+
+.schema-panel .tree-container::-webkit-scrollbar-thumb:hover {
+  background: var(--schema-panel-text-secondary);
+}
+
+/* Focus styles */
+.schema-panel *:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--tree-node-selected-text);
+}
+
+.schema-panel button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--tree-node-selected-text);
+}
+
+/* Drag and drop visual feedback */
+.dragging {
+  opacity: 0.5;
+  cursor: grabbing !important;
+}
+
+.drag-over {
+  background-color: var(--tree-node-drag-over-bg) !important;
+  box-shadow: inset 0 0 0 2px var(--tree-node-drag-over-border);
+}
+
+/* Icon type colors */
+.icon-color-string { color: var(--icon-color-string); }
+.icon-color-number { color: var(--icon-color-number); }
+.icon-color-datetime { color: var(--icon-color-datetime); }
+.icon-color-boolean { color: var(--icon-color-boolean); }
+.icon-color-json { color: var(--icon-color-json); }
+.icon-color-binary { color: var(--icon-color-binary); }
+.icon-color-uuid { color: var(--icon-color-uuid); }
+.icon-color-geometry { color: var(--icon-color-geometry); }
+.icon-color-array { color: var(--icon-color-array); }
+.icon-color-object { color: var(--icon-color-object); }
+.icon-color-default { color: var(--icon-color-default); }

@@ -43,6 +43,26 @@ const routes = [
     }
   },
   {
+    path: '/mappings/new',
+    name: 'MappingCreate',
+    component: () => import('@/views/MappingEditor.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '새 매핑 생성',
+      parent: 'Mappings'
+    }
+  },
+  {
+    path: '/mappings/:id/edit',
+    name: 'MappingEdit',
+    component: () => import('@/views/MappingEditor.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '매핑 편집',
+      parent: 'Mappings'
+    }
+  },
+  {
     path: '/jobs',
     name: 'Jobs',
     component: () => import('@/views/JobManagement.vue'),

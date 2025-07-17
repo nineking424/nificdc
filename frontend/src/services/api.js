@@ -93,14 +93,33 @@ export const schemaApi = {
   delete: (id) => api.delete(`/schemas/${id}`),
   
   // 스키마 자동 탐색
-  discover: (systemId) => api.post('/schemas/discover', { systemId }),
+  discover: (systemId, options = {}) => api.get(`/schemas/discover/${systemId}`, { params: options }),
+  
+  // 스키마 새로고침 (강제 재탐색)
+  refresh: (systemId) => api.post(`/schemas/refresh/${systemId}`),
+  
+  // 스키마 샘플 데이터 조회
+  getSampleData: (systemId, tableName, limit = 10) => 
+    api.get(`/schemas/sample/${systemId}/${tableName}`, { params: { limit } }),
+  
+  // 스키마 통계 조회
+  getStatistics: (systemId, tableName) => 
+    api.get(`/schemas/statistics/${systemId}/${tableName}`),
+  
+  // 스키마 비교
+  compare: (sourceSystemId, targetSystemId) => 
+    api.get(`/schemas/compare/${sourceSystemId}/${targetSystemId}`),
   
   // 스키마 버전 목록
   getVersions: (id) => api.get(`/schemas/${id}/versions`),
   
   // 스키마 버전 비교
   compareVersions: (id, versionA, versionB) => 
-    api.get(`/schemas/${id}/compare/${versionA}/${versionB}`)
+    api.get(`/schemas/${id}/compare/${versionA}/${versionB}`),
+  
+  // 스키마 캐시 관리
+  clearCache: (systemId) => api.delete(`/schemas/cache/${systemId}`),
+  getCacheStatus: () => api.get('/schemas/cache/status')
 }
 
 // 매핑 관련 API

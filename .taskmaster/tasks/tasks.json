@@ -615,7 +615,7 @@
         "dependencies": [
           11
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -623,7 +623,7 @@
             "description": "스키마 데이터를 트리뷰 형식으로 변환하고 v-treeview 컴포넌트로 렌더링하는 기능을 구현합니다",
             "dependencies": [],
             "details": "스키마 객체를 재귀적으로 순회하여 트리 구조로 변환하는 로직을 구현합니다. 중첩된 객체와 배열 타입을 처리하고, 각 노드에 고유 ID를 부여합니다. v-treeview의 items prop에 맞는 데이터 구조를 생성합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -634,7 +634,7 @@
               1
             ],
             "details": "STRING, INTEGER, DATE, BOOLEAN 등 각 데이터 타입별로 적절한 Material Design 아이콘을 매핑합니다. 아이콘 컴포넌트를 생성하고 색상 테마를 적용합니다. 커스텀 타입에 대한 기본 아이콘도 설정합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -646,7 +646,7 @@
               2
             ],
             "details": "dragstart, dragover, drop 이벤트 핸들러를 구현합니다. 드래그 가능한 필드와 드롭 가능한 영역을 정의하고, 드래그 데이터를 DataTransfer 객체로 전달합니다. 부모 컴포넌트로 이벤트를 emit하는 로직을 추가합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -657,7 +657,7 @@
               3
             ],
             "details": "드래그 중인 아이템의 투명도 조정, 드롭 가능 영역의 하이라이트 효과를 구현합니다. 호버 시 배경색 변경, 선택된 필드의 강조 표시, 드래그 커서 변경 등의 CSS 스타일을 추가합니다. 애니메이션 효과도 적용합니다",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1112,7 +1112,7 @@
     ],
     "metadata": {
       "created": "2025-07-11T19:04:31.110Z",
-      "updated": "2025-07-17T09:40:46.578Z",
+      "updated": "2025-07-17T10:32:00.127Z",
       "description": "Tasks for master context"
     }
   }
