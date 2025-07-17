@@ -1,78 +1,120 @@
 <template>
   <AppLayout>
-    <div class="mapping-management">
-      <!-- Header -->
-      <div class="page-header">
+    <div class="mapping-container">
+      <!-- Clean Header -->
+      <div class="mapping-header">
         <div class="header-content">
-          <h1 class="page-title">Mapping Management</h1>
-          <p class="page-subtitle">Create and manage data transformation mappings between systems</p>
+          <h1 class="page-title">매핑 관리</h1>
+          <p class="page-subtitle">시스템 간 데이터 변환 매핑을 생성하고 관리합니다</p>
         </div>
-        <div class="header-actions">
-          <button @click="createNewMapping" class="btn-primary">
-            <PlusIcon />
-            Create New Mapping
-          </button>
+        <button class="clean-button clean-button-primary" @click="createNewMapping">
+          <PlusIcon size="18" />
+          새 매핑 생성
+        </button>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon primary">
+            <v-icon size="24">mdi-file-document-multiple</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ totalMappings }}</div>
+            <div class="stat-label">전체 매핑</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon success">
+            <v-icon size="24">mdi-check-circle</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ activeMappings }}</div>
+            <div class="stat-label">활성 매핑</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon warning">
+            <v-icon size="24">mdi-file-document-edit</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ draftMappings }}</div>
+            <div class="stat-label">작성 중</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon error">
+            <v-icon size="24">mdi-alert-circle</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ errorMappings }}</div>
+            <div class="stat-label">오류</div>
+          </div>
         </div>
       </div>
 
-      <!-- Filters and Search -->
-      <div class="filters-section">
-        <div class="search-box">
-          <SearchIcon />
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            placeholder="Search mappings..."
-            @input="handleSearch"
-          />
-        </div>
-        
-        <div class="filters">
-          <select v-model="statusFilter" @change="applyFilters" class="filter-select">
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="draft">Draft</option>
-            <option value="inactive">Inactive</option>
-            <option value="error">Error</option>
-          </select>
+      <!-- Filter Section -->
+      <div class="filter-section clean-card">
+        <div class="filter-content">
+          <div class="search-box">
+            <v-icon size="20">mdi-magnify</v-icon>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              class="search-input"
+              placeholder="매핑 검색..."
+              @input="handleSearch"
+            />
+          </div>
           
-          <select v-model="systemFilter" @change="applyFilters" class="filter-select">
-            <option value="">All Systems</option>
-            <option v-for="system in availableSystems" :key="system.id" :value="system.id">
-              {{ system.name }}
-            </option>
-          </select>
-          
-          <button @click="refreshMappings" class="btn-icon" title="Refresh">
-            <RefreshIcon :class="{ 'spin': loading }" />
-          </button>
+          <div class="filter-controls">
+            <select v-model="statusFilter" @change="applyFilters" class="clean-form-input">
+              <option value="">모든 상태</option>
+              <option value="active">활성</option>
+              <option value="draft">작성 중</option>
+              <option value="inactive">비활성</option>
+              <option value="error">오류</option>
+            </select>
+            
+            <select v-model="systemFilter" @change="applyFilters" class="clean-form-input">
+              <option value="">모든 시스템</option>
+              <option v-for="system in availableSystems" :key="system.id" :value="system.id">
+                {{ system.name }}
+              </option>
+            </select>
+            
+            <button class="clean-button clean-button-secondary" @click="refreshMappings">
+              <v-icon size="18" :class="{ 'spin': loading }">mdi-refresh</v-icon>
+              새로고침
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Mappings List -->
       <div v-if="loading && mappings.length === 0" class="loading-state">
-        <LoadingSpinner />
-        <span>Loading mappings...</span>
+        <v-progress-circular indeterminate color="primary" />
+        <span>매핑 목록을 불러오는 중...</span>
       </div>
 
       <div v-else-if="error" class="error-state">
-        <ErrorIcon />
+        <v-icon size="64" color="error">mdi-alert-circle</v-icon>
         <span>{{ error }}</span>
-        <button @click="refreshMappings" class="retry-button">Retry</button>
+        <button @click="refreshMappings" class="clean-button clean-button-primary">재시도</button>
       </div>
 
       <div v-else-if="filteredMappings.length === 0" class="empty-state">
-        <EmptyStateIcon />
-        <h3>No mappings found</h3>
-        <p v-if="searchQuery || statusFilter || systemFilter">
-          Try adjusting your filters or search query
+        <v-icon size="64" color="var(--gray-400)">mdi-file-document-off</v-icon>
+        <h3 class="empty-state-title">매핑이 없습니다</h3>
+        <p v-if="searchQuery || statusFilter || systemFilter" class="empty-state-text">
+          검색 조건을 변경해보세요
         </p>
-        <p v-else>
-          Create your first mapping to get started
+        <p v-else class="empty-state-text">
+          첫 번째 매핑을 생성하여 시작하세요
         </p>
-        <button @click="createNewMapping" class="btn-primary">
-          <PlusIcon />
-          Create New Mapping
+        <button @click="createNewMapping" class="clean-button clean-button-primary">
+          <PlusIcon size="18" />
+          새 매핑 생성
         </button>
       </div>
 
@@ -80,37 +122,36 @@
         <div 
           v-for="mapping in paginatedMappings" 
           :key="mapping.id"
-          class="mapping-card"
-          :class="{ 'error': mapping.status === 'error' }"
+          class="mapping-card clean-card"
         >
           <div class="card-header">
             <div class="mapping-info">
               <h3 class="mapping-name">{{ mapping.name }}</h3>
-              <p class="mapping-description">{{ mapping.description || 'No description' }}</p>
+              <p class="mapping-description">{{ mapping.description || '설명 없음' }}</p>
             </div>
-            <div class="status-badge" :class="mapping.status">
-              {{ mapping.status }}
+            <div class="status-badge" :class="'status-' + mapping.status">
+              {{ getStatusText(mapping.status) }}
             </div>
           </div>
           
           <div class="card-body">
             <div class="system-flow">
-              <div class="system-box source">
-                <DatabaseIcon />
+              <div class="system-box">
+                <v-icon size="20" color="primary">mdi-database-export</v-icon>
                 <div>
-                  <span class="system-label">Source</span>
+                  <span class="system-label">소스</span>
                   <span class="system-name">{{ getSystemName(mapping.sourceSystemId) }}</span>
                 </div>
               </div>
               
               <div class="flow-arrow">
-                <ArrowRightIcon />
+                <v-icon size="24" color="var(--gray-400)">mdi-arrow-right</v-icon>
               </div>
               
-              <div class="system-box target">
-                <DatabaseIcon />
+              <div class="system-box">
+                <v-icon size="20" color="primary">mdi-database-import</v-icon>
                 <div>
-                  <span class="system-label">Target</span>
+                  <span class="system-label">타겟</span>
                   <span class="system-name">{{ getSystemName(mapping.targetSystemId) }}</span>
                 </div>
               </div>
@@ -118,32 +159,31 @@
             
             <div class="mapping-stats">
               <div class="stat">
-                <FieldIcon />
-                <span>{{ mapping.fieldMappings?.length || 0 }} fields mapped</span>
+                <v-icon size="16">mdi-table</v-icon>
+                <span>{{ mapping.fieldMappings?.length || 0 }}개 필드 매핑</span>
               </div>
               <div class="stat">
-                <ClockIcon />
+                <v-icon size="16">mdi-clock-outline</v-icon>
                 <span>{{ formatDate(mapping.updatedAt) }}</span>
               </div>
             </div>
           </div>
           
-          <div class="card-actions">
-            <button @click="editMapping(mapping.id)" class="btn-text">
-              <EditIcon />
-              Edit
+          <div class="card-footer">
+            <button @click="editMapping(mapping.id)" class="action-button primary">
+              <v-icon size="16">mdi-pencil</v-icon>
+              편집
             </button>
-            <button @click="duplicateMapping(mapping.id)" class="btn-text">
-              <CopyIcon />
-              Duplicate
+            <button @click="duplicateMapping(mapping.id)" class="action-button">
+              <v-icon size="16">mdi-content-copy</v-icon>
+              복제
             </button>
-            <button @click="testMapping(mapping.id)" class="btn-text" :disabled="mapping.status === 'draft'">
-              <TestIcon />
-              Test
+            <button @click="testMapping(mapping.id)" class="action-button" :disabled="mapping.status === 'draft'">
+              <v-icon size="16">mdi-play-circle</v-icon>
+              테스트
             </button>
-            <button @click="deleteMapping(mapping.id)" class="btn-text danger">
-              <DeleteIcon />
-              Delete
+            <button @click="deleteMapping(mapping.id)" class="action-button danger">
+              <v-icon size="16">mdi-delete</v-icon>
             </button>
           </div>
         </div>
@@ -156,40 +196,24 @@
           :disabled="currentPage === 1"
           class="page-button"
         >
-          Previous
+          <v-icon size="18">mdi-chevron-left</v-icon>
+          이전
         </button>
         
-        <span class="page-info">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
+        <div class="page-info">
+          <span class="current-page">{{ currentPage }}</span>
+          <span class="separator">/</span>
+          <span class="total-pages">{{ totalPages }}</span>
+        </div>
         
         <button 
           @click="currentPage++" 
           :disabled="currentPage === totalPages"
           class="page-button"
         >
-          Next
+          다음
+          <v-icon size="18">mdi-chevron-right</v-icon>
         </button>
-      </div>
-
-      <!-- Statistics Summary -->
-      <div class="statistics-summary">
-        <div class="stat-card">
-          <div class="stat-value">{{ totalMappings }}</div>
-          <div class="stat-label">Total Mappings</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value text-success">{{ activeMappings }}</div>
-          <div class="stat-label">Active</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value text-warning">{{ draftMappings }}</div>
-          <div class="stat-label">Draft</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value text-danger">{{ errorMappings }}</div>
-          <div class="stat-label">Errors</div>
-        </div>
       </div>
     </div>
   </AppLayout>
@@ -204,20 +228,7 @@ import { useAppStore } from '@/stores/app'
 import AppLayout from '@/components/AppLayout.vue'
 import { mappingApi } from '@/services/api'
 import {
-  PlusIcon,
-  SearchIcon,
-  RefreshIcon,
-  LoadingSpinner,
-  ErrorIcon,
-  EmptyStateIcon,
-  DatabaseIcon,
-  ArrowRightIcon,
-  FieldIcon,
-  ClockIcon,
-  EditIcon,
-  CopyIcon,
-  TestIcon,
-  DeleteIcon
+  PlusIcon
 } from '@/components/icons'
 
 export default {
@@ -225,20 +236,7 @@ export default {
   
   components: {
     AppLayout,
-    PlusIcon,
-    SearchIcon,
-    RefreshIcon,
-    LoadingSpinner,
-    ErrorIcon,
-    EmptyStateIcon,
-    DatabaseIcon,
-    ArrowRightIcon,
-    FieldIcon,
-    ClockIcon,
-    EditIcon,
-    CopyIcon,
-    TestIcon,
-    DeleteIcon
+    PlusIcon
   },
   
   setup() {
@@ -322,7 +320,7 @@ export default {
         })
         mappings.value = response.data.items || []
       } catch (err) {
-        error.value = err.message || 'Failed to load mappings'
+        error.value = err.message || '매핑 목록을 불러오는데 실패했습니다'
         mappings.value = []
       } finally {
         loading.value = false
@@ -343,18 +341,26 @@ export default {
     
     const getSystemName = (systemId) => {
       const system = availableSystems.value.find(s => s.id === systemId)
-      return system ? system.name : 'Unknown System'
+      return system ? system.name : '알 수 없는 시스템'
+    }
+    
+    const getStatusText = (status) => {
+      const statusMap = {
+        active: '활성',
+        draft: '작성 중',
+        inactive: '비활성',
+        error: '오류'
+      }
+      return statusMap[status] || status
     }
     
     const formatDate = (dateString) => {
-      if (!dateString) return 'Never'
+      if (!dateString) return '없음'
       const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', {
+      return date.toLocaleDateString('ko-KR', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: 'numeric'
       })
     }
     
@@ -373,7 +379,7 @@ export default {
         
         const duplicated = {
           ...mapping,
-          name: `${mapping.name} (Copy)`,
+          name: `${mapping.name} (사본)`,
           status: 'draft',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -382,42 +388,42 @@ export default {
         delete duplicated.id
         
         const response = await mappingApi.create(duplicated)
-        appStore.showSuccess('Mapping duplicated successfully')
+        appStore.showSuccess('매핑이 복제되었습니다')
         
         // Refresh list
         await fetchMappings()
         
       } catch (error) {
-        appStore.showError('Failed to duplicate mapping')
+        appStore.showError('매핑 복제에 실패했습니다')
       }
     }
     
     const testMapping = async (id) => {
       try {
-        appStore.setLoading(true, 'Testing mapping...')
+        appStore.setLoading(true, '매핑 테스트 중...')
         await mappingApi.validate(id)
         appStore.setLoading(false)
-        appStore.showSuccess('Mapping test completed successfully')
+        appStore.showSuccess('매핑 테스트가 성공적으로 완료되었습니다')
       } catch (error) {
         appStore.setLoading(false)
-        appStore.showError('Mapping test failed: ' + error.message)
+        appStore.showError('매핑 테스트 실패: ' + error.message)
       }
     }
     
     const deleteMapping = async (id) => {
-      if (!confirm('Are you sure you want to delete this mapping?')) {
+      if (!confirm('정말로 이 매핑을 삭제하시겠습니까?')) {
         return
       }
       
       try {
         await mappingApi.delete(id)
-        appStore.showSuccess('Mapping deleted successfully')
+        appStore.showSuccess('매핑이 삭제되었습니다')
         
         // Remove from local list
         mappings.value = mappings.value.filter(m => m.id !== id)
         
       } catch (error) {
-        appStore.showError('Failed to delete mapping')
+        appStore.showError('매핑 삭제에 실패했습니다')
       }
     }
     
@@ -457,6 +463,7 @@ export default {
       handleSearch,
       applyFilters,
       getSystemName,
+      getStatusText,
       formatDate,
       createNewMapping,
       editMapping,
@@ -469,46 +476,108 @@ export default {
 </script>
 
 <style scoped>
-.mapping-management {
-  padding: 24px;
+.mapping-container {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* Header */
-.page-header {
+.mapping-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 32px;
-}
-
-.header-content {
-  flex: 1;
+  align-items: center;
+  margin-bottom: var(--space-8);
 }
 
 .page-title {
-  margin: 0 0 8px;
-  font-size: 32px;
-  font-weight: 600;
-  color: var(--color-text);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+  margin: 0;
 }
 
 .page-subtitle {
-  margin: 0;
-  font-size: 16px;
-  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  color: var(--gray-600);
+  margin-top: var(--space-2);
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
 }
 
-/* Filters */
-.filters-section {
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid var(--gray-100);
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--space-4);
+  transition: all var(--transition-base);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon.primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.stat-icon.success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.stat-icon.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.stat-icon.error {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+}
+
+.stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+}
+
+/* Filter Section */
+.filter-section {
+  margin-bottom: var(--space-6);
+  padding: var(--space-5);
+}
+
+.filter-content {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
 }
 
 .search-box {
@@ -516,83 +585,60 @@ export default {
   position: relative;
 }
 
-.search-box svg {
+.search-box v-icon {
   position: absolute;
-  left: 12px;
+  left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  color: var(--color-text-secondary);
+  color: var(--gray-400);
 }
 
-.search-box input {
+.search-input {
   width: 100%;
-  padding: 10px 12px 10px 40px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--color-text);
-  transition: border-color 0.2s;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-10);
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-base);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-base);
 }
 
-.search-box input:focus {
+.search-input:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
-.filters {
+.filter-controls {
   display: flex;
-  gap: 12px;
-}
-
-.filter-select {
-  padding: 10px 16px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.filter-select:hover {
-  border-color: var(--color-border-hover);
+  gap: var(--space-3);
 }
 
 /* Mappings Grid */
 .mappings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .mapping-card {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-base);
 }
 
 .mapping-card:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.mapping-card.error {
-  border-color: var(--color-danger);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .card-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid var(--color-border);
+  align-items: flex-start;
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--gray-100);
 }
 
 .mapping-info {
@@ -601,78 +647,73 @@ export default {
 }
 
 .mapping-name {
-  margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .mapping-description {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
   margin: 0;
-  font-size: 14px;
-  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .status-badge {
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
   text-transform: uppercase;
 }
 
-.status-badge.active {
-  background: var(--color-success-soft);
-  color: var(--color-success);
+.status-badge.status-active {
+  background: var(--success-soft);
+  color: var(--success);
 }
 
-.status-badge.draft {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+.status-badge.status-draft {
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
-.status-badge.inactive {
-  background: var(--color-text-soft);
-  color: var(--color-text-secondary);
+.status-badge.status-inactive {
+  background: var(--gray-100);
+  color: var(--gray-600);
 }
 
-.status-badge.error {
-  background: var(--color-danger-soft);
-  color: var(--color-danger);
+.status-badge.status-error {
+  background: var(--error-soft);
+  color: var(--error);
 }
 
 .card-body {
-  padding: 20px;
+  padding: var(--space-5);
+  flex: 1;
 }
 
 .system-flow {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .system-box {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-}
-
-.system-box svg {
-  width: 24px;
-  height: 24px;
-  color: var(--color-primary);
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-base);
 }
 
 .system-box > div {
@@ -682,15 +723,16 @@ export default {
 }
 
 .system-label {
-  font-size: 12px;
-  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .system-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: var(--gray-900);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -699,36 +741,74 @@ export default {
 .flow-arrow {
   display: flex;
   align-items: center;
-  color: var(--color-text-secondary);
+  justify-content: center;
 }
 
 .mapping-stats {
   display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
 }
 
-.stat {
+.mapping-stats .stat {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
-.stat svg {
-  width: 16px;
-  height: 16px;
-}
-
-.card-actions {
+.card-footer {
   display: flex;
-  gap: 4px;
-  padding: 12px 16px;
-  background: var(--color-background-soft);
-  border-top: 1px solid var(--color-border);
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-100);
 }
 
-/* Loading States */
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-base);
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.action-button:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-400);
+}
+
+.action-button.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+.action-button.primary:hover {
+  background: var(--primary-dark);
+}
+
+.action-button.danger {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.action-button.danger:hover {
+  background: var(--error-soft);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading/Error/Empty States */
 .loading-state,
 .error-state,
 .empty-state {
@@ -737,48 +817,12 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  padding: 40px;
   text-align: center;
-}
-
-.loading-state svg,
-.error-state svg,
-.empty-state svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
-  opacity: 0.3;
+  color: var(--gray-600);
 }
 
 .error-state {
-  color: var(--color-danger);
-}
-
-.empty-state h3 {
-  margin: 0 0 8px;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.empty-state p {
-  margin: 0 0 24px;
-  color: var(--color-text-secondary);
-}
-
-.retry-button {
-  margin-top: 16px;
-  padding: 8px 16px;
-  background: var(--color-danger);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.retry-button:hover {
-  opacity: 0.9;
+  color: var(--error);
 }
 
 /* Pagination */
@@ -786,24 +830,27 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-bottom: 32px;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
 }
 
 .page-button {
-  padding: 8px 16px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-base);
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
 }
 
 .page-button:hover:not(:disabled) {
-  background: var(--color-background-soft);
-  border-color: var(--color-border-hover);
+  background: var(--gray-50);
+  border-color: var(--gray-400);
 }
 
 .page-button:disabled {
@@ -812,108 +859,19 @@ export default {
 }
 
 .page-info {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-/* Statistics */
-.statistics-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 24px;
-  background: var(--color-background-soft);
-  border-radius: 12px;
-}
-
-.stat-card {
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 4px;
-}
-
-.stat-value.text-success {
-  color: var(--color-success);
-}
-
-.stat-value.text-warning {
-  color: var(--color-warning);
-}
-
-.stat-value.text-danger {
-  color: var(--color-danger);
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-/* Buttons */
-.btn-primary,
-.btn-icon,
-.btn-text {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
 }
 
-.btn-primary {
-  background: var(--color-primary);
-  color: white;
+.current-page {
+  font-weight: var(--font-semibold);
+  color: var(--gray-900);
 }
 
-.btn-primary:hover {
-  background: var(--color-primary-hover);
-}
-
-.btn-icon {
-  padding: 10px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-}
-
-.btn-icon:hover {
-  background: var(--color-background-soft);
-  border-color: var(--color-border-hover);
-}
-
-.btn-text {
-  padding: 6px 12px;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 13px;
-}
-
-.btn-text:hover {
-  background: var(--color-background-mute);
-}
-
-.btn-text.danger {
-  color: var(--color-danger);
-}
-
-.btn-text.danger:hover {
-  background: var(--color-danger-soft);
-}
-
-.btn-text:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
+/* Utilities */
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -923,34 +881,37 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .mapping-card {
-    background: var(--color-background-dark);
-  }
-  
-  .filter-select,
-  .search-box input {
-    background: var(--color-background-dark);
-  }
-}
-
 /* Responsive */
-@media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
   
-  .filters-section {
+  .filter-content {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .filters {
-    width: 100%;
+  .filter-controls {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 768px) {
+  .mapping-container {
+    padding: var(--space-4);
+  }
+  
+  .mapping-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
   
   .mappings-grid {
@@ -963,6 +924,14 @@ export default {
   
   .flow-arrow {
     transform: rotate(90deg);
+  }
+  
+  .card-footer {
+    flex-wrap: wrap;
+  }
+  
+  .filter-controls {
+    grid-template-columns: 1fr;
   }
 }
 </style>

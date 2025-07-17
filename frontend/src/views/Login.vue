@@ -1,15 +1,5 @@
 <template>
   <div class="login-container">
-    <!-- 배경 패턴 -->
-    <div class="background-pattern">
-      <div class="pattern-grid"></div>
-      <div class="floating-elements">
-        <div class="element element-1"></div>
-        <div class="element element-2"></div>
-        <div class="element element-3"></div>
-      </div>
-    </div>
-
     <div class="login-content">
       <!-- 로그인 폼 섹션 -->
       <div class="login-form-section">
@@ -17,101 +7,97 @@
           <!-- 로고 및 헤더 -->
           <div class="login-header">
             <div class="brand-logo">
-              <h1 class="text-gradient">NiFiCDC</h1>
-              <span class="brand-subtitle">Data Sync Platform</span>
-              <div class="version-display">v{{ appVersion }}</div>
-            </div>
-            <div class="welcome-text">
-              <h2>환영합니다</h2>
-              <p>계정에 로그인하여 데이터 동기화 여정을 시작하세요</p>
+              <v-icon size="48" color="primary">mdi-database-sync</v-icon>
+              <h1>NiFiCDC</h1>
+              <p class="brand-subtitle">실시간 데이터 동기화 플랫폼</p>
             </div>
           </div>
 
           <!-- 로그인 폼 -->
-          <form @submit.prevent="handleLogin" class="modern-form">
-            <div class="form-group">
-              <div class="input-wrapper">
-                <input
-                  v-model="form.email"
-                  type="email"
-                  placeholder=" "
-                  class="modern-input"
-                  :class="{ 'error': emailError }"
-                  required
-                />
-                <label class="modern-label">이메일 주소</label>
-                <div class="input-icon">
-                  <v-icon size="20" color="gray-400">mdi-email-outline</v-icon>
+          <div class="login-card clean-card">
+            <h2 class="login-title">로그인</h2>
+            <p class="login-subtitle">계정에 로그인하여 시작하세요</p>
+            
+            <form @submit.prevent="handleLogin" class="login-form">
+              <div class="form-group">
+                <label class="form-label">이메일 주소</label>
+                <div class="input-wrapper">
+                  <v-icon size="20" class="input-icon">mdi-email-outline</v-icon>
+                  <input
+                    v-model="form.email"
+                    type="email"
+                    class="clean-form-input with-icon"
+                    :class="{ 'error': emailError }"
+                    placeholder="your@email.com"
+                    required
+                  />
+                </div>
+                <div v-if="emailError" class="error-message">
+                  <v-icon size="16">mdi-alert-circle</v-icon>
+                  {{ emailError }}
                 </div>
               </div>
-              <div v-if="emailError" class="error-message">{{ emailError }}</div>
-            </div>
 
-            <div class="form-group">
-              <div class="input-wrapper">
-                <input
-                  v-model="form.password"
-                  :type="showPassword ? 'text' : 'password'"
-                  placeholder=" "
-                  class="modern-input"
-                  :class="{ 'error': passwordError }"
-                  required
-                />
-                <label class="modern-label">비밀번호</label>
-                <div class="input-icon">
-                  <v-icon size="20" color="gray-400">mdi-lock-outline</v-icon>
+              <div class="form-group">
+                <label class="form-label">비밀번호</label>
+                <div class="input-wrapper">
+                  <v-icon size="20" class="input-icon">mdi-lock-outline</v-icon>
+                  <input
+                    v-model="form.password"
+                    :type="showPassword ? 'text' : 'password'"
+                    class="clean-form-input with-icon with-action"
+                    :class="{ 'error': passwordError }"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    class="input-action"
+                    @click="showPassword = !showPassword"
+                  >
+                    <v-icon size="20">
+                      {{ showPassword ? 'mdi-eye-off' : 'mdi-eye' }}
+                    </v-icon>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  class="password-toggle"
-                  @click="showPassword = !showPassword"
-                >
-                  <v-icon size="20" :color="showPassword ? 'primary' : 'gray-400'">
-                    {{ showPassword ? 'mdi-eye-off' : 'mdi-eye' }}
-                  </v-icon>
-                </button>
+                <div v-if="passwordError" class="error-message">
+                  <v-icon size="16">mdi-alert-circle</v-icon>
+                  {{ passwordError }}
+                </div>
               </div>
-              <div v-if="passwordError" class="error-message">{{ passwordError }}</div>
-            </div>
 
-            <div class="form-options">
-              <label class="checkbox-wrapper">
-                <input type="checkbox" v-model="rememberMe">
-                <span class="checkmark"></span>
-                <span class="checkbox-label">로그인 상태 유지</span>
-              </label>
-              <router-link to="/reset-password" class="forgot-link">
-                비밀번호 찾기
-              </router-link>
-            </div>
-
-            <button
-              type="submit"
-              class="login-button"
-              :disabled="loading"
-              :class="{ 'loading': loading }"
-            >
-              <span v-if="!loading" class="button-content">
-                <v-icon size="20" class="mr-2">mdi-login</v-icon>
-                로그인
-              </span>
-              <div v-else class="loading-spinner">
-                <div class="spinner"></div>
-                <span>로그인 중...</span>
+              <div class="form-options">
+                <label class="checkbox-wrapper">
+                  <input type="checkbox" v-model="rememberMe" class="checkbox-input">
+                  <span class="checkbox-label">로그인 상태 유지</span>
+                </label>
+                <a href="#" class="forgot-link">비밀번호를 잊으셨나요?</a>
               </div>
-            </button>
-          </form>
 
-          <!-- 소셜 로그인 (옵션) -->
-          <div class="social-login">
+              <button
+                type="submit"
+                class="clean-button clean-button-primary login-submit"
+                :disabled="loading || !isFormValid"
+              >
+                <v-icon v-if="!loading" size="20">mdi-login</v-icon>
+                <v-progress-circular v-else indeterminate size="20" width="2" />
+                <span>{{ loading ? '로그인 중...' : '로그인' }}</span>
+              </button>
+            </form>
+
             <div class="divider">
               <span>또는</span>
             </div>
-            <button class="social-button github" type="button" @click="loginWithGitHub">
-              <v-icon size="20" class="mr-2">mdi-github</v-icon>
+
+            <button class="clean-button clean-button-secondary social-button" @click="loginWithGitHub">
+              <v-icon size="20">mdi-github</v-icon>
               GitHub으로 로그인
             </button>
-            
+          </div>
+
+          <div class="login-footer">
+            <p>계정이 없으신가요? <a href="#" class="link">회원가입</a></p>
+            <p class="version">Version {{ appVersion }}</p>
           </div>
         </div>
       </div>
@@ -119,55 +105,60 @@
       <!-- 우측 비주얼 섹션 -->
       <div class="visual-section">
         <div class="visual-content">
-          <div class="visual-header">
-            <h2>Real-time Data Sync</h2>
-            <p>실시간 데이터 동기화로 비즈니스의 디지털 전환을 가속화하세요</p>
-          </div>
-          
-          <div class="feature-highlights">
-            <div class="highlight-item">
-              <div class="highlight-icon">
-                <v-icon size="24" color="white">mdi-lightning-bolt</v-icon>
+          <h2 class="visual-title">데이터 동기화의 새로운 기준</h2>
+          <p class="visual-subtitle">
+            NiFiCDC로 실시간 데이터 파이프라인을 구축하고<br>
+            비즈니스 인사이트를 빠르게 확보하세요
+          </p>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div class="feature-icon">
+                <v-icon size="32">mdi-lightning-bolt</v-icon>
               </div>
-              <div class="highlight-text">
-                <h3>실시간 처리</h3>
-                <p>밀리초 단위의 초고속 데이터 동기화</p>
-              </div>
+              <h3>초고속 동기화</h3>
+              <p>밀리초 단위의 실시간 데이터 처리</p>
             </div>
-            
-            <div class="highlight-item">
-              <div class="highlight-icon">
-                <v-icon size="24" color="white">mdi-shield-check</v-icon>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <v-icon size="32">mdi-shield-check</v-icon>
               </div>
-              <div class="highlight-text">
-                <h3>기업급 보안</h3>
-                <p>엔터프라이즈 수준의 보안과 신뢰성</p>
-              </div>
+              <h3>엔터프라이즈 보안</h3>
+              <p>금융권 수준의 보안과 안정성</p>
             </div>
-            
-            <div class="highlight-item">
-              <div class="highlight-icon">
-                <v-icon size="24" color="white">mdi-chart-timeline-variant</v-icon>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <v-icon size="32">mdi-chart-line</v-icon>
               </div>
-              <div class="highlight-text">
-                <h3>스마트 모니터링</h3>
-                <p>AI 기반 성능 분석과 최적화</p>
+              <h3>지능형 모니터링</h3>
+              <p>AI 기반 성능 최적화와 예측 분석</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <v-icon size="32">mdi-puzzle</v-icon>
               </div>
+              <h3>쉬운 통합</h3>
+              <p>다양한 데이터베이스와 시스템 지원</p>
             </div>
           </div>
 
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number">99.9%</div>
-              <div class="stat-label">Uptime</div>
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-value">99.9%</div>
+              <div class="stat-label">가동률</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-number">10M+</div>
-              <div class="stat-label">Records/sec</div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <div class="stat-value">10M+</div>
+              <div class="stat-label">초당 처리량</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-number">500+</div>
-              <div class="stat-label">Enterprises</div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <div class="stat-value">500+</div>
+              <div class="stat-label">기업 고객</div>
             </div>
           </div>
         </div>
@@ -279,391 +270,199 @@ export default {
 </script>
 
 <style scoped>
-/* 로그인 페이지 전용 스타일 */
+/* Login Container */
 .login-container {
   min-height: 100vh;
-  position: relative;
-  overflow: hidden;
+  background: var(--gray-50);
 }
 
-/* 배경 패턴 */
-.background-pattern {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, 
-    var(--primary-50) 0%, 
-    var(--primary-100) 25%, 
-    var(--gray-50) 50%, 
-    var(--primary-50) 75%, 
-    var(--primary-100) 100%);
-}
-
-.pattern-grid {
-  position: absolute;
-  inset: 0;
-  background-image: 
-    radial-gradient(circle at 1px 1px, var(--primary-200) 1px, transparent 0);
-  background-size: 40px 40px;
-  opacity: 0.3;
-}
-
-.floating-elements {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.element {
-  position: absolute;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-400), var(--primary-600));
-  opacity: 0.1;
-  animation: float 15s infinite;
-}
-
-.element-1 {
-  width: 150px;
-  height: 150px;
-  top: 10%;
-  left: 5%;
-  animation-delay: 0s;
-}
-
-.element-2 {
-  width: 100px;
-  height: 100px;
-  top: 70%;
-  right: 10%;
-  animation-delay: -5s;
-}
-
-.element-3 {
-  width: 80px;
-  height: 80px;
-  bottom: 15%;
-  left: 70%;
-  animation-delay: -10s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-20px) rotate(120deg); }
-  66% { transform: translateY(15px) rotate(240deg); }
-}
-
-/* 메인 콘텐츠 */
 .login-content {
-  position: relative;
-  z-index: 10;
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 100vh;
 }
 
-/* 로그인 폼 섹션 */
+/* Login Form Section */
 .login-form-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
+  padding: var(--space-8);
+  background: var(--white);
 }
 
 .login-form-container {
   width: 100%;
-  max-width: 450px;
+  max-width: 420px;
 }
 
-/* 로그인 헤더 */
+/* Brand Logo */
 .login-header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: var(--space-10);
+}
+
+.brand-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .brand-logo h1 {
-  font-size: 2.5rem;
-  font-weight: 900;
-  margin: 0 0 0.5rem 0;
-  background: linear-gradient(135deg, var(--primary-600), var(--primary-800));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.brand-subtitle {
-  color: var(--gray-600);
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.version-display {
-  color: var(--gray-500);
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  background: var(--gray-100);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--gray-200);
-  display: inline-block;
-  font-family: 'Monaco', 'Consolas', monospace;
-}
-
-.welcome-text {
-  margin-top: 2rem;
-}
-
-.welcome-text h2 {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-bold);
   color: var(--gray-900);
-  margin: 0 0 0.5rem 0;
-}
-
-.welcome-text p {
-  color: var(--gray-600);
-  font-size: 1rem;
-  line-height: 1.5;
   margin: 0;
 }
 
-/* 모던 폼 */
-.modern-form {
+.brand-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--gray-600);
+  margin: 0;
+}
+
+/* Login Card */
+.login-card {
+  padding: var(--space-8);
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+}
+
+.login-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-2);
+  text-align: center;
+}
+
+.login-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--gray-600);
+  margin: 0 0 var(--space-8);
+  text-align: center;
+}
+
+/* Login Form */
+.login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-6);
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
+}
+
+.form-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: var(--gray-700);
 }
 
 .input-wrapper {
   position: relative;
 }
 
-.modern-input {
-  width: 100%;
-  padding: 1rem 3rem 1rem 3rem;
-  border: 2px solid var(--gray-300);
-  border-radius: var(--radius-xl);
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  background: white;
-  font-family: inherit;
-}
-
-.modern-input:focus {
-  border-color: var(--primary-500);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
-}
-
-.modern-input.error {
-  border-color: var(--error-500);
-}
-
-.modern-input.error:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-
-.modern-label {
-  position: absolute;
-  left: 3rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1rem;
-  color: var(--gray-500);
-  transition: all 0.2s ease;
-  pointer-events: none;
-  background: white;
-  padding: 0 0.5rem;
-}
-
-.modern-input:focus + .modern-label,
-.modern-input:not(:placeholder-shown) + .modern-label {
-  top: 0;
-  font-size: 0.75rem;
-  color: var(--primary-600);
-  font-weight: 500;
-}
-
-.modern-input.error:focus + .modern-label,
-.modern-input.error:not(:placeholder-shown) + .modern-label {
-  color: var(--error-600);
-}
-
 .input-icon {
   position: absolute;
-  left: 1rem;
+  left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
+  color: var(--gray-400);
   pointer-events: none;
 }
 
-.password-toggle {
+.clean-form-input.with-icon {
+  padding-left: var(--space-10);
+}
+
+.clean-form-input.with-action {
+  padding-right: var(--space-10);
+}
+
+.input-action {
   position: absolute;
-  right: 1rem;
+  right: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
+  padding: var(--space-2);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: var(--radius-md);
-  transition: background-color 0.2s ease;
+  color: var(--gray-400);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-base);
 }
 
-.password-toggle:hover {
+.input-action:hover {
   background: var(--gray-100);
+  color: var(--gray-600);
 }
 
 .error-message {
-  color: var(--error-600);
-  font-size: 0.875rem;
-  font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--error);
 }
 
-/* 폼 옵션 */
+/* Form Options */
 .form-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0.5rem 0;
 }
 
 .checkbox-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-2);
   cursor: pointer;
-  user-select: none;
 }
 
-.checkbox-wrapper input[type="checkbox"] {
-  display: none;
-}
-
-.checkmark {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--gray-300);
-  border-radius: var(--radius-sm);
-  position: relative;
-  transition: all 0.2s ease;
-  background: white;
-}
-
-.checkbox-wrapper input:checked + .checkmark {
-  background: var(--primary-600);
-  border-color: var(--primary-600);
-}
-
-.checkbox-wrapper input:checked + .checkmark::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) rotate(45deg);
-  width: 6px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
+.checkbox-input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
 }
 
 .checkbox-label {
+  font-size: var(--font-size-sm);
   color: var(--gray-700);
-  font-size: 0.875rem;
-  font-weight: 500;
+  user-select: none;
 }
 
 .forgot-link {
-  color: var(--primary-600);
+  font-size: var(--font-size-sm);
+  color: var(--primary);
   text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: color 0.2s ease;
+  transition: all var(--transition-base);
 }
 
 .forgot-link:hover {
-  color: var(--primary-700);
+  color: var(--primary-dark);
   text-decoration: underline;
 }
 
-/* 로그인 버튼 */
-.login-button {
+/* Login Submit Button */
+.login-submit {
   width: 100%;
-  padding: 1rem 2rem;
-  background: var(--primary-600);
-  color: white;
-  border: none;
-  border-radius: var(--radius-xl);
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  position: relative;
-  overflow: hidden;
+  gap: var(--space-2);
+  font-size: var(--font-size-base);
+  padding: var(--space-3) var(--space-4);
 }
 
-.login-button:hover:not(:disabled) {
-  background: var(--primary-700);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
-}
-
-.login-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.button-content {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.loading-spinner {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid transparent;
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 소셜 로그인 */
-.social-login {
-  margin-top: 2rem;
-}
-
+/* Divider */
 .divider {
   position: relative;
   text-align: center;
-  margin: 1.5rem 0;
+  margin: var(--space-6) 0;
 }
 
 .divider::before {
@@ -673,46 +472,60 @@ export default {
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--gray-300);
+  background: var(--gray-200);
 }
 
 .divider span {
-  background: white;
-  padding: 0 1rem;
+  background: var(--white);
+  padding: 0 var(--space-4);
   color: var(--gray-500);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  position: relative;
 }
 
+/* Social Button */
 .social-button {
   width: 100%;
-  padding: 0.875rem 1.5rem;
-  background: var(--gray-900);
-  color: white;
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
-.social-button:hover {
-  background: var(--gray-800);
-  transform: translateY(-1px);
+/* Login Footer */
+.login-footer {
+  text-align: center;
+  margin-top: var(--space-8);
 }
 
-/* 우측 비주얼 섹션 */
+.login-footer p {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  margin: var(--space-2) 0;
+}
+
+.login-footer .link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: var(--font-medium);
+  transition: all var(--transition-base);
+}
+
+.login-footer .link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+.version {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+}
+
+/* Visual Section */
 .visual-section {
-  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: var(--space-8);
   position: relative;
   overflow: hidden;
 }
@@ -721,288 +534,151 @@ export default {
   content: '';
   position: absolute;
   inset: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .visual-content {
   position: relative;
-  z-index: 10;
+  z-index: 1;
   max-width: 500px;
-  color: white;
-  text-align: center;
+  color: var(--white);
 }
 
-.visual-header h2 {
-  font-size: 2.25rem;
-  font-weight: 800;
-  margin: 0 0 1rem 0;
+.visual-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-bold);
+  margin: 0 0 var(--space-4);
   line-height: 1.2;
 }
 
-.visual-header p {
-  font-size: 1.125rem;
+.visual-subtitle {
+  font-size: var(--font-size-lg);
   opacity: 0.9;
   line-height: 1.6;
-  margin: 0 0 3rem 0;
+  margin: 0 0 var(--space-10);
 }
 
-/* 기능 하이라이트 */
-.feature-highlights {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-bottom: 3rem;
+/* Feature Grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
 }
 
-.highlight-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  text-align: left;
-  padding: 1rem;
+.feature-card {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.2s ease;
-}
-
-.highlight-item:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateX(10px);
-}
-
-.highlight-icon {
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  transition: all var(--transition-base);
+}
+
+.feature-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-base);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  margin-bottom: var(--space-3);
+  color: var(--white);
 }
 
-.highlight-text h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0 0 0.25rem 0;
+.feature-card h3 {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-semibold);
+  margin: 0 0 var(--space-2);
 }
 
-.highlight-text p {
-  font-size: 0.875rem;
+.feature-card p {
+  font-size: var(--font-size-sm);
   opacity: 0.8;
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
-/* 통계 그리드 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-
-.stat-card {
+/* Stats Row */
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
   background: rgba(255, 255, 255, 0.1);
-  padding: 1.5rem 1rem;
-  border-radius: var(--radius-lg);
-  text-align: center;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
 }
 
-.stat-number {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin-bottom: 0.25rem;
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  margin-bottom: var(--space-1);
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   opacity: 0.8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 500;
 }
 
-/* 반응형 디자인 */
+.stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive Design */
 @media (max-width: 1024px) {
   .login-content {
     grid-template-columns: 1fr;
   }
   
   .visual-section {
-    order: -1;
-    min-height: 40vh;
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-form-section {
+    padding: var(--space-4);
   }
   
-  .feature-highlights {
-    grid-template-columns: 1fr;
+  .login-card {
+    padding: var(--space-6);
+  }
+  
+  .brand-logo h1 {
+    font-size: var(--font-size-3xl);
+  }
+  
+  .form-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
   }
 }
 
-/* 태블릿에서 visual section 축소 */
-@media (max-width: 768px) {
-  .visual-section {
-    min-height: 30vh;
-  }
-}
-
-/* 모바일에서 visual section 완전 숨김 */
 @media (max-width: 640px) {
-  .login-content {
-    display: block !important;
-    grid-template-columns: none !important;
-  }
-  
-  .visual-section {
-    display: none !important;
-  }
-  
-  .login-form-section {
-    width: 100% !important;
-    min-height: 100vh !important;
-    padding: 1rem !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .login-form-section {
-    padding: 1.5rem 1rem;
-  }
-  
   .login-form-container {
     max-width: 100%;
   }
   
-  .brand-logo h1 {
-    font-size: 2rem;
-  }
-  
-  .welcome-text h2 {
-    font-size: 1.5rem;
-  }
-  
-  .visual-header h2 {
-    font-size: 1.75rem;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-options {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+  .login-card {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
   }
 }
-
-@media (max-width: 640px) {
-  /* 로그인 컨테이너 모바일 최적화 */
-  .login-container {
-    min-height: 100vh;
-    background: #ffffff;
-  }
-  
-  .background-pattern {
-    display: none; /* 모바일에서 배경 패턴 숨김 */
-  }
-  
-  .login-form-section {
-    background: #ffffff !important;
-    padding: 2rem 1rem !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-  
-  .login-form-container {
-    padding: 1.5rem;
-    max-width: 400px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  
-  .modern-input {
-    padding: 0.875rem 2.5rem 0.875rem 2.5rem;
-    font-size: 16px; /* iOS 줌 방지 */
-  }
-  
-  .modern-label {
-    left: 2.5rem;
-    font-size: 14px;
-  }
-  
-  .input-icon {
-    left: 0.75rem;
-  }
-  
-  .password-toggle {
-    right: 0.75rem;
-  }
-  
-  .brand-logo h1 {
-    font-size: 2rem;
-  }
-  
-  .welcome-text h2 {
-    font-size: 1.5rem;
-  }
-  
-  .welcome-text p {
-    font-size: 0.9rem;
-  }
-  
-  .login-button {
-    min-height: 48px;
-    font-size: 16px;
-    width: 100%;
-  }
-  
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  .form-options {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-}
-
-/* 작은 모바일 디바이스 */
-@media (max-width: 375px) {
-  .login-form-container {
-    padding: 1.5rem 1rem;
-  }
-  
-  .brand-logo h1 {
-    font-size: 1.75rem;
-  }
-  
-  .welcome-text h2 {
-    font-size: 1.25rem;
-  }
-  
-  .modern-input {
-    padding: 0.75rem 2.25rem 0.75rem 2.25rem;
-  }
-}
-
-/* 터치 디바이스 최적화 */
-@media (hover: none) and (pointer: coarse) {
-  .modern-btn,
-  .forgot-password,
-  .password-toggle {
-    min-height: 44px;
-    min-width: 44px;
-  }
-  
-  .modern-btn:hover {
-    transform: none;
-  }
-}
-
 </style>

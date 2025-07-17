@@ -1,272 +1,208 @@
 <template>
   <AppLayout>
-    <div class="monitoring-dashboard">
-    <v-container fluid>
-      <!-- 헤더 -->
-      <v-row class="mb-4">
-        <v-col cols="12">
-          <div class="d-flex justify-space-between align-center">
-            <div>
-              <h1 class="text-h4 font-weight-bold">모니터링 대시보드</h1>
-              <p class="text-subtitle-1 text-medium-emphasis">
-                실시간 시스템 상태 및 성능 모니터링
-              </p>
-            </div>
-            <div class="d-flex align-center gap-2">
-              <v-chip
-                :color="connectionStatus.color"
-                size="small"
-                :prepend-icon="connectionStatus.icon"
-                variant="tonal"
+    <div class="monitoring-container">
+      <!-- Clean Header -->
+      <div class="monitoring-header">
+        <div class="header-content">
+          <h1 class="page-title">모니터링 대시보드</h1>
+          <p class="page-subtitle">실시간 시스템 상태 및 성능 모니터링</p>
+        </div>
+        <div class="header-actions">
+          <div class="connection-status" :class="'status-' + connectionStatus.status">
+            <v-icon size="16">{{ connectionStatus.icon }}</v-icon>
+            <span>{{ connectionStatus.text }}</span>
+          </div>
+          <button class="clean-button clean-button-secondary" @click="refreshData" :disabled="loading">
+            <v-icon size="18" :class="{ 'spin': loading }">mdi-refresh</v-icon>
+            새로고침
+          </button>
+          <button class="clean-button clean-button-secondary" @click="showSettings = true">
+            <v-icon size="18">mdi-cog</v-icon>
+            설정
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="metric-grid">
+        <div class="metric-card primary">
+          <div class="metric-icon">
+            <v-icon size="40">mdi-pulse</v-icon>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{ metrics.performance?.throughput || 0 }}</div>
+            <div class="metric-label">처리량 (시간당)</div>
+          </div>
+        </div>
+        
+        <div class="metric-card success">
+          <div class="metric-icon">
+            <v-icon size="40">mdi-speedometer</v-icon>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{ metrics.performance?.avgLatency || 0 }}ms</div>
+            <div class="metric-label">평균 지연시간</div>
+          </div>
+        </div>
+        
+        <div class="metric-card warning">
+          <div class="metric-icon">
+            <v-icon size="40">mdi-alert-circle</v-icon>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{ metrics.performance?.errorRate || 0 }}%</div>
+            <div class="metric-label">에러율</div>
+          </div>
+        </div>
+        
+        <div class="metric-card info">
+          <div class="metric-icon">
+            <v-icon size="40">mdi-chart-line</v-icon>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{ metrics.summary?.runningJobs || 0 }}</div>
+            <div class="metric-label">실행 중인 작업</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div class="content-grid">
+        <!-- Chart Section -->
+        <div class="chart-section clean-card">
+          <div class="section-header">
+            <h2 class="section-title">시간대별 실행 통계</h2>
+            <div class="chart-controls">
+              <button 
+                v-for="period in [{ value: '1h', label: '1시간' }, { value: '6h', label: '6시간' }, { value: '24h', label: '24시간' }]"
+                :key="period.value"
+                class="period-button"
+                :class="{ active: chartPeriod === period.value }"
+                @click="chartPeriod = period.value; updateChartData()"
               >
-                {{ connectionStatus.text }}
-              </v-chip>
-              <v-btn
-                variant="outlined"
-                prepend-icon="mdi-refresh"
-                @click="refreshData"
-                :loading="loading"
-              >
-                새로고침
-              </v-btn>
-              <v-btn
-                variant="outlined"
-                prepend-icon="mdi-cog"
-                @click="showSettings = true"
-              >
-                설정
-              </v-btn>
+                {{ period.label }}
+              </button>
             </div>
           </div>
-        </v-col>
-      </v-row>
+          <div class="chart-container">
+            <canvas ref="executionChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- System Health -->
+        <div class="health-section clean-card">
+          <div class="section-header">
+            <h2 class="section-title">시스템 상태</h2>
+          </div>
+          
+          <div class="health-content">
+            <div class="overall-health">
+              <div class="health-header">
+                <span>전체 상태</span>
+                <span class="status-badge" :class="'status-' + health.overall?.status">
+                  {{ getHealthLabel(health.overall?.status) }}
+                </span>
+              </div>
+              <div class="health-progress">
+                <div 
+                  class="progress-fill" 
+                  :class="'status-' + health.overall?.status"
+                  :style="{ width: (health.overall?.score || 0) + '%' }"
+                ></div>
+              </div>
+            </div>
+            
+            <div class="component-health">
+              <h3>구성 요소 상태</h3>
+              <div class="component-list">
+                <div v-for="(component, key) in health.components" :key="key" class="component-item">
+                  <span class="component-name">{{ getComponentLabel(key) }}</span>
+                  <span class="status-indicator" :class="'status-' + component.status">
+                    <v-icon size="16">{{ getHealthIcon(component.status) }}</v-icon>
+                    {{ getHealthLabel(component.status) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="health.components?.server" class="server-resources">
+              <h3>서버 리소스</h3>
+              <div class="resource-item">
+                <div class="resource-header">
+                  <span>메모리</span>
+                  <span>{{ health.components.server.memoryUsage }}%</span>
+                </div>
+                <div class="resource-progress">
+                  <div 
+                    class="progress-fill primary"
+                    :style="{ width: health.components.server.memoryUsage + '%' }"
+                  ></div>
+                </div>
+              </div>
+              <div class="resource-item">
+                <div class="resource-header">
+                  <span>CPU</span>
+                  <span>{{ health.components.server.cpuUsage }}%</span>
+                </div>
+                <div class="resource-progress">
+                  <div 
+                    class="progress-fill warning"
+                    :style="{ width: health.components.server.cpuUsage + '%' }"
+                  ></div>
+                </div>
+              </div>
+              <div class="uptime">
+                업타임: {{ formatUptime(health.components.server.uptime) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <!-- 실시간 메트릭 카드 -->
-      <v-row class="mb-4">
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="primary" variant="tonal" class="metric-card">
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-icon size="40" class="mr-3">mdi-pulse</v-icon>
-                <div>
-                  <div class="text-h4 font-weight-bold">{{ metrics.performance?.throughput || 0 }}</div>
-                  <div class="text-body-2">처리량 (시간당)</div>
-                </div>
+      <!-- Job Statistics -->
+      <div class="stats-grid">
+        <!-- Top Jobs -->
+        <div class="job-stats clean-card">
+          <div class="section-header">
+            <h2 class="section-title">상위 성능 작업</h2>
+          </div>
+          <div class="job-list">
+            <div v-for="job in topJobs" :key="job.id" class="job-item">
+              <div class="job-rank">{{ job.executionCount }}</div>
+              <div class="job-info">
+                <h4>{{ job.name }}</h4>
+                <p>평균 실행시간: {{ job.avgDuration }}ms | 성공률: {{ job.successRate }}%</p>
               </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
+            </div>
+          </div>
+        </div>
         
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="success" variant="tonal" class="metric-card">
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-icon size="40" class="mr-3">mdi-speedometer</v-icon>
-                <div>
-                  <div class="text-h4 font-weight-bold">{{ metrics.performance?.avgLatency || 0 }}ms</div>
-                  <div class="text-body-2">평균 지연시간</div>
-                </div>
+        <!-- Recent Executions -->
+        <div class="executions clean-card">
+          <div class="section-header">
+            <h2 class="section-title">최근 실행 내역</h2>
+          </div>
+          <div class="execution-list">
+            <div v-for="execution in recentExecutions" :key="execution.id" class="execution-item">
+              <div class="execution-icon" :class="'status-' + execution.status">
+                <v-icon size="16">{{ getExecutionStatusIcon(execution.status) }}</v-icon>
               </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="warning" variant="tonal" class="metric-card">
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-icon size="40" class="mr-3">mdi-alert-circle</v-icon>
-                <div>
-                  <div class="text-h4 font-weight-bold">{{ metrics.performance?.errorRate || 0 }}%</div>
-                  <div class="text-body-2">에러율</div>
-                </div>
+              <div class="execution-info">
+                <h4>{{ execution.job?.name }}</h4>
+                <p>
+                  {{ $filters.formatDate(execution.startedAt) }} | 
+                  {{ execution.duration ? `${execution.duration}ms` : '실행 중' }}
+                </p>
               </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="info" variant="tonal" class="metric-card">
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-icon size="40" class="mr-3">mdi-chart-line</v-icon>
-                <div>
-                  <div class="text-h4 font-weight-bold">{{ metrics.summary?.runningJobs || 0 }}</div>
-                  <div class="text-body-2">실행 중인 작업</div>
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+              <span class="status-badge" :class="'status-' + execution.status">
+                {{ getExecutionStatusLabel(execution.status) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <!-- 메인 차트 영역 -->
-      <v-row class="mb-4">
-        <v-col cols="12" md="8">
-          <v-card>
-            <v-card-title class="d-flex justify-space-between align-center">
-              <span>시간대별 실행 통계</span>
-              <v-btn-toggle
-                v-model="chartPeriod"
-                variant="outlined"
-                density="compact"
-                @update:model-value="updateChartData"
-              >
-                <v-btn value="1h">1시간</v-btn>
-                <v-btn value="6h">6시간</v-btn>
-                <v-btn value="24h">24시간</v-btn>
-              </v-btn-toggle>
-            </v-card-title>
-            <v-card-text>
-              <div class="chart-container">
-                <canvas ref="executionChart"></canvas>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        
-        <v-col cols="12" md="4">
-          <v-card class="fill-height">
-            <v-card-title>시스템 상태</v-card-title>
-            <v-card-text>
-              <div class="mb-4">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <span>전체 상태</span>
-                  <v-chip
-                    :color="getHealthColor(health.overall?.status)"
-                    size="small"
-                    variant="tonal"
-                  >
-                    {{ getHealthLabel(health.overall?.status) }}
-                  </v-chip>
-                </div>
-                <v-progress-linear
-                  :model-value="health.overall?.score || 0"
-                  :color="getHealthColor(health.overall?.status)"
-                  height="8"
-                  rounded
-                />
-              </div>
-              
-              <div class="mb-3">
-                <div class="text-subtitle-2 mb-2">구성 요소 상태</div>
-                <div v-for="(component, key) in health.components" :key="key" class="mb-2">
-                  <div class="d-flex justify-space-between align-center">
-                    <span class="text-body-2">{{ getComponentLabel(key) }}</span>
-                    <v-chip
-                      :color="getHealthColor(component.status)"
-                      size="x-small"
-                      variant="tonal"
-                    >
-                      {{ getHealthLabel(component.status) }}
-                    </v-chip>
-                  </div>
-                </div>
-              </div>
-              
-              <div v-if="health.components?.server" class="mb-3">
-                <div class="text-subtitle-2 mb-2">서버 리소스</div>
-                <div class="mb-2">
-                  <div class="d-flex justify-space-between align-center mb-1">
-                    <span class="text-body-2">메모리</span>
-                    <span class="text-body-2">{{ health.components.server.memoryUsage }}%</span>
-                  </div>
-                  <v-progress-linear
-                    :model-value="health.components.server.memoryUsage"
-                    color="primary"
-                    height="4"
-                    rounded
-                  />
-                </div>
-                <div class="mb-2">
-                  <div class="d-flex justify-space-between align-center mb-1">
-                    <span class="text-body-2">CPU</span>
-                    <span class="text-body-2">{{ health.components.server.cpuUsage }}%</span>
-                  </div>
-                  <v-progress-linear
-                    :model-value="health.components.server.cpuUsage"
-                    color="warning"
-                    height="4"
-                    rounded
-                  />
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                  업타임: {{ formatUptime(health.components.server.uptime) }}
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- 상위 작업 및 최근 실행 -->
-      <v-row>
-        <v-col cols="12" md="6">
-          <v-card>
-            <v-card-title>상위 성능 작업</v-card-title>
-            <v-card-text>
-              <v-list dense>
-                <v-list-item
-                  v-for="job in topJobs"
-                  :key="job.id"
-                  class="px-0"
-                >
-                  <template #prepend>
-                    <v-avatar color="primary" size="small">
-                      {{ job.executionCount }}
-                    </v-avatar>
-                  </template>
-                  <v-list-item-title>{{ job.name }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    평균 실행시간: {{ job.avgDuration }}ms | 
-                    성공률: {{ job.successRate }}%
-                  </v-list-item-subtitle>
-                </v-list-item>
-              </v-list>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        
-        <v-col cols="12" md="6">
-          <v-card>
-            <v-card-title>최근 실행 내역</v-card-title>
-            <v-card-text>
-              <v-list dense>
-                <v-list-item
-                  v-for="execution in recentExecutions"
-                  :key="execution.id"
-                  class="px-0"
-                >
-                  <template #prepend>
-                    <v-icon
-                      :color="getExecutionStatusColor(execution.status)"
-                      size="small"
-                    >
-                      {{ getExecutionStatusIcon(execution.status) }}
-                    </v-icon>
-                  </template>
-                  <v-list-item-title>{{ execution.job?.name }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    {{ $filters.formatDate(execution.startedAt) }} | 
-                    {{ execution.duration ? `${execution.duration}ms` : '실행 중' }}
-                  </v-list-item-subtitle>
-                  <template #append>
-                    <v-chip
-                      :color="getExecutionStatusColor(execution.status)"
-                      size="x-small"
-                      variant="tonal"
-                    >
-                      {{ getExecutionStatusLabel(execution.status) }}
-                    </v-chip>
-                  </template>
-                </v-list-item>
-              </v-list>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- 설정 대화상자 -->
+      <!-- Settings Dialog -->
       <v-dialog v-model="showSettings" max-width="600">
         <v-card>
           <v-card-title>모니터링 설정</v-card-title>
@@ -324,7 +260,6 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
-    </v-container>
     </div>
   </AppLayout>
 </template>
@@ -392,13 +327,13 @@ export default {
     const connectionStatus = computed(() => {
       if (monitoringService.isConnectedToWebSocket()) {
         return {
-          color: 'success',
+          status: 'success',
           icon: 'mdi-wifi',
           text: '연결됨'
         };
       } else {
         return {
-          color: 'error',
+          status: 'error',
           icon: 'mdi-wifi-off',
           text: '연결 안됨'
         };
@@ -514,8 +449,8 @@ export default {
           datasets: [{
             label: '실행 횟수',
             data: [],
-            borderColor: 'rgb(33, 150, 243)',
-            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+            borderColor: '#1976D2',
+            backgroundColor: 'rgba(25, 118, 210, 0.1)',
             tension: 0.4,
             fill: true
           }]
@@ -663,6 +598,15 @@ export default {
       return labels[status] || '알 수 없음';
     };
 
+    const getHealthIcon = (status) => {
+      const icons = {
+        healthy: 'mdi-check-circle',
+        degraded: 'mdi-alert',
+        error: 'mdi-close-circle'
+      };
+      return icons[status] || 'mdi-help-circle';
+    };
+
     const getComponentLabel = (key) => {
       const labels = {
         database: '데이터베이스',
@@ -772,6 +716,7 @@ export default {
       saveSettings,
       getHealthColor,
       getHealthLabel,
+      getHealthIcon,
       getComponentLabel,
       getExecutionStatusColor,
       getExecutionStatusIcon,
@@ -783,78 +728,451 @@ export default {
 </script>
 
 <style scoped>
-.monitoring-dashboard {
-  padding: 20px;
+.monitoring-container {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.monitoring-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-8);
+}
+
+.page-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--gray-600);
+  margin-top: var(--space-2);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+}
+
+.connection-status.status-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.connection-status.status-error {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+/* Metric Grid */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .metric-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  transition: all var(--transition-base);
+  border: 2px solid;
 }
 
 .metric-card:hover {
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.metric-card.primary { 
+  border-color: var(--primary); 
+  background: var(--primary-soft);
+}
+
+.metric-card.success { 
+  border-color: var(--success); 
+  background: var(--success-soft);
+}
+
+.metric-card.warning { 
+  border-color: var(--warning); 
+  background: var(--warning-soft);
+}
+
+.metric-card.info { 
+  border-color: var(--info); 
+  background: var(--info-soft);
+}
+
+.metric-icon {
+  flex-shrink: 0;
+}
+
+.metric-card.primary .metric-icon { color: var(--primary); }
+.metric-card.success .metric-icon { color: var(--success); }
+.metric-card.warning .metric-icon { color: var(--warning); }
+.metric-card.info .metric-icon { color: var(--info); }
+
+.metric-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+}
+
+.metric-label {
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  margin-top: var(--space-1);
+}
+
+/* Content Grid */
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+/* Chart Section */
+.chart-section {
+  min-height: 400px;
+}
+
+.chart-controls {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.period-button {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  border-radius: var(--radius-base);
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.period-button:hover {
+  background: var(--gray-50);
+}
+
+.period-button.active {
+  background: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
 }
 
 .chart-container {
   position: relative;
   height: 300px;
   width: 100%;
+  padding: var(--space-4);
 }
 
-.v-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+/* Health Section */
+.health-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
-.v-list-item {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+.overall-health {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.v-list-item:last-child {
-  border-bottom: none;
+.health-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-base);
 }
 
-.gap-2 {
-  gap: 8px;
+.health-progress {
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
 }
 
-.fill-height {
+.progress-fill {
   height: 100%;
+  transition: width var(--transition-base);
 }
 
-.text-h4 {
-  font-size: 1.75rem !important;
-  font-weight: 600 !important;
+.progress-fill.status-healthy { background: var(--success); }
+.progress-fill.status-degraded { background: var(--warning); }
+.progress-fill.status-error { background: var(--error); }
+.progress-fill.primary { background: var(--primary); }
+.progress-fill.warning { background: var(--warning); }
+
+.component-health h3,
+.server-resources h3 {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-semibold);
+  color: var(--gray-700);
+  margin: 0 0 var(--space-3);
 }
 
-.text-subtitle-1 {
-  font-size: 1rem !important;
-  opacity: 0.7;
+.component-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.text-body-2 {
-  font-size: 0.875rem !important;
+.component-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-sm);
 }
 
-.text-caption {
-  font-size: 0.75rem !important;
-  opacity: 0.6;
+.component-name {
+  color: var(--gray-700);
 }
 
-.v-progress-linear {
-  border-radius: 4px;
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
 }
 
-.v-chip {
-  font-size: 0.75rem;
-  font-weight: 500;
+.status-indicator.status-healthy { color: var(--success); }
+.status-indicator.status-degraded { color: var(--warning); }
+.status-indicator.status-error { color: var(--error); }
+
+.resource-item {
+  margin-bottom: var(--space-3);
 }
 
-@media (max-width: 960px) {
-  .monitoring-dashboard {
-    padding: 16px;
+.resource-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  margin-bottom: var(--space-1);
+}
+
+.resource-progress {
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.uptime {
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  margin-top: var(--space-2);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+/* Job List */
+.job-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.job-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--gray-50);
+  border-radius: var(--radius-base);
+  transition: all var(--transition-base);
+}
+
+.job-item:hover {
+  background: var(--gray-100);
+}
+
+.job-rank {
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  color: var(--white);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-bold);
+  flex-shrink: 0;
+}
+
+.job-info h4 {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-medium);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-1);
+}
+
+.job-info p {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  margin: 0;
+}
+
+/* Execution List */
+.execution-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.execution-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--gray-50);
+  border-radius: var(--radius-base);
+  transition: all var(--transition-base);
+}
+
+.execution-item:hover {
+  background: var(--gray-100);
+}
+
+.execution-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.execution-icon.status-queued { background: var(--gray-200); color: var(--gray-600); }
+.execution-icon.status-running { background: var(--warning-soft); color: var(--warning); }
+.execution-icon.status-completed { background: var(--success-soft); color: var(--success); }
+.execution-icon.status-failed { background: var(--error-soft); color: var(--error); }
+.execution-icon.status-cancelled { background: var(--warning-soft); color: var(--warning); }
+
+.execution-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.execution-info h4 {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-medium);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-1);
+}
+
+.execution-info p {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.status-badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+  text-transform: uppercase;
+}
+
+.status-badge.status-healthy,
+.status-badge.status-completed { 
+  background: var(--success-soft); 
+  color: var(--success); 
+}
+
+.status-badge.status-degraded,
+.status-badge.status-running,
+.status-badge.status-cancelled { 
+  background: var(--warning-soft); 
+  color: var(--warning); 
+}
+
+.status-badge.status-error,
+.status-badge.status-failed { 
+  background: var(--error-soft); 
+  color: var(--error); 
+}
+
+.status-badge.status-queued { 
+  background: var(--gray-100); 
+  color: var(--gray-600); 
+}
+
+/* Utilities */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .monitoring-container {
+    padding: var(--space-4);
+  }
+  
+  .monitoring-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+  
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
   
   .chart-container {

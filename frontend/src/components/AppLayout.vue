@@ -280,20 +280,19 @@ export default {
 </script>
 
 <style scoped>
-/* 앱 레이아웃 전체 컨테이너 */
+/* App Layout Container */
 .app-layout {
   display: flex;
   min-height: 100vh;
   background: var(--gray-50);
 }
 
-/* 모던 사이드바 */
+/* Sidebar */
 .modern-sidebar {
-  width: 280px;
-  background: white;
-  border-right: 1px solid var(--gray-200);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
+  width: 260px;
+  background: var(--white);
+  border-right: 1px solid var(--gray-100);
+  transition: all var(--transition-base);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -304,10 +303,10 @@ export default {
 }
 
 .modern-sidebar.collapsed {
-  width: 80px;
+  width: 70px;
 }
 
-/* 모바일 오버레이 */
+/* Mobile Overlay */
 .mobile-overlay {
   position: fixed;
   top: 0;
@@ -316,50 +315,49 @@ export default {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
-  backdrop-filter: blur(2px);
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  backdrop-filter: blur(4px);
 }
 
-/* 모바일 사이드바 */
+/* Mobile Sidebar */
 .modern-sidebar.mobile-sidebar {
   transform: translateX(-100%);
-  transition: transform 0.3s ease;
-  width: 280px;
+  transition: transform var(--transition-base);
+  width: 260px;
   z-index: 1001;
 }
 
 .modern-sidebar.mobile-open {
   transform: translateX(0);
+  box-shadow: var(--shadow-xl);
 }
 
+/* Sidebar Header */
 .sidebar-header {
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid var(--gray-200);
+  padding: var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--gray-100);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 80px;
+  height: 80px;
 }
 
 .brand-section {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-3);
   flex: 1;
 }
 
 .brand-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--primary-100);
-  border-radius: var(--radius-xl);
+  width: 42px;
+  height: 42px;
+  background: var(--primary-soft);
+  border-radius: var(--radius-base);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--primary);
 }
 
 .brand-text {
@@ -369,15 +367,15 @@ export default {
 }
 
 .brand-main {
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-bold);
   color: var(--gray-900);
   line-height: 1.2;
 }
 
 .brand-sub {
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
   color: var(--gray-500);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -387,26 +385,27 @@ export default {
   width: 32px;
   height: 32px;
   border: none;
-  background: var(--gray-100);
-  border-radius: var(--radius-md);
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base);
   color: var(--gray-600);
   flex-shrink: 0;
 }
 
 .toggle-btn:hover {
-  background: var(--gray-200);
+  background: var(--gray-100);
   color: var(--gray-800);
 }
 
+/* Sidebar Navigation */
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0;
+  padding: var(--space-4) 0;
 }
 
 .nav-list {
@@ -415,38 +414,37 @@ export default {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-1);
 }
 
 .nav-item {
   margin: 0;
-  padding: 0 1rem;
+  padding: 0 var(--space-3);
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.875rem 1rem;
-  border-radius: var(--radius-lg);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-base);
   text-decoration: none;
   color: var(--gray-700);
-  font-weight: 500;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-base);
   position: relative;
-  overflow: hidden;
 }
 
 .nav-link:hover {
-  background: var(--primary-50);
-  color: var(--primary-700);
+  background: var(--gray-50);
+  color: var(--gray-900);
 }
 
 .nav-link.active {
-  background: var(--primary-100);
-  color: var(--primary-800);
-  font-weight: 600;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: var(--font-semibold);
 }
 
 .nav-icon {
@@ -461,54 +459,55 @@ export default {
 .nav-text {
   flex: 1;
   white-space: nowrap;
-  opacity: 1;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--transition-base);
 }
 
 .collapsed .nav-text {
   opacity: 0;
+  display: none;
 }
 
 .nav-indicator {
   position: absolute;
-  right: 0;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 60%;
-  background: var(--primary-600);
-  border-radius: var(--radius-full) 0 0 var(--radius-full);
+  height: 20px;
+  background: var(--primary);
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
 }
 
+/* Sidebar Footer */
 .sidebar-footer {
-  padding: 1rem;
-  border-top: 1px solid var(--gray-200);
+  padding: var(--space-4);
+  border-top: 1px solid var(--gray-100);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-3);
   background: var(--gray-50);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-base);
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all var(--transition-base);
 }
 
 .user-info:hover {
   background: var(--gray-100);
 }
 
-.user-info .user-avatar {
-  width: 32px;
-  height: 32px;
-  background: var(--primary-100);
-  border-radius: 50%;
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  background: var(--primary-soft);
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-600);
+  color: var(--primary);
   flex-shrink: 0;
 }
 
@@ -520,8 +519,8 @@ export default {
 }
 
 .user-name {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-semibold);
   color: var(--gray-900);
   white-space: nowrap;
   overflow: hidden;
@@ -529,74 +528,72 @@ export default {
 }
 
 .user-role {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--gray-500);
 }
 
 .user-dropdown-icon {
-  color: var(--gray-500);
-  transition: transform 0.2s ease;
+  color: var(--gray-400);
+  transition: transform var(--transition-base);
 }
 
 .user-info:hover .user-dropdown-icon {
-  transform: translateY(-2px);
+  transform: rotate(180deg);
 }
 
-/* 모던 헤더 */
+/* Header */
 .modern-header {
-  background: white;
-  border-bottom: 1px solid var(--gray-200);
-  box-shadow: var(--shadow-sm);
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-100);
   position: fixed;
   top: 0;
   right: 0;
-  left: 280px;
+  left: 260px;
+  height: 80px;
   z-index: 100;
-  transition: left 0.3s ease;
-  overflow: visible; /* 드롭다운 메뉴가 보이도록 */
+  transition: left var(--transition-base);
 }
 
 .collapsed ~ .modern-header {
-  left: 80px;
+  left: 70px;
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 2rem;
-  height: 80px;
+  padding: 0 var(--space-6);
+  height: 100%;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .mobile-menu-btn {
-  width: 44px;
-  height: 44px;
+  display: none;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: var(--gray-100);
-  border-radius: var(--radius-lg);
-  display: flex;
+  background: var(--gray-50);
+  border-radius: var(--radius-base);
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base);
   color: var(--gray-600);
-  flex-shrink: 0;
 }
 
 .mobile-menu-btn:hover {
-  background: var(--gray-200);
+  background: var(--gray-100);
   color: var(--gray-800);
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
   color: var(--gray-900);
   margin: 0;
 }
@@ -604,110 +601,110 @@ export default {
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-1);
 }
 
 .breadcrumb-item {
   color: var(--gray-500);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color var(--transition-base);
 }
 
 .breadcrumb-item:hover {
-  color: var(--primary-600);
+  color: var(--primary);
 }
 
 .breadcrumb-separator {
-  color: var(--gray-400);
+  color: var(--gray-300);
 }
 
 .breadcrumb-current {
   color: var(--gray-700);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: var(--space-4);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .action-btn {
   width: 40px;
   height: 40px;
   border: none;
-  background: var(--gray-100);
-  border-radius: var(--radius-lg);
+  background: var(--gray-50);
+  border-radius: var(--radius-base);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base);
   color: var(--gray-600);
   position: relative;
 }
 
 .action-btn:hover {
-  background: var(--gray-200);
+  background: var(--gray-100);
   color: var(--gray-800);
-  transform: translateY(-1px);
 }
 
 .notification-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 18px;
-  height: 18px;
-  background: var(--error-500);
-  color: white;
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 600;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  background: var(--error);
+  color: var(--white);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-semibold);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid white;
+  padding: 0 var(--space-1);
+  border: 2px solid var(--white);
 }
 
-/* 사용자 드롭다운 - 사이드바에서 사용 */
+/* User Dropdown */
 .sidebar-user-dropdown {
-  border-radius: var(--radius-lg) !important;
+  border-radius: var(--radius-base) !important;
   box-shadow: var(--shadow-lg) !important;
-  border: 1px solid var(--gray-200) !important;
-  padding: 0.5rem 0 !important;
+  border: 1px solid var(--gray-100) !important;
+  padding: var(--space-2) 0 !important;
   min-width: 240px;
-  z-index: 9999 !important;
+  background: var(--white) !important;
 }
 
 .user-profile {
-  padding: 1rem !important;
-  border-bottom: 1px solid var(--gray-200) !important;
-  margin-bottom: 0.5rem !important;
+  padding: var(--space-4) !important;
+  border-bottom: 1px solid var(--gray-100) !important;
 }
 
 .profile-content {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-3);
 }
 
 .profile-avatar {
   width: 48px;
   height: 48px;
-  background: var(--primary-100);
-  border-radius: 50%;
+  background: var(--primary-soft);
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-600);
+  color: var(--primary);
 }
 
 .profile-info {
@@ -716,26 +713,25 @@ export default {
 }
 
 .profile-name {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-semibold);
   color: var(--gray-900);
-  margin: 0 0 0.25rem 0;
-  word-wrap: break-word;
+  margin: 0 0 var(--space-1) 0;
 }
 
 .profile-email {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--gray-500);
   margin: 0;
-  word-wrap: break-word;
 }
 
 .dropdown-item {
-  padding: 0.75rem 1rem !important;
-  transition: background-color 0.2s ease !important;
+  padding: var(--space-3) var(--space-4) !important;
+  transition: background-color var(--transition-base) !important;
   cursor: pointer;
   display: flex !important;
   align-items: center !important;
+  font-size: var(--font-size-sm) !important;
 }
 
 .dropdown-item:hover {
@@ -743,64 +739,58 @@ export default {
 }
 
 .dropdown-item.logout:hover {
-  background-color: var(--error-50) !important;
-  color: var(--error-700) !important;
+  background-color: var(--error-soft) !important;
+  color: var(--error) !important;
 }
 
-/* 메인 콘텐츠 */
+/* Main Content */
 .main-content {
   position: fixed;
-  top: 81px; /* 헤더 높이(80px) + border(1px) */
-  left: 280px;
+  top: 80px;
+  left: 260px;
   right: 0;
   bottom: 0;
-  transition: left 0.3s ease;
+  transition: left var(--transition-base);
   background: var(--gray-50);
   overflow-y: auto;
 }
 
 .collapsed ~ .main-content {
-  left: 80px;
+  left: 70px;
 }
 
 .content-wrapper {
   min-height: 100%;
-  padding-bottom: 2rem;
+  padding-bottom: var(--space-8);
 }
 
-/* 홈 버튼 */
+/* Home Button */
 .home-button {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 0.75rem 1rem;
-  margin-top: 0.75rem;
-  background: var(--primary-50);
-  border: 1px solid var(--primary-200);
-  border-radius: var(--radius-lg);
-  color: var(--primary-700);
-  font-weight: 500;
-  font-size: 0.875rem;
+  padding: var(--space-3);
+  margin-top: var(--space-3);
+  background: var(--primary-soft);
+  border: none;
+  border-radius: var(--radius-base);
+  color: var(--primary);
+  font-weight: var(--font-medium);
+  font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base);
 }
 
 .home-button:hover {
-  background: var(--primary-100);
-  border-color: var(--primary-300);
-  transform: translateY(-1px);
+  background: var(--primary);
+  color: var(--white);
 }
 
-.home-button:active {
-  transform: translateY(0);
-}
-
-/* 반응형 디자인 */
+/* Responsive Design */
 @media (max-width: 1024px) {
   .modern-sidebar {
     transform: translateX(-100%);
-    z-index: 1100;
   }
   
   .modern-sidebar.collapsed {
@@ -814,15 +804,19 @@ export default {
   .main-content {
     left: 0;
   }
+  
+  .mobile-menu-btn {
+    display: flex;
+  }
 }
 
 @media (max-width: 768px) {
   .header-content {
-    padding: 1rem;
+    padding: 0 var(--space-4);
   }
   
   .page-title {
-    font-size: 1.25rem;
+    font-size: var(--font-size-xl);
   }
   
   .breadcrumb {
@@ -830,86 +824,32 @@ export default {
   }
   
   .header-actions {
-    gap: 0.25rem;
+    gap: var(--space-1);
   }
   
   .action-btn {
     width: 36px;
     height: 36px;
   }
-  
 }
 
 @media (max-width: 640px) {
-  .header-right {
-    gap: 1rem;
-  }
-  
-  /* 모바일 사이드바 추가 스타일 */
   .modern-sidebar {
-    width: 280px;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    width: 260px;
   }
   
-  .modern-sidebar.mobile-open {
-    transform: translateX(0);
-  }
-  
-  .main-content {
-    left: 0 !important;
-    top: 65px !important; /* 모바일 헤더 높이 + padding + border */
-  }
-  
-  .modern-header {
-    left: 0 !important;
+  .header-content {
+    padding: 0 var(--space-3);
   }
   
   .sidebar-header {
-    padding: 1rem;
-    min-height: 64px;
+    padding: var(--space-4);
+    height: 64px;
   }
   
   .nav-link {
-    padding: 12px 16px;
-    margin: 2px 8px;
-    min-height: 48px; /* 터치 친화적 크기 */
-  }
-  
-  .content-wrapper {
-    padding: 1rem;
-  }
-}
-
-/* 터치 디바이스 최적화 */
-@media (hover: none) and (pointer: coarse) {
-  .nav-link,
-  .toggle-btn,
-  .header-actions .v-btn {
+    padding: var(--space-3);
     min-height: 44px;
-    min-width: 44px;
-  }
-  
-  .nav-link:hover::before {
-    opacity: 0;
-  }
-  
-  /* 모바일에서 요소가 사라지지 않도록 강제 표시 */
-  .user-dropdown,
-  .v-menu__content,
-  .dropdown,
-  .sidebar-user-dropdown {
-    opacity: 1 !important;
-    visibility: visible !important;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-  }
-  
-  /* 터치 후에도 요소가 보이도록 유지 */
-  *:focus,
-  *:active {
-    opacity: 1 !important;
-    visibility: visible !important;
   }
 }
 </style>

@@ -1,333 +1,265 @@
 <template>
   <AppLayout>
-    <v-container fluid class="pa-6">
-      <!-- 페이지 헤더 정보 -->
-      <v-row class="mb-6">
-        <v-col cols="12">
-          <div class="d-flex justify-space-between align-center mb-4">
-            <div>
-              <p class="text-subtitle-1 text-medium-emphasis mb-3">
-                시스템 연결 정보를 관리하고 실시간 상태를 모니터링합니다.
-              </p>
-              <div class="d-flex gap-4">
-                <v-chip color="primary" variant="tonal">
-                  <v-icon start>mdi-server</v-icon>
-                  {{ systems.length }} 총 시스템
-                </v-chip>
-                <v-chip color="success" variant="tonal">
-                  <v-icon start>mdi-check-circle</v-icon>
-                  {{ activeSystemCount }} 활성 시스템
-                </v-chip>
-                <v-chip color="info" variant="tonal">
-                  <v-icon start>mdi-heart-pulse</v-icon>
-                  {{ healthySystemCount }} 정상 상태
-                </v-chip>
-              </div>
-            </div>
-            <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog">
-              새 시스템 추가
-            </v-btn>
+    <div class="system-container">
+      <!-- Clean Header -->
+      <div class="system-header">
+        <div class="header-content">
+          <h1 class="page-title">시스템 관리</h1>
+          <p class="page-subtitle">시스템 연결 정보를 관리하고 실시간 상태를 모니터링합니다</p>
+        </div>
+        <button class="clean-button clean-button-primary" @click="openCreateDialog">
+          <v-icon size="18">mdi-plus</v-icon>
+          새 시스템 추가
+        </button>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon primary">
+            <v-icon size="24">mdi-server</v-icon>
           </div>
-        </v-col>
-      </v-row>
+          <div class="stat-content">
+            <div class="stat-value">{{ systems.length }}</div>
+            <div class="stat-label">총 시스템</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon success">
+            <v-icon size="24">mdi-check-circle</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ activeSystemCount }}</div>
+            <div class="stat-label">활성 시스템</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon info">
+            <v-icon size="24">mdi-heart-pulse</v-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ healthySystemCount }}</div>
+            <div class="stat-label">정상 상태</div>
+          </div>
+        </div>
+      </div>
 
-      <!-- 필터 섹션 -->
-      <v-row class="mb-6">
-        <v-col cols="12">
-          <v-card>
-            <v-card-title>
-              <v-icon class="mr-2">mdi-filter-variant</v-icon>
-              필터 & 검색
-            </v-card-title>
-            <v-card-text>
-              <v-row>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    v-model="filters.search"
-                    label="시스템명 또는 설명 검색"
-                    prepend-inner-icon="mdi-magnify"
-                    variant="outlined"
-                    density="compact"
-                    clearable
-                    @keyup.enter="loadSystems"
-                  />
-                </v-col>
-                <v-col cols="12" md="3">
-                  <v-select
-                    v-model="filters.type"
-                    :items="systemTypeOptions"
-                    label="시스템 타입"
-                    variant="outlined"
-                    density="compact"
-                    clearable
-                    @update:model-value="loadSystems"
-                  />
-                </v-col>
-                <v-col cols="12" md="3">
-                  <v-select
-                    v-model="filters.isActive"
-                    :items="statusOptions"
-                    label="활성 상태"
-                    variant="outlined"
-                    density="compact"
-                    clearable
-                    @update:model-value="loadSystems"
-                  />
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col cols="12">
-                  <div class="d-flex gap-2">
-                    <v-btn color="primary" prepend-icon="mdi-magnify" @click="loadSystems">
-                      검색
-                    </v-btn>
-                    <v-btn variant="outlined" prepend-icon="mdi-refresh" @click="resetFilters">
-                      초기화
-                    </v-btn>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- 시스템 목록 -->
-      <v-row>
-        <v-col cols="12">
-          <v-card>
-            <v-card-title class="d-flex justify-space-between align-center">
-              <div class="d-flex align-center">
-                <v-icon class="mr-2">mdi-server-network</v-icon>
-                시스템 목록
-              </div>
-              <div class="d-flex align-center gap-2">
-                <v-btn-toggle
-                  v-model="viewMode"
-                  variant="outlined"
-                  density="compact"
-                  mandatory
-                >
-                  <v-btn value="table" size="small">
-                    <v-icon>mdi-table</v-icon>
-                  </v-btn>
-                  <v-btn value="grid" size="small">
-                    <v-icon>mdi-grid</v-icon>
-                  </v-btn>
-                </v-btn-toggle>
-              </div>
-            </v-card-title>
-            
-            <!-- 테이블 뷰 -->
-            <div v-if="viewMode === 'table'">
-              <v-data-table
-                :headers="tableHeaders"
-                :items="filteredSystems"
-                :loading="loading"
-                item-key="id"
-                class="elevation-0"
-                density="comfortable"
+      <!-- Filter Section -->
+      <div class="filter-section clean-card">
+        <div class="section-header">
+          <h2 class="section-title">필터 & 검색</h2>
+        </div>
+        <div class="filter-content">
+          <div class="filter-grid">
+            <div class="filter-item">
+              <input
+                v-model="filters.search"
+                type="text"
+                class="clean-form-input"
+                placeholder="시스템명 또는 설명 검색"
+                @keyup.enter="loadSystems"
               >
-                <template v-slot:item.name="{ item }">
-                  <div class="d-flex align-center">
-                    <v-icon :color="getTypeIcon(item.type).color" class="mr-2">
-                      {{ getTypeIcon(item.type).icon }}
+            </div>
+            <div class="filter-item">
+              <select v-model="filters.type" class="clean-form-input" @change="loadSystems">
+                <option value="">모든 타입</option>
+                <option v-for="option in systemTypeOptions" :key="option.value" :value="option.value">
+                  {{ option.title }}
+                </option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <select v-model="filters.isActive" class="clean-form-input" @change="loadSystems">
+                <option value="">모든 상태</option>
+                <option value="true">활성</option>
+                <option value="false">비활성</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="clean-button clean-button-primary" @click="loadSystems">
+              <v-icon size="18">mdi-magnify</v-icon>
+              검색
+            </button>
+            <button class="clean-button clean-button-secondary" @click="resetFilters">
+              <v-icon size="18">mdi-refresh</v-icon>
+              초기화
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- System List -->
+      <div class="system-list-section clean-card">
+        <div class="section-header">
+          <h2 class="section-title">시스템 목록</h2>
+          <div class="view-toggle">
+            <button 
+              class="view-button" 
+              :class="{ active: viewMode === 'table' }"
+              @click="viewMode = 'table'"
+            >
+              <v-icon size="20">mdi-table</v-icon>
+            </button>
+            <button 
+              class="view-button" 
+              :class="{ active: viewMode === 'grid' }"
+              @click="viewMode = 'grid'"
+            >
+              <v-icon size="20">mdi-grid</v-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="loading-state">
+          <v-progress-circular indeterminate color="primary" />
+          <p>시스템 목록을 불러오는 중...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="!loading && filteredSystems.length === 0" class="empty-state">
+          <v-icon size="64" color="var(--gray-400)">mdi-server-network-off</v-icon>
+          <h3 class="empty-state-title">시스템이 없습니다</h3>
+          <p class="empty-state-text">새로운 시스템을 추가하여 데이터 동기화를 시작하세요.</p>
+          <button class="clean-button clean-button-primary" @click="openCreateDialog">
+            <v-icon size="18">mdi-plus</v-icon>
+            첫 번째 시스템 추가
+          </button>
+        </div>
+
+        <!-- Table View -->
+        <div v-else-if="viewMode === 'table'" class="table-container">
+          <table class="clean-table">
+            <thead>
+              <tr>
+                <th>시스템명</th>
+                <th>설명</th>
+                <th>타입</th>
+                <th>활성</th>
+                <th>연결 상태</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="system in filteredSystems" :key="system.id">
+                <td>
+                  <div class="system-name">
+                    <v-icon :color="getTypeIcon(system.type).color" size="20">
+                      {{ getTypeIcon(system.type).icon }}
                     </v-icon>
                     <div>
-                      <div class="font-weight-medium">{{ item.name }}</div>
-                      <div class="text-caption text-medium-emphasis">{{ item.host }}:{{ item.port }}</div>
+                      <div class="name">{{ system.name }}</div>
+                      <div class="host">{{ system.host }}:{{ system.port }}</div>
                     </div>
                   </div>
-                </template>
-                
-                <template v-slot:item.type="{ item }">
-                  <v-chip
-                    :color="getTypeColor(item.type)"
-                    size="small"
-                    variant="tonal"
-                  >
-                    {{ item.type }}
-                  </v-chip>
-                </template>
-                
-                <template v-slot:item.description="{ item }">
-                  <div class="text-body-2">{{ item.description || '-' }}</div>
-                </template>
-                
-                <template v-slot:item.isActive="{ item }">
-                  <v-switch
-                    v-model="item.isActive"
-                    color="primary"
-                    density="compact"
-                    hide-details
-                    @update:model-value="updateSystemStatus(item)"
-                  />
-                </template>
-                
-                <template v-slot:item.connectionStatus="{ item }">
-                  <v-chip
-                    :color="getConnectionStatusColor(item.connectionStatus)"
-                    size="small"
-                    variant="tonal"
-                  >
-                    <v-icon start size="14">
-                      {{ getConnectionStatusIcon(item.connectionStatus) }}
-                    </v-icon>
-                    {{ getConnectionStatusText(item.connectionStatus) }}
-                  </v-chip>
-                </template>
-                
-                <template v-slot:item.actions="{ item }">
-                  <div class="d-flex align-center gap-1">
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                      @click="testConnection(item)"
-                      :loading="item.testing"
+                </td>
+                <td>{{ system.description || '-' }}</td>
+                <td>
+                  <span class="type-badge" :class="'type-' + system.type">
+                    {{ system.type }}
+                  </span>
+                </td>
+                <td>
+                  <label class="switch">
+                    <input 
+                      type="checkbox" 
+                      v-model="system.isActive"
+                      @change="updateSystemStatus(system)"
+                    >
+                    <span class="slider"></span>
+                  </label>
+                </td>
+                <td>
+                  <span class="status-badge" :class="'status-' + system.connectionStatus">
+                    <v-icon size="14">{{ getConnectionStatusIcon(system.connectionStatus) }}</v-icon>
+                    {{ getConnectionStatusText(system.connectionStatus) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button 
+                      class="action-button test"
+                      @click="testConnection(system)"
+                      :disabled="system.testing"
                     >
                       <v-icon size="16">mdi-wifi</v-icon>
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      color="warning"
-                      @click="editSystem(item)"
+                    </button>
+                    <button 
+                      class="action-button edit"
+                      @click="editSystem(system)"
                     >
                       <v-icon size="16">mdi-pencil</v-icon>
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      @click="deleteSystem(item)"
+                    </button>
+                    <button 
+                      class="action-button delete"
+                      @click="deleteSystem(system)"
                     >
                       <v-icon size="16">mdi-delete</v-icon>
-                    </v-btn>
+                    </button>
                   </div>
-                </template>
-              </v-data-table>
-            </div>
-            
-            <!-- 그리드 뷰 -->
-            <div v-else class="pa-4">
-              <v-row>
-                <v-col
-                  v-for="system in filteredSystems"
-                  :key="system.id"
-                  cols="12"
-                  sm="6"
-                  md="4"
-                  lg="3"
-                >
-                  <v-card
-                    class="system-card"
-                    :elevation="2"
-                    hover
-                  >
-                    <v-card-title class="d-flex align-center pa-4">
-                      <v-icon 
-                        :color="getTypeIcon(system.type).color" 
-                        class="mr-3"
-                        size="24"
-                      >
-                        {{ getTypeIcon(system.type).icon }}
-                      </v-icon>
-                      <div class="flex-grow-1">
-                        <div class="font-weight-bold text-truncate">{{ system.name }}</div>
-                        <div class="text-caption text-medium-emphasis">{{ system.host }}:{{ system.port }}</div>
-                      </div>
-                      <v-chip
-                        :color="getConnectionStatusColor(system.connectionStatus)"
-                        size="x-small"
-                        variant="dot"
-                      />
-                    </v-card-title>
-                    
-                    <v-card-text class="pa-4">
-                      <v-chip
-                        :color="getTypeColor(system.type)"
-                        size="small"
-                        variant="tonal"
-                        class="mb-3"
-                      >
-                        {{ system.type }}
-                      </v-chip>
-                      
-                      <p class="text-body-2 mb-3">{{ system.description || '설명 없음' }}</p>
-                      
-                      <div class="d-flex align-center justify-space-between mb-3">
-                        <span class="text-caption">활성 상태</span>
-                        <v-switch
-                          v-model="system.isActive"
-                          color="primary"
-                          density="compact"
-                          hide-details
-                          @update:model-value="updateSystemStatus(system)"
-                        />
-                      </div>
-                      
-                      <div v-if="system.connectionMessage" class="text-caption text-medium-emphasis">
-                        {{ system.connectionMessage }}
-                      </div>
-                    </v-card-text>
-                    
-                    <v-card-actions class="pa-4">
-                      <v-btn
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                        @click="testConnection(system)"
-                        :loading="system.testing"
-                        block
-                      >
-                        <v-icon size="16" class="mr-1">mdi-wifi</v-icon>
-                        연결 테스트
-                      </v-btn>
-                    </v-card-actions>
-                    
-                    <v-card-actions class="pa-2 pt-0">
-                      <v-btn
-                        size="small"
-                        variant="text"
-                        color="warning"
-                        @click="editSystem(system)"
-                      >
-                        <v-icon size="16">mdi-pencil</v-icon>
-                      </v-btn>
-                      <v-spacer />
-                      <v-btn
-                        size="small"
-                        variant="text"
-                        color="error"
-                        @click="deleteSystem(system)"
-                      >
-                        <v-icon size="16">mdi-delete</v-icon>
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
-                </v-col>
-              </v-row>
-            </div>
-          </v-card>
-        </v-col>
-      </v-row>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <!-- Empty state for no data -->
-      <v-row v-if="!loading && filteredSystems.length === 0">
-        <v-col cols="12">
-          <div class="text-center py-8">
-            <v-icon size="80" color="grey-300">mdi-server-network-off</v-icon>
-            <h3 class="text-h6 mt-4 mb-2">시스템이 없습니다</h3>
-            <p class="text-body-2 text-medium-emphasis mb-4">새로운 시스템을 추가하여 데이터 동기화를 시작하세요.</p>
-            <v-btn color="primary" @click="openCreateDialog">
-              <v-icon class="mr-2">mdi-plus</v-icon>
-              첫 번째 시스템 추가
-            </v-btn>
+        <!-- Grid View -->
+        <div v-else class="grid-container">
+          <div class="system-grid">
+            <div 
+              v-for="system in filteredSystems" 
+              :key="system.id"
+              class="system-card"
+            >
+              <div class="card-header">
+                <v-icon :color="getTypeIcon(system.type).color" size="32">
+                  {{ getTypeIcon(system.type).icon }}
+                </v-icon>
+                <div class="card-status" :class="'status-' + system.connectionStatus"></div>
+              </div>
+              <div class="card-body">
+                <h3 class="card-title">{{ system.name }}</h3>
+                <p class="card-subtitle">{{ system.host }}:{{ system.port }}</p>
+                <span class="type-badge" :class="'type-' + system.type">
+                  {{ system.type }}
+                </span>
+                <p class="card-description">{{ system.description || '설명 없음' }}</p>
+                <div class="card-status-row">
+                  <span class="status-label">활성 상태</span>
+                  <label class="switch small">
+                    <input 
+                      type="checkbox" 
+                      v-model="system.isActive"
+                      @change="updateSystemStatus(system)"
+                    >
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button 
+                  class="clean-button clean-button-primary test-button"
+                  @click="testConnection(system)"
+                  :disabled="system.testing"
+                >
+                  <v-icon size="16">mdi-wifi</v-icon>
+                  연결 테스트
+                </button>
+                <div class="card-actions">
+                  <button class="icon-button edit" @click="editSystem(system)">
+                    <v-icon size="16">mdi-pencil</v-icon>
+                  </button>
+                  <button class="icon-button delete" @click="deleteSystem(system)">
+                    <v-icon size="16">mdi-delete</v-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </v-col>
-      </v-row>
-    </v-container>
+        </div>
+      </div>
+    </div>
 
     <!-- System Create/Edit Dialog -->
     <SystemDialog
@@ -801,18 +733,531 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.system-container {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.system-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-8);
+}
+
+.page-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--gray-600);
+  margin-top: var(--space-2);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid var(--gray-100);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  transition: all var(--transition-base);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon.primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.stat-icon.success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.stat-icon.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+}
+
+.stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+}
+
+/* Filter Section */
+.filter-section {
+  margin-bottom: var(--space-6);
+}
+
+.filter-content {
+  padding: var(--space-6);
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.filter-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* System List Section */
+.system-list-section {
+  min-height: 400px;
+}
+
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-base);
+  overflow: hidden;
+}
+
+.view-button {
+  padding: var(--space-2) var(--space-3);
+  background: var(--white);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-button:not(:last-child) {
+  border-right: 1px solid var(--gray-300);
+}
+
+.view-button:hover {
+  background: var(--gray-50);
+}
+
+.view-button.active {
+  background: var(--primary);
+  color: var(--white);
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  color: var(--gray-600);
+}
+
+/* Table Styles */
+.table-container {
+  overflow-x: auto;
+}
+
+.clean-table {
+  width: 100%;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.clean-table th {
+  background: var(--gray-50);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-semibold);
+  text-align: left;
+  color: var(--gray-700);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.clean-table td {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.clean-table tr:last-child td {
+  border-bottom: none;
+}
+
+.clean-table tr:hover td {
+  background: var(--gray-50);
+}
+
+.system-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.system-name .name {
+  font-weight: var(--font-medium);
+  color: var(--gray-900);
+}
+
+.system-name .host {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+}
+
+/* Type Badge */
+.type-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+  text-transform: uppercase;
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.type-badge.type-postgresql { background: #E3F2FD; color: #1976D2; }
+.type-badge.type-mysql { background: #FFF3E0; color: #F57C00; }
+.type-badge.type-oracle { background: #FFEBEE; color: #D32F2F; }
+.type-badge.type-mongodb { background: #E8F5E9; color: #388E3C; }
+.type-badge.type-redis { background: #FFEBEE; color: #D32F2F; }
+.type-badge.type-sqlite { background: #E8F5E9; color: #388E3C; }
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-medium);
+}
+
+.status-badge.status-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.status-badge.status-failed {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.status-badge.status-pending {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+/* Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch.small {
+  width: 36px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--gray-300);
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.switch.small .slider:before {
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.switch.small input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
+/* Table Actions */
+.table-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.action-button {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-base);
+  border: 1px solid;
+  background: var(--white);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+}
+
+.action-button.test {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.action-button.test:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.action-button.edit {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.action-button.edit:hover {
+  background: var(--warning);
+  color: var(--white);
+}
+
+.action-button.delete {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.action-button.delete:hover {
+  background: var(--error);
+  color: var(--white);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Grid View */
+.system-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-6);
+  padding: var(--space-6);
+}
+
 .system-card {
-  transition: all 0.2s ease;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+  transition: all var(--transition-base);
+  overflow: hidden;
 }
 
 .system-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
-.text-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.card-header {
+  position: relative;
+  padding: var(--space-6);
+  background: var(--gray-50);
+  text-align: center;
+}
+
+.card-status {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gray-400);
+}
+
+.card-status.status-success { background: var(--success); }
+.card-status.status-failed { background: var(--error); }
+.card-status.status-pending { background: var(--warning); }
+
+.card-body {
+  padding: var(--space-6);
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-1);
+}
+
+.card-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  margin-bottom: var(--space-3);
+}
+
+.card-description {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  margin: var(--space-3) 0;
+  min-height: 40px;
+}
+
+.card-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--gray-100);
+  margin-top: var(--space-3);
+}
+
+.status-label {
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+}
+
+.card-footer {
+  padding: var(--space-4) var(--space-6);
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-100);
+}
+
+.test-button {
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-base);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+}
+
+.icon-button.edit {
+  color: var(--warning);
+}
+
+.icon-button.edit:hover {
+  background: var(--warning-soft);
+}
+
+.icon-button.delete {
+  color: var(--error);
+}
+
+.icon-button.delete:hover {
+  background: var(--error-soft);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .system-container {
+    padding: var(--space-4);
+  }
+  
+  .system-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+  
+  .table-container {
+    overflow-x: scroll;
+  }
+  
+  .clean-table {
+    min-width: 700px;
+  }
+  
+  .system-grid {
+    grid-template-columns: 1fr;
+    padding: var(--space-4);
+  }
 }
 </style>
