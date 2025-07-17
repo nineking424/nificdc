@@ -216,6 +216,13 @@
         </button>
       </div>
     </div>
+  
+    <!-- Mapping Creation Wizard -->
+    <MappingCreationWizard
+      v-if="showWizard"
+      @close="handleWizardClose"
+      @created="handleWizardCreated"
+    />
   </AppLayout>
 </template>
 
@@ -226,6 +233,7 @@ import { useMappingStore } from '@/stores/mapping'
 import { useSystemStore } from '@/stores/system'
 import { useAppStore } from '@/stores/app'
 import AppLayout from '@/components/AppLayout.vue'
+import MappingCreationWizard from '@/components/MappingCreationWizard.vue'
 import { mappingApi } from '@/services/api'
 import {
   PlusIcon
@@ -236,6 +244,7 @@ export default {
   
   components: {
     AppLayout,
+    MappingCreationWizard,
     PlusIcon
   },
   
@@ -254,6 +263,7 @@ export default {
     const systemFilter = ref('')
     const currentPage = ref(1)
     const itemsPerPage = ref(12)
+    const showWizard = ref(false)
     
     // Computed
     const availableSystems = computed(() => systemStore.systems || [])
@@ -365,7 +375,17 @@ export default {
     }
     
     const createNewMapping = () => {
-      router.push('/mappings/new')
+      showWizard.value = true
+    }
+    
+    const handleWizardClose = () => {
+      showWizard.value = false
+    }
+    
+    const handleWizardCreated = (mapping) => {
+      showWizard.value = false
+      // Refresh the mappings list
+      fetchMappings()
     }
     
     const editMapping = (id) => {
@@ -447,6 +467,7 @@ export default {
       statusFilter,
       systemFilter,
       currentPage,
+      showWizard,
       
       // Computed
       availableSystems,
@@ -466,6 +487,8 @@ export default {
       getStatusText,
       formatDate,
       createNewMapping,
+      handleWizardClose,
+      handleWizardCreated,
       editMapping,
       duplicateMapping,
       testMapping,
