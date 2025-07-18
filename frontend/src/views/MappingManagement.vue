@@ -1,13 +1,18 @@
 <template>
   <AppLayout>
     <div class="mapping-container">
-      <!-- Clean Header -->
+      <!-- Page Header -->
       <div class="mapping-header">
         <div class="header-content">
           <h1 class="page-title">매핑 관리</h1>
-          <p class="page-subtitle">시스템 간 데이터 변환 매핑을 생성하고 관리합니다</p>
+          <p class="page-subtitle">
+            시스템 간 데이터 변환 매핑을 생성하고 관리합니다
+          </p>
         </div>
-        <button class="clean-button clean-button-primary" @click="createNewMapping">
+        <button
+          class="clean-button clean-button-primary"
+          @click="createNewMapping"
+        >
           <PlusIcon size="18" />
           새 매핑 생성
         </button>
@@ -53,38 +58,98 @@
         </div>
       </div>
 
+      <!-- Authentication Notice -->
+      <div
+        v-if="showAuthNotice && !isAuthenticated"
+        class="auth-notice clean-card"
+      >
+        <div class="auth-notice-icon">
+          <v-icon size="48" color="warning">mdi-lock-outline</v-icon>
+        </div>
+        <div class="auth-notice-content">
+          <h3 class="auth-notice-title">로그인이 필요합니다</h3>
+          <p class="auth-notice-text">
+            매핑 관리 기능을 사용하려면 먼저 로그인해주세요.
+          </p>
+
+          <!-- Development Mode Credentials -->
+          <div v-if="isDevelopment()" class="dev-credentials">
+            <p class="dev-note">개발 모드에서 사용 가능한 테스트 계정:</p>
+            <div class="credential-cards">
+              <div
+                v-for="cred in getDevCredentials()"
+                :key="cred.email"
+                class="credential-card"
+              >
+                <div class="credential-role">{{ cred.role }}</div>
+                <div class="credential-info">
+                  <div class="credential-field">
+                    <span class="field-label">이메일:</span>
+                    <code>{{ cred.email }}</code>
+                  </div>
+                  <div class="credential-field">
+                    <span class="field-label">비밀번호:</span>
+                    <code>{{ cred.password }}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button class="clean-button clean-button-primary" @click="goToLogin">
+            <v-icon size="18">mdi-login</v-icon>
+            로그인 페이지로
+          </button>
+        </div>
+      </div>
+
       <!-- Filter Section -->
       <div class="filter-section clean-card">
         <div class="filter-content">
           <div class="search-box">
             <v-icon size="20">mdi-magnify</v-icon>
-            <input 
-              v-model="searchQuery" 
-              type="text" 
+            <input
+              v-model="searchQuery"
+              type="text"
               class="search-input"
               placeholder="매핑 검색..."
               @input="handleSearch"
             />
           </div>
-          
+
           <div class="filter-controls">
-            <select v-model="statusFilter" @change="applyFilters" class="clean-form-input">
+            <select
+              v-model="statusFilter"
+              @change="applyFilters"
+              class="clean-form-input"
+            >
               <option value="">모든 상태</option>
               <option value="active">활성</option>
               <option value="draft">작성 중</option>
               <option value="inactive">비활성</option>
               <option value="error">오류</option>
             </select>
-            
-            <select v-model="systemFilter" @change="applyFilters" class="clean-form-input">
+
+            <select
+              v-model="systemFilter"
+              @change="applyFilters"
+              class="clean-form-input"
+            >
               <option value="">모든 시스템</option>
-              <option v-for="system in availableSystems" :key="system.id" :value="system.id">
+              <option
+                v-for="system in availableSystems"
+                :key="system.id"
+                :value="system.id"
+              >
                 {{ system.name }}
               </option>
             </select>
-            
-            <button class="clean-button clean-button-secondary" @click="refreshMappings">
-              <v-icon size="18" :class="{ 'spin': loading }">mdi-refresh</v-icon>
+
+            <button
+              class="clean-button clean-button-secondary"
+              @click="refreshMappings"
+            >
+              <v-icon size="18" :class="{ spin: loading }">mdi-refresh</v-icon>
               새로고침
             </button>
           </div>
@@ -100,67 +165,88 @@
       <div v-else-if="error" class="error-state">
         <v-icon size="64" color="error">mdi-alert-circle</v-icon>
         <span>{{ error }}</span>
-        <button @click="refreshMappings" class="clean-button clean-button-primary">재시도</button>
+        <button
+          @click="refreshMappings"
+          class="clean-button clean-button-primary"
+        >
+          재시도
+        </button>
       </div>
 
       <div v-else-if="filteredMappings.length === 0" class="empty-state">
         <v-icon size="64" color="var(--gray-400)">mdi-file-document-off</v-icon>
         <h3 class="empty-state-title">매핑이 없습니다</h3>
-        <p v-if="searchQuery || statusFilter || systemFilter" class="empty-state-text">
+        <p
+          v-if="searchQuery || statusFilter || systemFilter"
+          class="empty-state-text"
+        >
           검색 조건을 변경해보세요
         </p>
         <p v-else class="empty-state-text">
           첫 번째 매핑을 생성하여 시작하세요
         </p>
-        <button @click="createNewMapping" class="clean-button clean-button-primary">
+        <button
+          @click="createNewMapping"
+          class="clean-button clean-button-primary"
+        >
           <PlusIcon size="18" />
           새 매핑 생성
         </button>
       </div>
 
       <div v-else class="mappings-grid">
-        <div 
-          v-for="mapping in paginatedMappings" 
+        <div
+          v-for="mapping in paginatedMappings"
           :key="mapping.id"
           class="mapping-card clean-card"
         >
           <div class="card-header">
             <div class="mapping-info">
               <h3 class="mapping-name">{{ mapping.name }}</h3>
-              <p class="mapping-description">{{ mapping.description || '설명 없음' }}</p>
+              <p class="mapping-description">
+                {{ mapping.description || "설명 없음" }}
+              </p>
             </div>
             <div class="status-badge" :class="'status-' + mapping.status">
               {{ getStatusText(mapping.status) }}
             </div>
           </div>
-          
+
           <div class="card-body">
             <div class="system-flow">
               <div class="system-box">
                 <v-icon size="20" color="primary">mdi-database-export</v-icon>
                 <div>
                   <span class="system-label">소스</span>
-                  <span class="system-name">{{ getSystemName(mapping.sourceSystemId) }}</span>
+                  <span class="system-name">{{
+                    getSystemName(mapping.sourceSystemId)
+                  }}</span>
                 </div>
               </div>
-              
+
               <div class="flow-arrow">
-                <v-icon size="24" color="var(--gray-400)">mdi-arrow-right</v-icon>
+                <v-icon size="24" color="var(--gray-400)"
+                  >mdi-arrow-right</v-icon
+                >
               </div>
-              
+
               <div class="system-box">
                 <v-icon size="20" color="primary">mdi-database-import</v-icon>
                 <div>
                   <span class="system-label">타겟</span>
-                  <span class="system-name">{{ getSystemName(mapping.targetSystemId) }}</span>
+                  <span class="system-name">{{
+                    getSystemName(mapping.targetSystemId)
+                  }}</span>
                 </div>
               </div>
             </div>
-            
+
             <div class="mapping-stats">
               <div class="stat">
                 <v-icon size="16">mdi-table</v-icon>
-                <span>{{ mapping.fieldMappings?.length || 0 }}개 필드 매핑</span>
+                <span
+                  >{{ mapping.fieldMappings?.length || 0 }}개 필드 매핑</span
+                >
               </div>
               <div class="stat">
                 <v-icon size="16">mdi-clock-outline</v-icon>
@@ -168,9 +254,12 @@
               </div>
             </div>
           </div>
-          
+
           <div class="card-footer">
-            <button @click="editMapping(mapping.id)" class="action-button primary">
+            <button
+              @click="editMapping(mapping.id)"
+              class="action-button primary"
+            >
               <v-icon size="16">mdi-pencil</v-icon>
               편집
             </button>
@@ -178,11 +267,18 @@
               <v-icon size="16">mdi-content-copy</v-icon>
               복제
             </button>
-            <button @click="testMapping(mapping.id)" class="action-button" :disabled="mapping.status === 'draft'">
+            <button
+              @click="testMapping(mapping.id)"
+              class="action-button"
+              :disabled="mapping.status === 'draft'"
+            >
               <v-icon size="16">mdi-play-circle</v-icon>
               테스트
             </button>
-            <button @click="deleteMapping(mapping.id)" class="action-button danger">
+            <button
+              @click="deleteMapping(mapping.id)"
+              class="action-button danger"
+            >
               <v-icon size="16">mdi-delete</v-icon>
             </button>
           </div>
@@ -191,23 +287,23 @@
 
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="pagination">
-        <button 
-          @click="currentPage--" 
+        <button
+          @click="currentPage--"
           :disabled="currentPage === 1"
           class="page-button"
         >
           <v-icon size="18">mdi-chevron-left</v-icon>
           이전
         </button>
-        
+
         <div class="page-info">
           <span class="current-page">{{ currentPage }}</span>
           <span class="separator">/</span>
           <span class="total-pages">{{ totalPages }}</span>
         </div>
-        
-        <button 
-          @click="currentPage++" 
+
+        <button
+          @click="currentPage++"
           :disabled="currentPage === totalPages"
           class="page-button"
         >
@@ -216,248 +312,254 @@
         </button>
       </div>
     </div>
-  
-    <!-- Mapping Creation Wizard -->
-    <MappingCreationWizard
-      v-if="showWizard"
-      @close="handleWizardClose"
-      @created="handleWizardCreated"
-    />
   </AppLayout>
 </template>
 
 <script>
-import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useMappingStore } from '@/stores/mapping'
-import { useSystemStore } from '@/stores/system'
-import { useAppStore } from '@/stores/app'
-import AppLayout from '@/components/AppLayout.vue'
-import MappingCreationWizard from '@/components/MappingCreationWizard.vue'
-import { mappingApi } from '@/services/api'
-import {
-  PlusIcon
-} from '@/components/icons'
+import { ref, computed, watch, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useMappingStore } from "@/stores/mapping";
+import { useSystemStore } from "@/stores/system";
+import { useAppStore } from "@/stores/app";
+import { useAuthStore } from "@/stores/auth";
+import AppLayout from "@/components/AppLayout.vue";
+import { mappingApi } from "@/services/api";
+import { isDevelopment, getDevCredentials } from "@/utils/devAuth";
+import { PlusIcon } from "@/components/icons";
 
 export default {
-  name: 'MappingManagement',
-  
+  name: "MappingManagement",
+
   components: {
     AppLayout,
-    MappingCreationWizard,
-    PlusIcon
+    PlusIcon,
   },
-  
+
   setup() {
-    const router = useRouter()
-    const mappingStore = useMappingStore()
-    const systemStore = useSystemStore()
-    const appStore = useAppStore()
-    
+    const router = useRouter();
+    const mappingStore = useMappingStore();
+    const systemStore = useSystemStore();
+    const appStore = useAppStore();
+    const authStore = useAuthStore();
+
     // State
-    const mappings = ref([])
-    const loading = ref(false)
-    const error = ref(null)
-    const searchQuery = ref('')
-    const statusFilter = ref('')
-    const systemFilter = ref('')
-    const currentPage = ref(1)
-    const itemsPerPage = ref(12)
-    const showWizard = ref(false)
-    
+    const mappings = ref([]);
+    const loading = ref(false);
+    const error = ref(null);
+    const searchQuery = ref("");
+    const statusFilter = ref("");
+    const systemFilter = ref("");
+    const currentPage = ref(1);
+    const itemsPerPage = ref(12);
+    const showAuthNotice = ref(false);
+
     // Computed
-    const availableSystems = computed(() => systemStore.systems || [])
-    
+    const isAuthenticated = computed(() => authStore.isAuthenticated);
+    const availableSystems = computed(() => systemStore.systems || []);
+
     const filteredMappings = computed(() => {
-      let result = mappings.value
-      
+      let result = mappings.value;
+
       // Search filter
       if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        result = result.filter(mapping => 
-          mapping.name.toLowerCase().includes(query) ||
-          (mapping.description && mapping.description.toLowerCase().includes(query))
-        )
+        const query = searchQuery.value.toLowerCase();
+        result = result.filter(
+          (mapping) =>
+            mapping.name.toLowerCase().includes(query) ||
+            (mapping.description &&
+              mapping.description.toLowerCase().includes(query)),
+        );
       }
-      
+
       // Status filter
       if (statusFilter.value) {
-        result = result.filter(mapping => mapping.status === statusFilter.value)
+        result = result.filter(
+          (mapping) => mapping.status === statusFilter.value,
+        );
       }
-      
+
       // System filter
       if (systemFilter.value) {
-        result = result.filter(mapping => 
-          mapping.sourceSystemId === systemFilter.value ||
-          mapping.targetSystemId === systemFilter.value
-        )
+        result = result.filter(
+          (mapping) =>
+            mapping.sourceSystemId === systemFilter.value ||
+            mapping.targetSystemId === systemFilter.value,
+        );
       }
-      
-      return result
-    })
-    
-    const totalPages = computed(() => 
-      Math.ceil(filteredMappings.value.length / itemsPerPage.value)
-    )
-    
+
+      return result;
+    });
+
+    const totalPages = computed(() =>
+      Math.ceil(filteredMappings.value.length / itemsPerPage.value),
+    );
+
     const paginatedMappings = computed(() => {
-      const start = (currentPage.value - 1) * itemsPerPage.value
-      const end = start + itemsPerPage.value
-      return filteredMappings.value.slice(start, end)
-    })
-    
+      const start = (currentPage.value - 1) * itemsPerPage.value;
+      const end = start + itemsPerPage.value;
+      return filteredMappings.value.slice(start, end);
+    });
+
     // Statistics
-    const totalMappings = computed(() => mappings.value.length)
-    const activeMappings = computed(() => 
-      mappings.value.filter(m => m.status === 'active').length
-    )
-    const draftMappings = computed(() => 
-      mappings.value.filter(m => m.status === 'draft').length
-    )
-    const errorMappings = computed(() => 
-      mappings.value.filter(m => m.status === 'error').length
-    )
-    
+    const totalMappings = computed(() => mappings.value.length);
+    const activeMappings = computed(
+      () => mappings.value.filter((m) => m.status === "active").length,
+    );
+    const draftMappings = computed(
+      () => mappings.value.filter((m) => m.status === "draft").length,
+    );
+    const errorMappings = computed(
+      () => mappings.value.filter((m) => m.status === "error").length,
+    );
+
     // Methods
     const fetchMappings = async () => {
-      loading.value = true
-      error.value = null
-      
+      loading.value = true;
+      error.value = null;
+
       try {
         const response = await mappingApi.getList({
           page: 1,
-          limit: 1000 // Get all for client-side filtering
-        })
-        mappings.value = response.data.items || []
+          limit: 1000, // Get all for client-side filtering
+        });
+        mappings.value = response.data.items || [];
       } catch (err) {
-        error.value = err.message || '매핑 목록을 불러오는데 실패했습니다'
-        mappings.value = []
+        error.value = err.message || "매핑 목록을 불러오는데 실패했습니다";
+        mappings.value = [];
       } finally {
-        loading.value = false
+        loading.value = false;
       }
-    }
-    
+    };
+
     const refreshMappings = () => {
-      fetchMappings()
-    }
-    
+      fetchMappings();
+    };
+
     const handleSearch = () => {
-      currentPage.value = 1 // Reset to first page on search
-    }
-    
+      currentPage.value = 1; // Reset to first page on search
+    };
+
     const applyFilters = () => {
-      currentPage.value = 1 // Reset to first page on filter change
-    }
-    
+      currentPage.value = 1; // Reset to first page on filter change
+    };
+
     const getSystemName = (systemId) => {
-      const system = availableSystems.value.find(s => s.id === systemId)
-      return system ? system.name : '알 수 없는 시스템'
-    }
-    
+      const system = availableSystems.value.find((s) => s.id === systemId);
+      return system ? system.name : "알 수 없는 시스템";
+    };
+
     const getStatusText = (status) => {
       const statusMap = {
-        active: '활성',
-        draft: '작성 중',
-        inactive: '비활성',
-        error: '오류'
-      }
-      return statusMap[status] || status
-    }
-    
+        active: "활성",
+        draft: "작성 중",
+        inactive: "비활성",
+        error: "오류",
+      };
+      return statusMap[status] || status;
+    };
+
     const formatDate = (dateString) => {
-      if (!dateString) return '없음'
-      const date = new Date(dateString)
-      return date.toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
-    }
-    
+      if (!dateString) return "없음";
+      const date = new Date(dateString);
+      return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    };
+
     const createNewMapping = () => {
-      showWizard.value = true
-    }
-    
-    const handleWizardClose = () => {
-      showWizard.value = false
-    }
-    
-    const handleWizardCreated = (mapping) => {
-      showWizard.value = false
-      // Refresh the mappings list
-      fetchMappings()
-    }
-    
+      router.push("/mappings/new");
+    };
+
     const editMapping = (id) => {
-      router.push(`/mappings/${id}/edit`)
-    }
-    
+      router.push(`/mappings/${id}/edit`);
+    };
+
     const duplicateMapping = async (id) => {
       try {
-        const mapping = mappings.value.find(m => m.id === id)
-        if (!mapping) return
-        
+        const mapping = mappings.value.find((m) => m.id === id);
+        if (!mapping) return;
+
         const duplicated = {
           ...mapping,
           name: `${mapping.name} (사본)`,
-          status: 'draft',
+          status: "draft",
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-        
-        delete duplicated.id
-        
-        const response = await mappingApi.create(duplicated)
-        appStore.showSuccess('매핑이 복제되었습니다')
-        
+          updatedAt: new Date().toISOString(),
+        };
+
+        delete duplicated.id;
+
+        const response = await mappingApi.create(duplicated);
+        appStore.showSuccess("매핑이 복제되었습니다");
+
         // Refresh list
-        await fetchMappings()
-        
+        await fetchMappings();
       } catch (error) {
-        appStore.showError('매핑 복제에 실패했습니다')
+        appStore.showError("매핑 복제에 실패했습니다");
       }
-    }
-    
+    };
+
     const testMapping = async (id) => {
       try {
-        appStore.setLoading(true, '매핑 테스트 중...')
-        await mappingApi.validate(id)
-        appStore.setLoading(false)
-        appStore.showSuccess('매핑 테스트가 성공적으로 완료되었습니다')
+        appStore.setLoading(true, "매핑 테스트 중...");
+        await mappingApi.validate(id);
+        appStore.setLoading(false);
+        appStore.showSuccess("매핑 테스트가 성공적으로 완료되었습니다");
       } catch (error) {
-        appStore.setLoading(false)
-        appStore.showError('매핑 테스트 실패: ' + error.message)
+        appStore.setLoading(false);
+        appStore.showError("매핑 테스트 실패: " + error.message);
       }
-    }
-    
+    };
+
     const deleteMapping = async (id) => {
-      if (!confirm('정말로 이 매핑을 삭제하시겠습니까?')) {
-        return
+      if (!confirm("정말로 이 매핑을 삭제하시겠습니까?")) {
+        return;
       }
-      
+
       try {
-        await mappingApi.delete(id)
-        appStore.showSuccess('매핑이 삭제되었습니다')
-        
+        await mappingApi.delete(id);
+        appStore.showSuccess("매핑이 삭제되었습니다");
+
         // Remove from local list
-        mappings.value = mappings.value.filter(m => m.id !== id)
-        
+        mappings.value = mappings.value.filter((m) => m.id !== id);
       } catch (error) {
-        appStore.showError('매핑 삭제에 실패했습니다')
+        appStore.showError("매핑 삭제에 실패했습니다");
       }
-    }
-    
+    };
+
+    const goToLogin = () => {
+      router.push("/login");
+    };
+
     // Lifecycle
     onMounted(async () => {
-      await systemStore.fetchSystems()
-      await fetchMappings()
-    })
-    
+      // Check authentication status
+      if (!isAuthenticated.value) {
+        showAuthNotice.value = true;
+      }
+
+      try {
+        await systemStore.fetchSystems();
+      } catch (error) {
+        console.error("Failed to load systems:", error);
+        // Continue loading the page even if systems fail to load
+      }
+
+      try {
+        await fetchMappings();
+      } catch (error) {
+        console.error("Failed to load mappings:", error);
+        // Continue loading the page even if mappings fail to load
+      }
+    });
+
     // Watch for page changes
     watch(currentPage, () => {
-      window.scrollTo(0, 0)
-    })
-    
+      window.scrollTo(0, 0);
+    });
+
     return {
       // State
       mappings,
@@ -467,9 +569,10 @@ export default {
       statusFilter,
       systemFilter,
       currentPage,
-      showWizard,
-      
+      showAuthNotice,
+
       // Computed
+      isAuthenticated,
       availableSystems,
       filteredMappings,
       paginatedMappings,
@@ -478,7 +581,7 @@ export default {
       activeMappings,
       draftMappings,
       errorMappings,
-      
+
       // Methods
       refreshMappings,
       handleSearch,
@@ -487,15 +590,18 @@ export default {
       getStatusText,
       formatDate,
       createNewMapping,
-      handleWizardClose,
-      handleWizardCreated,
       editMapping,
       duplicateMapping,
       testMapping,
-      deleteMapping
-    }
-  }
-}
+      deleteMapping,
+      goToLogin,
+
+      // Utils
+      isDevelopment,
+      getDevCredentials,
+    };
+  },
+};
 </script>
 
 <style scoped>
@@ -505,7 +611,18 @@ export default {
   margin: 0 auto;
 }
 
-/* Header */
+/* Page Actions */
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+/* Header - Deprecated, use .page-actions instead */
 .mapping-header {
   display: flex;
   justify-content: space-between;
@@ -900,8 +1017,12 @@ export default {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive */
@@ -909,12 +1030,12 @@ export default {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .filter-content {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filter-controls {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
@@ -922,37 +1043,126 @@ export default {
   }
 }
 
+/* Authentication Notice */
+.auth-notice {
+  margin-bottom: var(--space-6);
+  padding: var(--space-8);
+  text-align: center;
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-200);
+}
+
+.auth-notice-icon {
+  margin-bottom: var(--space-4);
+  color: var(--warning);
+}
+
+.auth-notice-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-semibold);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.auth-notice-text {
+  font-size: var(--font-size-base);
+  color: var(--gray-600);
+  margin: 0 0 var(--space-6) 0;
+}
+
+.dev-credentials {
+  margin: var(--space-6) 0;
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-radius: var(--radius-base);
+  text-align: left;
+}
+
+.dev-note {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  margin: 0 0 var(--space-3) 0;
+  text-align: center;
+}
+
+.credential-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-3);
+}
+
+.credential-card {
+  background: var(--white);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+}
+
+.credential-role {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-semibold);
+  color: var(--primary);
+  margin-bottom: var(--space-2);
+}
+
+.credential-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.field-label {
+  color: var(--gray-600);
+  min-width: 70px;
+}
+
+.credential-field code {
+  background: var(--gray-100);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  color: var(--gray-700);
+}
+
 @media (max-width: 768px) {
   .mapping-container {
     padding: var(--space-4);
   }
-  
+
+  .page-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
   .mapping-header {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-4);
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .mappings-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .system-flow {
     flex-direction: column;
   }
-  
+
   .flow-arrow {
     transform: rotate(90deg);
   }
-  
+
   .card-footer {
     flex-wrap: wrap;
   }
-  
+
   .filter-controls {
     grid-template-columns: 1fr;
   }

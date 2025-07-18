@@ -99,6 +99,9 @@ router.get('/', authorize('mappings', 'read'), async (req, res) => {
       targetSchema: mapping.targetSchema,
       mappingRules: mapping.mappingRules,
       transformationScript: mapping.transformationScript,
+      status: mapping.status,
+      priority: mapping.priority,
+      tags: mapping.tags,
       isActive: mapping.isActive,
       createdAt: mapping.createdAt,
       updatedAt: mapping.updatedAt
@@ -264,38 +267,45 @@ router.post('/', authorize('mappings', 'create'), async (req, res) => {
       description,
       sourceSchemaId, 
       targetSchemaId, 
-      mappingRules, 
+      mappingRules = {}, 
       transformationScript,
+      status = 'draft',
+      priority = 'medium',
+      tags = [],
       isActive = true 
     } = req.body;
     
-    // 입력 검증
-    if (!name || !sourceSchemaId || !targetSchemaId || !mappingRules) {
+    // 입력 검증 - only name is required
+    if (!name) {
       return res.status(400).json({
         success: false,
-        error: 'Name, sourceSchemaId, targetSchemaId, and mappingRules are required'
+        error: 'Mapping name is required'
       });
     }
 
-    // 소스 및 타겟 스키마 존재 확인
+    // 소스 및 타겟 스키마 존재 확인 (if provided)
     const { DataSchema } = require('../models');
-    const [sourceSchema, targetSchema] = await Promise.all([
-      DataSchema.findByPk(sourceSchemaId),
-      DataSchema.findByPk(targetSchemaId)
-    ]);
-
-    if (!sourceSchema) {
-      return res.status(404).json({
-        success: false,
-        error: 'Source schema not found'
-      });
+    let sourceSchema = null;
+    let targetSchema = null;
+    
+    if (sourceSchemaId) {
+      sourceSchema = await DataSchema.findByPk(sourceSchemaId);
+      if (!sourceSchema) {
+        return res.status(404).json({
+          success: false,
+          error: 'Source schema not found'
+        });
+      }
     }
-
-    if (!targetSchema) {
-      return res.status(404).json({
-        success: false,
-        error: 'Target schema not found'
-      });
+    
+    if (targetSchemaId) {
+      targetSchema = await DataSchema.findByPk(targetSchemaId);
+      if (!targetSchema) {
+        return res.status(404).json({
+          success: false,
+          error: 'Target schema not found'
+        });
+      }
     }
 
     // 매핑 생성
@@ -303,10 +313,13 @@ router.post('/', authorize('mappings', 'create'), async (req, res) => {
     const newMapping = await Mapping.create({
       name,
       description,
-      sourceSchemaId,
-      targetSchemaId,
+      sourceSchemaId: sourceSchemaId || null,
+      targetSchemaId: targetSchemaId || null,
       mappingRules,
       transformationScript,
+      status,
+      priority,
+      tags,
       isActive
     });
 
@@ -336,6 +349,9 @@ router.post('/', authorize('mappings', 'create'), async (req, res) => {
       targetSchema: createdMapping.targetSchema,
       mappingRules: createdMapping.mappingRules,
       transformationScript: createdMapping.transformationScript,
+      status: createdMapping.status,
+      priority: createdMapping.priority,
+      tags: createdMapping.tags,
       isActive: createdMapping.isActive,
       createdAt: createdMapping.createdAt,
       updatedAt: createdMapping.updatedAt

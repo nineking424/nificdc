@@ -18,7 +18,7 @@ const Mapping = sequelize.define('Mapping', {
   },
   sourceSchemaId: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true, // Made optional
     references: {
       model: 'data_schemas',
       key: 'id'
@@ -28,7 +28,7 @@ const Mapping = sequelize.define('Mapping', {
   },
   targetSchemaId: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true, // Made optional
     references: {
       model: 'data_schemas',
       key: 'id'
@@ -39,10 +39,8 @@ const Mapping = sequelize.define('Mapping', {
   mappingRules: {
     type: DataTypes.JSONB,
     allowNull: false,
-    field: 'mapping_rules',
-    validate: {
-      notEmpty: true
-    }
+    defaultValue: {}, // Default empty object
+    field: 'mapping_rules'
   },
   transformationScript: {
     type: DataTypes.TEXT,
@@ -52,6 +50,33 @@ const Mapping = sequelize.define('Mapping', {
   description: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  status: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'draft',
+    validate: {
+      isIn: [['draft', 'active', 'inactive', 'error']]
+    }
+  },
+  priority: {
+    type: DataTypes.STRING(10),
+    allowNull: false,
+    defaultValue: 'medium',
+    validate: {
+      isIn: [['low', 'medium', 'high']]
+    }
+  },
+  tags: {
+    type: DataTypes.ARRAY(DataTypes.STRING),
+    allowNull: true,
+    defaultValue: []
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: 'is_active'
   },
   createdAt: {
     type: DataTypes.DATE,
@@ -73,13 +98,7 @@ const Mapping = sequelize.define('Mapping', {
   timestamps: true,
   paranoid: true,
   underscored: true,
-  validate: {
-    differentSchemas() {
-      if (this.sourceSchemaId === this.targetSchemaId) {
-        throw new Error('Source and target schemas must be different');
-      }
-    }
-  },
+  // Removed validation to allow same source and target schemas
   indexes: [
     {
       fields: ['source_schema_id']

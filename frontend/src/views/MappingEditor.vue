@@ -1,1032 +1,790 @@
 <template>
-  <div class="mapping-editor">
-    <!-- Header -->
-    <div class="editor-header">
-      <div class="header-left">
-        <button @click="handleBack" class="back-button">
-          <ArrowLeftIcon />
-          <span>Back to Mappings</span>
-        </button>
-        <h1 class="editor-title">
-          {{ isEditMode ? 'Edit Mapping' : 'Create New Mapping' }}
-        </h1>
-      </div>
-      
-      <div class="header-actions">
-        <button 
-          @click="handleSave" 
-          class="btn-primary"
-          :disabled="!canSave || saving"
-        >
-          <SaveIcon />
-          {{ saving ? 'Saving...' : 'Save Mapping' }}
-        </button>
-        <button @click="handleCancel" class="btn-secondary">
-          Cancel
-        </button>
-      </div>
-    </div>
-
-    <!-- Mapping Configuration -->
-    <div class="mapping-config">
-      <div class="config-row">
-        <div class="config-field">
-          <label>Mapping Name</label>
-          <input 
-            v-model="mappingName" 
-            type="text" 
-            placeholder="Enter mapping name"
-            class="input-field"
-          />
+  <AppLayout>
+    <div class="mapping-editor">
+      <!-- Header -->
+      <div class="editor-header">
+        <div class="header-content">
+          <h1 class="page-title">
+            {{ isEditMode ? "Edit Mapping" : "Create New Mapping" }}
+          </h1>
+          <p class="page-subtitle">
+            {{
+              isEditMode
+                ? "Modify mapping configuration and field mappings"
+                : "Set up a new data mapping between systems"
+            }}
+          </p>
         </div>
-        <div class="config-field">
-          <label>Description</label>
-          <input 
-            v-model="mappingDescription" 
-            type="text" 
-            placeholder="Optional description"
-            class="input-field"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="editor-content">
-      <!-- Source Panel -->
-      <div class="schema-column source-column">
-        <div class="column-header">
-          <h2>Source System</h2>
-          <select 
-            v-model="sourceSystemId" 
-            @change="handleSourceSystemChange"
-            class="system-select"
+        <div class="header-actions">
+          <button
+            @click="handleCancel"
+            class="clean-button clean-button-secondary"
           >
-            <option value="">Select source system...</option>
-            <option 
-              v-for="system in availableSystems" 
-              :key="system.id"
-              :value="system.id"
-            >
-              {{ system.name }} ({{ system.type }})
-            </option>
-          </select>
-        </div>
-        
-        <SchemaPanel
-          v-if="sourceSystemId"
-          :key="`source-${sourceSystemId}`"
-          title="Source Schema"
-          :system-id="sourceSystemId"
-          :schema="sourceSchema"
-          type="source"
-          :loading="sourceLoading"
-          :error="sourceError"
-          :searchable="true"
-          :draggable="true"
-          :droppable="false"
-          :show-stats="true"
-          @refresh="refreshSourceSchema"
-          @field-select="handleFieldSelect"
-          @field-drag-start="handleFieldDragStart"
-          @field-drag-end="handleFieldDragEnd"
-        />
-        
-        <div v-else class="empty-panel">
-          <EmptyStateIcon />
-          <p>Select a source system to view schema</p>
-        </div>
-      </div>
-
-      <!-- Mapping Canvas (Placeholder for Task 13) -->
-      <div class="mapping-canvas">
-        <div class="canvas-header">
-          <h3>Field Mappings</h3>
-          <button @click="autoMap" class="btn-small" :disabled="!canAutoMap">
-            <AutoMapIcon />
-            Auto Map
+            Cancel
+          </button>
+          <button
+            @click="handleSave"
+            class="clean-button clean-button-primary"
+            :disabled="!isValid || saving"
+          >
+            <v-icon v-if="!saving" size="18">mdi-content-save</v-icon>
+            <v-progress-circular v-else indeterminate size="16" width="2" />
+            {{
+              saving
+                ? "Saving..."
+                : isEditMode
+                  ? "Save Changes"
+                  : "Create Mapping"
+            }}
           </button>
         </div>
-        
-        <div class="canvas-content">
-          <!-- This will be replaced with the actual Mapping Canvas component in Task 13 -->
-          <div class="mapping-list">
-            <div v-if="mappings.length === 0" class="no-mappings">
-              <InfoIcon />
-              <p>Drag fields from source to target to create mappings</p>
+      </div>
+
+      <!-- Main Form -->
+      <div class="editor-content">
+        <!-- Basic Information Section -->
+        <div class="form-section">
+          <h2 class="section-title">
+            <v-icon size="20">mdi-information-outline</v-icon>
+            Basic Information
+          </h2>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label required">Mapping Name</label>
+              <input
+                v-model="formData.name"
+                type="text"
+                class="clean-form-input"
+                :class="{ error: errors.name }"
+                placeholder="Enter a descriptive name for this mapping"
+                @blur="validateName"
+              />
+              <span v-if="errors.name" class="error-message">{{
+                errors.name
+              }}</span>
             </div>
-            
-            <div v-else class="mapping-items">
-              <div 
-                v-for="(mapping, index) in mappings" 
-                :key="index"
-                class="mapping-item"
-              >
-                <div class="mapping-source">
-                  <FieldIcon />
-                  {{ mapping.source.tableName }}.{{ mapping.source.name }}
-                </div>
-                <div class="mapping-arrow">→</div>
-                <div class="mapping-target">
-                  <FieldIcon />
-                  {{ mapping.target.tableName }}.{{ mapping.target.name }}
-                </div>
-                <button 
-                  @click="removeMapping(index)" 
-                  class="remove-mapping"
-                  title="Remove mapping"
+            <div class="form-group full-width">
+              <label class="form-label">Description</label>
+              <textarea
+                v-model="formData.description"
+                class="clean-form-textarea"
+                placeholder="Optional description of what this mapping does"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Configuration Section -->
+        <div class="form-section">
+          <h2 class="section-title">
+            <v-icon size="20">mdi-database-outline</v-icon>
+            System Configuration
+          </h2>
+          <div class="form-grid">
+            <!-- Source System -->
+            <div class="form-group">
+              <label class="form-label">Source System</label>
+              <div class="system-selector">
+                <div
+                  class="system-display"
+                  :class="{ 'has-value': formData.sourceSystemId }"
+                  @click="openSourceSystemDialog"
                 >
-                  <CloseIcon />
+                  <div v-if="sourceSystem" class="selected-system">
+                    <v-icon size="24">{{
+                      getSystemIcon(sourceSystem.type)
+                    }}</v-icon>
+                    <div class="system-info">
+                      <span class="system-name">{{ sourceSystem.name }}</span>
+                      <span class="system-type">{{ sourceSystem.type }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="placeholder">
+                    <v-icon size="20">mdi-database-export</v-icon>
+                    <span>Select source system</span>
+                  </div>
+                  <v-icon class="action-icon">mdi-magnify</v-icon>
+                </div>
+                <button
+                  v-if="formData.sourceSystemId"
+                  @click.stop="clearSourceSystem"
+                  class="clear-button"
+                  title="Clear selection"
+                >
+                  <v-icon size="18">mdi-close</v-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Target System -->
+            <div class="form-group">
+              <label class="form-label">Target System</label>
+              <div class="system-selector">
+                <div
+                  class="system-display"
+                  :class="{ 'has-value': formData.targetSystemId }"
+                  @click="openTargetSystemDialog"
+                >
+                  <div v-if="targetSystem" class="selected-system">
+                    <v-icon size="24">{{
+                      getSystemIcon(targetSystem.type)
+                    }}</v-icon>
+                    <div class="system-info">
+                      <span class="system-name">{{ targetSystem.name }}</span>
+                      <span class="system-type">{{ targetSystem.type }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="placeholder">
+                    <v-icon size="20">mdi-database-import</v-icon>
+                    <span>Select target system</span>
+                  </div>
+                  <v-icon class="action-icon">mdi-magnify</v-icon>
+                </div>
+                <button
+                  v-if="formData.targetSystemId"
+                  @click.stop="clearTargetSystem"
+                  class="clear-button"
+                  title="Clear selection"
+                >
+                  <v-icon size="18">mdi-close</v-icon>
                 </button>
               </div>
             </div>
           </div>
-          
-          <div class="mapping-stats">
-            <span>{{ mappings.length }} field mapping(s)</span>
-            <span v-if="unmappedSourceFields > 0" class="warning">
-              {{ unmappedSourceFields }} unmapped source fields
-            </span>
+
+          <!-- Same System Notice -->
+          <div v-if="isSameSystem" class="info-banner">
+            <v-icon size="20">mdi-information</v-icon>
+            <span
+              >Source and target are the same system. This is useful for
+              table-to-table mappings within the same database.</span
+            >
+          </div>
+        </div>
+
+        <!-- Advanced Options Section (Collapsible) -->
+        <div class="form-section">
+          <button
+            @click="showAdvanced = !showAdvanced"
+            class="section-title clickable"
+          >
+            <v-icon size="20">{{
+              showAdvanced ? "mdi-chevron-down" : "mdi-chevron-right"
+            }}</v-icon>
+            Advanced Options
+            <span class="section-subtitle">Optional configuration</span>
+          </button>
+
+          <div v-show="showAdvanced" class="form-content">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Mapping Status</label>
+                <select v-model="formData.status" class="clean-form-select">
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select v-model="formData.priority" class="clean-form-select">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="form-group full-width">
+                <label class="form-label">Tags</label>
+                <input
+                  v-model="formData.tags"
+                  type="text"
+                  class="clean-form-input"
+                  placeholder="Enter tags separated by commas"
+                />
+                <span class="form-hint"
+                  >Use tags to organize and filter mappings</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Field Mappings Section (if systems are selected) -->
+        <div
+          v-if="formData.sourceSystemId && formData.targetSystemId"
+          class="form-section"
+        >
+          <h2 class="section-title">
+            <v-icon size="20">mdi-table-arrow-right</v-icon>
+            Field Mappings
+          </h2>
+          <div class="field-mapping-notice">
+            <v-icon size="48" color="primary">mdi-table-edit</v-icon>
+            <h3>Configure Field Mappings</h3>
+            <p>
+              After creating the mapping, you can configure detailed field
+              mappings and transformations.
+            </p>
+            <p class="hint">
+              This section will be available in edit mode with a visual mapping
+              interface.
+            </p>
           </div>
         </div>
       </div>
 
-      <!-- Target Panel -->
-      <div class="schema-column target-column">
-        <div class="column-header">
-          <h2>Target System</h2>
-          <select 
-            v-model="targetSystemId" 
-            @change="handleTargetSystemChange"
-            class="system-select"
-          >
-            <option value="">Select target system...</option>
-            <option 
-              v-for="system in availableSystems" 
-              :key="system.id"
-              :value="system.id"
-              :disabled="system.id === sourceSystemId"
-            >
-              {{ system.name }} ({{ system.type }})
-            </option>
-          </select>
-        </div>
-        
-        <SchemaPanel
-          v-if="targetSystemId"
-          :key="`target-${targetSystemId}`"
-          title="Target Schema"
-          :system-id="targetSystemId"
-          :schema="targetSchema"
-          type="target"
-          :loading="targetLoading"
-          :error="targetError"
-          :searchable="true"
-          :draggable="false"
-          :droppable="true"
-          :show-stats="true"
-          @refresh="refreshTargetSchema"
-          @field-select="handleFieldSelect"
-          @field-drop="handleFieldDrop"
-        />
-        
-        <div v-else class="empty-panel">
-          <EmptyStateIcon />
-          <p>Select a target system to view schema</p>
-        </div>
-      </div>
-    </div>
+      <!-- System Search Dialogs -->
+      <SystemSearchDialog
+        v-model="showSourceSystemDialog"
+        title="Select Source System"
+        :current-system-id="formData.sourceSystemId"
+        @select="handleSourceSystemSelect"
+      />
 
-    <!-- Footer Status Bar -->
-    <div class="editor-footer">
-      <div class="footer-status">
-        <span v-if="lastSaved">
-          Last saved: {{ formatTime(lastSaved) }}
-        </span>
-        <span v-else>Unsaved changes</span>
-      </div>
-      
-      <div class="footer-actions">
-        <button @click="validateMapping" class="btn-small">
-          <ValidateIcon />
-          Validate
-        </button>
-        <button @click="previewMapping" class="btn-small" :disabled="mappings.length === 0">
-          <PreviewIcon />
-          Preview
-        </button>
-      </div>
+      <SystemSearchDialog
+        v-model="showTargetSystemDialog"
+        title="Select Target System"
+        :current-system-id="formData.targetSystemId"
+        @select="handleTargetSystemSelect"
+      />
     </div>
-  </div>
+  </AppLayout>
 </template>
 
 <script>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useMappingStore } from '@/stores/mapping'
-import { useSystemStore } from '@/stores/system'
-import { useAppStore } from '@/stores/app'
-import SchemaPanel from '@/components/SchemaPanel/SchemaPanel.vue'
-import schemaService from '@/services/schemaService'
-import { mappingApi } from '@/services/api'
-import {
-  ArrowLeftIcon,
-  SaveIcon,
-  EmptyStateIcon,
-  AutoMapIcon,
-  InfoIcon,
-  FieldIcon,
-  CloseIcon,
-  ValidateIcon,
-  PreviewIcon
-} from '@/components/icons'
+import { ref, computed, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useSystemStore } from "@/stores/system";
+import { useAppStore } from "@/stores/app";
+import { mappingApi } from "@/services/api";
+import AppLayout from "@/components/AppLayout.vue";
+import SystemSearchDialog from "@/components/SystemSearchDialog.vue";
 
 export default {
-  name: 'MappingEditor',
-  
+  name: "MappingEditor",
+
   components: {
-    SchemaPanel,
-    ArrowLeftIcon,
-    SaveIcon,
-    EmptyStateIcon,
-    AutoMapIcon,
-    InfoIcon,
-    FieldIcon,
-    CloseIcon,
-    ValidateIcon,
-    PreviewIcon
+    AppLayout,
+    SystemSearchDialog,
   },
-  
+
   setup() {
-    const route = useRoute()
-    const router = useRouter()
-    const mappingStore = useMappingStore()
-    const systemStore = useSystemStore()
-    const appStore = useAppStore()
-    
-    // State
-    const mappingId = ref(route.params.id || null)
-    const isEditMode = computed(() => !!mappingId.value)
-    
-    // Mapping configuration
-    const mappingName = ref('')
-    const mappingDescription = ref('')
-    const sourceSystemId = ref('')
-    const targetSystemId = ref('')
-    
-    // Schema states
-    const sourceSchema = ref(null)
-    const targetSchema = ref(null)
-    const sourceLoading = ref(false)
-    const targetLoading = ref(false)
-    const sourceError = ref(null)
-    const targetError = ref(null)
-    
-    // Mappings
-    const mappings = ref([])
-    const draggedField = ref(null)
-    
-    // UI states
-    const saving = ref(false)
-    const lastSaved = ref(null)
-    const hasUnsavedChanges = ref(false)
-    
+    const route = useRoute();
+    const router = useRouter();
+    const systemStore = useSystemStore();
+    const appStore = useAppStore();
+
+    // Form state
+    const formData = ref({
+      name: "",
+      description: "",
+      sourceSystemId: null,
+      targetSystemId: null,
+      status: "draft",
+      priority: "medium",
+      tags: "",
+      mappingRules: {},
+    });
+
+    const errors = ref({});
+    const saving = ref(false);
+    const loading = ref(false);
+    const showAdvanced = ref(false);
+
+    // Dialog state
+    const showSourceSystemDialog = ref(false);
+    const showTargetSystemDialog = ref(false);
+
     // Computed
-    const availableSystems = computed(() => systemStore.systems || [])
-    
-    const canSave = computed(() => {
-      return mappingName.value && 
-             sourceSystemId.value && 
-             targetSystemId.value && 
-             mappings.value.length > 0
-    })
-    
-    const canAutoMap = computed(() => {
-      return sourceSchema.value && targetSchema.value
-    })
-    
-    const unmappedSourceFields = computed(() => {
-      if (!sourceSchema.value) return 0
-      
-      const mappedFields = new Set(mappings.value.map(m => 
-        `${m.source.tableName}.${m.source.name}`
-      ))
-      
-      let totalFields = 0
-      sourceSchema.value.tables?.forEach(table => {
-        table.columns?.forEach(column => {
-          const fieldKey = `${table.name}.${column.name}`
-          if (!mappedFields.has(fieldKey)) {
-            totalFields++
-          }
-        })
-      })
-      
-      return totalFields
-    })
-    
+    const isEditMode = computed(() => !!route.params.id);
+    const mappingId = computed(() => route.params.id);
+
+    const isValid = computed(() => {
+      return formData.value.name && !errors.value.name;
+    });
+
+    const sourceSystem = computed(() => {
+      if (!formData.value.sourceSystemId) return null;
+      return systemStore.systems.find(
+        (s) => s.id === formData.value.sourceSystemId,
+      );
+    });
+
+    const targetSystem = computed(() => {
+      if (!formData.value.targetSystemId) return null;
+      return systemStore.systems.find(
+        (s) => s.id === formData.value.targetSystemId,
+      );
+    });
+
+    const isSameSystem = computed(() => {
+      return (
+        formData.value.sourceSystemId &&
+        formData.value.targetSystemId &&
+        formData.value.sourceSystemId === formData.value.targetSystemId
+      );
+    });
+
     // Methods
-    const handleBack = () => {
-      if (hasUnsavedChanges.value) {
-        if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
-          return
-        }
-      }
-      router.push('/mappings')
-    }
-    
-    const handleSourceSystemChange = async () => {
-      if (!sourceSystemId.value) {
-        sourceSchema.value = null
-        return
-      }
-      
-      sourceLoading.value = true
-      sourceError.value = null
-      
-      try {
-        sourceSchema.value = await schemaService.discoverSchema(sourceSystemId.value)
-      } catch (error) {
-        sourceError.value = error.message
-        sourceSchema.value = null
-      } finally {
-        sourceLoading.value = false
-      }
-    }
-    
-    const handleTargetSystemChange = async () => {
-      if (!targetSystemId.value) {
-        targetSchema.value = null
-        return
-      }
-      
-      targetLoading.value = true
-      targetError.value = null
-      
-      try {
-        targetSchema.value = await schemaService.discoverSchema(targetSystemId.value)
-      } catch (error) {
-        targetError.value = error.message
-        targetSchema.value = null
-      } finally {
-        targetLoading.value = false
-      }
-    }
-    
-    const refreshSourceSchema = async () => {
-      sourceLoading.value = true
-      sourceError.value = null
-      
-      try {
-        sourceSchema.value = await schemaService.refreshSchema(sourceSystemId.value)
-      } catch (error) {
-        sourceError.value = error.message
-      } finally {
-        sourceLoading.value = false
-      }
-    }
-    
-    const refreshTargetSchema = async () => {
-      targetLoading.value = true
-      targetError.value = null
-      
-      try {
-        targetSchema.value = await schemaService.refreshSchema(targetSystemId.value)
-      } catch (error) {
-        targetError.value = error.message
-      } finally {
-        targetLoading.value = false
-      }
-    }
-    
-    const handleFieldSelect = (data) => {
-      console.log('Field selected:', data)
-    }
-    
-    const handleFieldDragStart = (data) => {
-      draggedField.value = data.field
-    }
-    
-    const handleFieldDragEnd = () => {
-      draggedField.value = null
-    }
-    
-    const handleFieldDrop = (data) => {
-      if (draggedField.value && data.targetField) {
-        // Check if mapping already exists
-        const exists = mappings.value.some(m => 
-          m.source.tableName === draggedField.value.tableName &&
-          m.source.name === draggedField.value.name &&
-          m.target.tableName === data.targetField.tableName &&
-          m.target.name === data.targetField.name
-        )
-        
-        if (!exists) {
-          mappings.value.push({
-            source: draggedField.value,
-            target: data.targetField,
-            transformations: []
-          })
-          hasUnsavedChanges.value = true
-        }
-      }
-      draggedField.value = null
-    }
-    
-    const removeMapping = (index) => {
-      mappings.value.splice(index, 1)
-      hasUnsavedChanges.value = true
-    }
-    
-    const autoMap = async () => {
-      if (!sourceSchema.value || !targetSchema.value) return
-      
-      // Simple auto-mapping based on field names
-      const newMappings = []
-      
-      sourceSchema.value.tables?.forEach(sourceTable => {
-        targetSchema.value.tables?.forEach(targetTable => {
-          sourceTable.columns?.forEach(sourceColumn => {
-            targetTable.columns?.forEach(targetColumn => {
-              // Match by name (case insensitive)
-              if (sourceColumn.name.toLowerCase() === targetColumn.name.toLowerCase()) {
-                // Check if mapping already exists
-                const exists = mappings.value.some(m => 
-                  m.source.tableName === sourceTable.name &&
-                  m.source.name === sourceColumn.name &&
-                  m.target.tableName === targetTable.name &&
-                  m.target.name === targetColumn.name
-                )
-                
-                if (!exists) {
-                  newMappings.push({
-                    source: {
-                      ...sourceColumn,
-                      tableName: sourceTable.name
-                    },
-                    target: {
-                      ...targetColumn,
-                      tableName: targetTable.name
-                    },
-                    transformations: []
-                  })
-                }
-              }
-            })
-          })
-        })
-      })
-      
-      if (newMappings.length > 0) {
-        mappings.value.push(...newMappings)
-        hasUnsavedChanges.value = true
-        appStore.showSuccess(`Auto-mapped ${newMappings.length} fields`)
+    const validateName = () => {
+      if (!formData.value.name) {
+        errors.value.name = "Mapping name is required";
+      } else if (formData.value.name.length < 3) {
+        errors.value.name = "Name must be at least 3 characters";
       } else {
-        appStore.showWarning('No matching fields found for auto-mapping')
+        delete errors.value.name;
       }
-    }
-    
-    const validateMapping = async () => {
-      // This will be implemented with backend validation
-      appStore.showInfo('Mapping validation will be implemented with backend integration')
-    }
-    
-    const previewMapping = async () => {
-      // This will be implemented to show mapping preview
-      appStore.showInfo('Mapping preview will be implemented with transformation editor')
-    }
-    
-    const handleSave = async () => {
-      if (!canSave.value) return
-      
-      saving.value = true
-      
-      try {
-        const mappingData = {
-          name: mappingName.value,
-          description: mappingDescription.value,
-          sourceSystemId: sourceSystemId.value,
-          targetSystemId: targetSystemId.value,
-          fieldMappings: mappings.value,
-          status: 'draft',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-        
-        if (isEditMode.value) {
-          await mappingApi.update(mappingId.value, mappingData)
-          appStore.showSuccess('Mapping updated successfully')
-        } else {
-          const response = await mappingApi.create(mappingData)
-          mappingId.value = response.data.id
-          appStore.showSuccess('Mapping created successfully')
-          
-          // Navigate to edit mode
-          router.replace(`/mappings/${mappingId.value}/edit`)
-        }
-        
-        lastSaved.value = new Date()
-        hasUnsavedChanges.value = false
-        
-      } catch (error) {
-        appStore.showError(error.message || 'Failed to save mapping')
-      } finally {
-        saving.value = false
-      }
-    }
-    
-    const handleCancel = () => {
-      handleBack()
-    }
-    
-    const formatTime = (date) => {
-      return new Intl.DateTimeFormat('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }).format(date)
-    }
-    
-    // Load existing mapping in edit mode
+    };
+
+    const openSourceSystemDialog = () => {
+      showSourceSystemDialog.value = true;
+    };
+
+    const openTargetSystemDialog = () => {
+      showTargetSystemDialog.value = true;
+    };
+
+    const handleSourceSystemSelect = (system) => {
+      formData.value.sourceSystemId = system.id;
+    };
+
+    const handleTargetSystemSelect = (system) => {
+      formData.value.targetSystemId = system.id;
+    };
+
+    const clearSourceSystem = () => {
+      formData.value.sourceSystemId = null;
+    };
+
+    const clearTargetSystem = () => {
+      formData.value.targetSystemId = null;
+    };
+
+    const getSystemIcon = (type) => {
+      const icons = {
+        postgresql: "mdi-elephant",
+        mysql: "mdi-database",
+        oracle: "mdi-database",
+        mssql: "mdi-microsoft",
+        sqlite: "mdi-database",
+        mongodb: "mdi-leaf",
+        ftp: "mdi-folder-network",
+        sftp: "mdi-folder-lock",
+        local_fs: "mdi-folder",
+        aws_s3: "mdi-aws",
+        azure_blob: "mdi-microsoft-azure",
+      };
+      return icons[type] || "mdi-database";
+    };
+
     const loadMapping = async () => {
-      if (!isEditMode.value) return
-      
+      if (!isEditMode.value) return;
+
+      loading.value = true;
       try {
-        const response = await mappingApi.getById(mappingId.value)
-        const mapping = response.data
-        
-        mappingName.value = mapping.name
-        mappingDescription.value = mapping.description || ''
-        sourceSystemId.value = mapping.sourceSystemId
-        targetSystemId.value = mapping.targetSystemId
-        mappings.value = mapping.fieldMappings || []
-        
-        // Load schemas
-        await Promise.all([
-          handleSourceSystemChange(),
-          handleTargetSystemChange()
-        ])
-        
+        const response = await mappingApi.getById(mappingId.value);
+        const mapping = response.data;
+
+        // Populate form data
+        formData.value = {
+          name: mapping.name || "",
+          description: mapping.description || "",
+          sourceSystemId: mapping.sourceSystemId,
+          targetSystemId: mapping.targetSystemId,
+          status: mapping.status || "draft",
+          priority: mapping.priority || "medium",
+          tags: mapping.tags ? mapping.tags.join(", ") : "",
+          mappingRules: mapping.mappingRules || {},
+        };
       } catch (error) {
-        appStore.showError('Failed to load mapping')
-        router.push('/mappings')
+        console.error("Failed to load mapping:", error);
+        appStore.showError("Failed to load mapping");
+        router.push("/mappings");
+      } finally {
+        loading.value = false;
       }
-    }
-    
+    };
+
+    const handleSave = async () => {
+      validateName();
+      if (!isValid.value) return;
+
+      saving.value = true;
+      try {
+        const data = {
+          name: formData.value.name,
+          description: formData.value.description,
+          sourceSystemId: formData.value.sourceSystemId,
+          targetSystemId: formData.value.targetSystemId,
+          status: formData.value.status,
+          priority: formData.value.priority,
+          tags: formData.value.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((tag) => tag),
+          mappingRules: formData.value.mappingRules,
+        };
+
+        if (isEditMode.value) {
+          await mappingApi.update(mappingId.value, data);
+          appStore.showSuccess("Mapping updated successfully");
+        } else {
+          const response = await mappingApi.create(data);
+          appStore.showSuccess("Mapping created successfully");
+
+          // Navigate to edit mode for the new mapping
+          router.push(`/mappings/${response.data.id}/edit`);
+        }
+      } catch (error) {
+        console.error("Failed to save mapping:", error);
+        appStore.showError(
+          error.response?.data?.error ||
+            `Failed to ${isEditMode.value ? "update" : "create"} mapping`,
+        );
+      } finally {
+        saving.value = false;
+      }
+    };
+
+    const handleCancel = () => {
+      router.push("/mappings");
+    };
+
+    // Auto-save draft
+    let saveTimeout = null;
+    watch(
+      formData,
+      (newData) => {
+        if (!isEditMode.value) return;
+
+        // Clear existing timeout
+        if (saveTimeout) clearTimeout(saveTimeout);
+
+        // Set new timeout for auto-save
+        saveTimeout = setTimeout(() => {
+          if (newData.name && isValid.value) {
+            // In a real implementation, this would save a draft
+            console.log("Auto-saving draft...");
+          }
+        }, 2000);
+      },
+      { deep: true },
+    );
+
     // Lifecycle
     onMounted(async () => {
       // Load systems
-      await systemStore.fetchSystems()
-      
+      try {
+        await systemStore.fetchSystems();
+      } catch (error) {
+        console.error("Failed to load systems:", error);
+      }
+
       // Load mapping if in edit mode
       if (isEditMode.value) {
-        await loadMapping()
+        await loadMapping();
       }
-    })
-    
-    // Warn about unsaved changes
-    onBeforeUnmount(() => {
-      if (hasUnsavedChanges.value) {
-        return confirm('You have unsaved changes. Are you sure you want to leave?')
-      }
-    })
-    
-    // Watch for changes
-    watch([mappingName, mappingDescription, sourceSystemId, targetSystemId], () => {
-      if (mappingName.value || mappingDescription.value || sourceSystemId.value || targetSystemId.value) {
-        hasUnsavedChanges.value = true
-      }
-    })
-    
+    });
+
     return {
       // State
-      isEditMode,
-      mappingName,
-      mappingDescription,
-      sourceSystemId,
-      targetSystemId,
-      sourceSchema,
-      targetSchema,
-      sourceLoading,
-      targetLoading,
-      sourceError,
-      targetError,
-      mappings,
+      formData,
+      errors,
       saving,
-      lastSaved,
-      hasUnsavedChanges,
-      
+      loading,
+      showAdvanced,
+      showSourceSystemDialog,
+      showTargetSystemDialog,
+
       // Computed
-      availableSystems,
-      canSave,
-      canAutoMap,
-      unmappedSourceFields,
-      
+      isEditMode,
+      isValid,
+      sourceSystem,
+      targetSystem,
+      isSameSystem,
+
       // Methods
-      handleBack,
-      handleSourceSystemChange,
-      handleTargetSystemChange,
-      refreshSourceSchema,
-      refreshTargetSchema,
-      handleFieldSelect,
-      handleFieldDragStart,
-      handleFieldDragEnd,
-      handleFieldDrop,
-      removeMapping,
-      autoMap,
-      validateMapping,
-      previewMapping,
+      validateName,
+      openSourceSystemDialog,
+      openTargetSystemDialog,
+      handleSourceSystemSelect,
+      handleTargetSystemSelect,
+      clearSourceSystem,
+      clearTargetSystem,
+      getSystemIcon,
       handleSave,
       handleCancel,
-      formatTime
-    }
-  }
-}
+    };
+  },
+};
 </script>
 
 <style scoped>
 .mapping-editor {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--color-background);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6);
 }
 
 /* Header */
 .editor-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  background: var(--color-background-soft);
-  border-bottom: 1px solid var(--color-border);
+  align-items: flex-start;
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--gray-100);
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.header-content {
+  flex: 1;
 }
 
-.back-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
+.page-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-bold);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-2) 0;
 }
 
-.back-button:hover {
-  background: var(--color-background-mute);
-  border-color: var(--color-border-hover);
-}
-
-.editor-title {
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--gray-600);
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--color-text);
 }
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-/* Mapping Configuration */
-.mapping-config {
-  padding: 20px 24px;
-  background: var(--color-background-soft);
-  border-bottom: 1px solid var(--color-border);
+/* Form Sections */
+.form-section {
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
-.config-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.config-field label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.input-field {
-  width: 100%;
-  padding: 8px 12px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--color-text);
-  transition: border-color 0.2s;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-/* Main Content */
-.editor-content {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 300px 1fr;
-  gap: 0;
-  overflow: hidden;
-}
-
-.schema-column {
+.section-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  color: var(--gray-900);
+  margin: 0 0 var(--space-4) 0;
   display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--color-border);
-}
-
-.target-column {
-  border-right: none;
-  border-left: 1px solid var(--color-border);
-}
-
-.column-header {
-  padding: 16px;
-  background: var(--color-background-soft);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.column-header h2 {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.system-select {
-  width: 100%;
-  padding: 8px 12px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.empty-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px;
-  color: var(--color-text-secondary);
+  gap: var(--space-2);
 }
 
-.empty-panel svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
-  opacity: 0.3;
+.section-title.clickable {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  transition: all var(--transition-base);
 }
 
-/* Mapping Canvas */
-.mapping-canvas {
+.section-title.clickable:hover {
+  color: var(--primary);
+}
+
+.section-subtitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-normal);
+  color: var(--gray-600);
+  margin-left: auto;
+}
+
+.form-content {
+  margin-top: var(--space-4);
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-6);
+}
+
+.form-group {
   display: flex;
   flex-direction: column;
-  background: var(--color-background-mute);
+  gap: var(--space-2);
 }
 
-.canvas-header {
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-medium);
+  color: var(--gray-700);
+}
+
+.form-label.required::after {
+  content: " *";
+  color: var(--error);
+}
+
+.form-hint {
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+}
+
+.error-message {
+  font-size: var(--font-size-xs);
+  color: var(--error);
+}
+
+/* System Selector */
+.system-selector {
+  position: relative;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.system-display {
+  flex: 1;
+  min-height: 48px;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-base);
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: all var(--transition-base);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  background: var(--color-background-soft);
-  border-bottom: 1px solid var(--color-border);
 }
 
-.canvas-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text);
+.system-display:hover {
+  border-color: var(--gray-400);
+  background: var(--gray-50);
 }
 
-.canvas-content {
-  flex: 1;
+.system-display.has-value {
+  border-color: var(--primary);
+}
+
+.selected-system {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.system-info {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
-.mapping-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+.system-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-medium);
+  color: var(--gray-900);
 }
 
-.no-mappings {
+.system-type {
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  text-transform: uppercase;
+}
+
+.placeholder {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--gray-500);
+}
+
+.action-icon {
+  color: var(--gray-400);
+}
+
+.clear-button {
+  display: flex;
   align-items: center;
   justify-content: center;
-  height: 200px;
-  color: var(--color-text-secondary);
+  width: 36px;
+  height: 36px;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-base);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.clear-button:hover {
+  background: var(--error-soft);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* Info Banner */
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--info-soft);
+  border: 1px solid var(--info-200);
+  border-radius: var(--radius-base);
+  margin-top: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--info);
+}
+
+/* Field Mapping Notice */
+.field-mapping-notice {
   text-align: center;
+  padding: var(--space-8);
+  color: var(--gray-600);
 }
 
-.no-mappings svg {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 12px;
-  opacity: 0.5;
+.field-mapping-notice h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-semibold);
+  color: var(--gray-900);
+  margin: var(--space-3) 0 var(--space-2) 0;
 }
 
-.mapping-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.field-mapping-notice p {
+  font-size: var(--font-size-base);
+  margin: 0;
 }
 
-.mapping-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.mapping-source,
-.mapping-target {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mapping-arrow {
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.remove-mapping {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.remove-mapping:hover {
-  background: var(--color-danger);
-  color: white;
-}
-
-.mapping-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--color-background-soft);
-  border-top: 1px solid var(--color-border);
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-
-.mapping-stats .warning {
-  color: var(--color-warning);
-}
-
-/* Footer */
-.editor-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 24px;
-  background: var(--color-background-soft);
-  border-top: 1px solid var(--color-border);
-}
-
-.footer-status {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-
-.footer-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* Buttons */
-.btn-primary,
-.btn-secondary,
-.btn-small {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: var(--color-primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn-secondary:hover {
-  background: var(--color-background-mute);
-  border-color: var(--color-border-hover);
-}
-
-.btn-small {
-  padding: 6px 12px;
-  font-size: 13px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-}
-
-.btn-small:hover:not(:disabled) {
-  background: var(--color-background-mute);
-  border-color: var(--color-border-hover);
-}
-
-.btn-small:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .mapping-editor {
-    background: var(--color-background-dark);
-  }
-  
-  .editor-header,
-  .mapping-config,
-  .column-header,
-  .canvas-header {
-    background: var(--color-background-soft-dark);
-  }
-  
-  .mapping-canvas {
-    background: var(--color-background-mute-dark);
-  }
+.field-mapping-notice .hint {
+  font-size: var(--font-size-sm);
+  color: var(--gray-500);
+  margin-top: var(--space-2);
 }
 
 /* Responsive */
-@media (max-width: 1200px) {
-  .editor-content {
-    grid-template-columns: 1fr 250px 1fr;
+@media (max-width: 768px) {
+  .mapping-editor {
+    padding: var(--space-4);
   }
-}
 
-@media (max-width: 900px) {
-  .editor-content {
+  .editor-header {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .form-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto 1fr;
   }
-  
-  .schema-column {
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
-  }
-  
-  .target-column {
-    border-left: none;
-    border-top: 1px solid var(--color-border);
+
+  .form-section {
+    padding: var(--space-4);
   }
 }
 </style>
