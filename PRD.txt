@@ -81,9 +81,8 @@ nificdc
 - UPDATE는 overwrite(upsert)로 처리
 
 ### 5.2 CDC Key 전략
-- `CDC_KEY = TIMESTAMP || LPAD(PK, N)`
+- `CDC_KEY = TIMESTAMP`
 - NiFi `max-value-columns` 사용
-- 동일 timestamp 다중 row 안전 처리
 
 ---
 
@@ -111,7 +110,7 @@ nificdc
 - `sql_id = oracle.cdc.<table>.<range>`
 
 ### 7.2 SQL 필수 규칙
-- `:sql_last_value` 필수 포함
+- NiFi State 또는 Expression Language 사용 (`${max.value.column}`)
 - `ORDER BY CDC_KEY` 필수
 - `${range_from}`, `${range_to}` attribute 사용
 - 단일 SQL(one-liner) 유지
@@ -155,7 +154,7 @@ nificdc
 
 ### 10.2 테스트 기준
 - `ORDER BY` 누락 시 실패
-- `:sql_last_value` 누락 시 실패
+- NiFi State 또는 `${max.value.column}` 미사용 시 실패
 - 동일 데이터 중복 적재 금지
 - NiFi 재기동 후 이어서 CDC 수행
 
