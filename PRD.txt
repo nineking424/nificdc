@@ -42,13 +42,14 @@ nificdc
 | 항목 | 내용 |
 |------|------|
 | Kubernetes | 이미 존재, kubectl 접근 가능 |
-| NiFi | Apache NiFi 1.28 |
+| NiFi | Apache NiFi 1.28, `apache/nifi:1.28.1` |
 | NiFi 구성 | 단일 노드 |
-| Oracle | 로컬 Docker (테스트용) |
+| Oracle | 로컬 Docker (테스트용), `absolutapps/oracle-12c-ee:latest` |
 | Elasticsearch | 로컬 Docker, 인덱스 삭제/재생성 허용 |
 
 ### 3.2 Oracle 관련 설정
 - 로컬 Docker 컨테이너로 Oracle 실행 (테스트용)
+- Docker 이미지: `absolutapps/oracle-12c-ee:latest`
 - 테스트용 전용 스키마 계정 직접 생성
 - Oracle 시스템 계정 사용 가능
 - JDBC 접근
