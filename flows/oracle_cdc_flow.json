@@ -3,7 +3,10 @@
     "identifier": "oracle-cdc-flow",
     "name": "Oracle CDC Pipeline",
     "comments": "Oracle to Elasticsearch CDC Pipeline using timestamp-based incremental sync",
-    "position": { "x": 0, "y": 0 },
+    "position": {
+      "x": 0,
+      "y": 0
+    },
     "processGroups": [],
     "remoteProcessGroups": [],
     "processors": [
@@ -16,7 +19,10 @@
           "artifact": "nifi-standard-nar",
           "version": "1.28.1"
         },
-        "position": { "x": 0, "y": 0 },
+        "position": {
+          "x": 0,
+          "y": 0
+        },
         "properties": {
           "generate-ff-custom-text": "",
           "Batch Size": "1",
@@ -38,7 +44,10 @@
           "artifact": "nifi-update-attribute-nar",
           "version": "1.28.1"
         },
-        "position": { "x": 0, "y": 150 },
+        "position": {
+          "x": 0,
+          "y": 150
+        },
         "properties": {
           "sql_id": "oracle.cdc.my_table.5m",
           "table_name": "MY_TABLE",
@@ -56,12 +65,17 @@
           "artifact": "nifi-standard-nar",
           "version": "1.28.1"
         },
-        "position": { "x": 0, "y": 300 },
+        "position": {
+          "x": 0,
+          "y": 300
+        },
         "properties": {
           "Lookup Service": "sql-lookup-service",
           "lookup.sql": "${sql_id}"
         },
-        "autoTerminatedRelationships": ["unmatched"]
+        "autoTerminatedRelationships": [
+          "unmatched"
+        ]
       },
       {
         "identifier": "update-attribute-range",
@@ -72,7 +86,10 @@
           "artifact": "nifi-update-attribute-nar",
           "version": "1.28.1"
         },
-        "position": { "x": 0, "y": 450 },
+        "position": {
+          "x": 0,
+          "y": 450
+        },
         "properties": {
           "range_to": "${now():format('yyyy-MM-dd HH:mm:ss.SSS')}",
           "range_from": "${now():toNumber():minus(300000):format('yyyy-MM-dd HH:mm:ss.SSS')}"
@@ -88,7 +105,10 @@
           "artifact": "nifi-standard-nar",
           "version": "1.28.1"
         },
-        "position": { "x": 0, "y": 600 },
+        "position": {
+          "x": 0,
+          "y": 600
+        },
         "properties": {
           "Database Connection Pooling Service": "oracle-dbcp",
           "db-fetch-db-type": "Oracle",
@@ -112,7 +132,10 @@
           "artifact": "nifi-elasticsearch-restapi-nar",
           "version": "1.28.1"
         },
-        "position": { "x": 0, "y": 750 },
+        "position": {
+          "x": 0,
+          "y": 750
+        },
         "properties": {
           "Client Service": "elasticsearch-client",
           "Index": "${es_index}",
@@ -121,16 +144,29 @@
           "ID Record Path": "/${es_id_field}",
           "Record Reader": "json-record-reader"
         },
-        "autoTerminatedRelationships": ["success", "errors", "failure", "retry"]
+        "autoTerminatedRelationships": [
+          "success",
+          "errors",
+          "failure",
+          "retry"
+        ]
       }
     ],
     "connections": [
       {
         "identifier": "conn-generate-to-init",
         "name": "success",
-        "source": { "id": "generate-flowfile", "type": "PROCESSOR" },
-        "destination": { "id": "update-attribute-init", "type": "PROCESSOR" },
-        "selectedRelationships": ["success"],
+        "source": {
+          "id": "generate-flowfile",
+          "type": "PROCESSOR"
+        },
+        "destination": {
+          "id": "update-attribute-init",
+          "type": "PROCESSOR"
+        },
+        "selectedRelationships": [
+          "success"
+        ],
         "flowFileExpiration": "0 sec",
         "backPressureDataSizeThreshold": "1 GB",
         "backPressureObjectThreshold": 10000
@@ -138,9 +174,17 @@
       {
         "identifier": "conn-init-to-lookup",
         "name": "success",
-        "source": { "id": "update-attribute-init", "type": "PROCESSOR" },
-        "destination": { "id": "lookup-attribute", "type": "PROCESSOR" },
-        "selectedRelationships": ["success"],
+        "source": {
+          "id": "update-attribute-init",
+          "type": "PROCESSOR"
+        },
+        "destination": {
+          "id": "lookup-attribute",
+          "type": "PROCESSOR"
+        },
+        "selectedRelationships": [
+          "success"
+        ],
         "flowFileExpiration": "0 sec",
         "backPressureDataSizeThreshold": "1 GB",
         "backPressureObjectThreshold": 10000
@@ -148,9 +192,17 @@
       {
         "identifier": "conn-lookup-to-range",
         "name": "matched",
-        "source": { "id": "lookup-attribute", "type": "PROCESSOR" },
-        "destination": { "id": "update-attribute-range", "type": "PROCESSOR" },
-        "selectedRelationships": ["matched"],
+        "source": {
+          "id": "lookup-attribute",
+          "type": "PROCESSOR"
+        },
+        "destination": {
+          "id": "update-attribute-range",
+          "type": "PROCESSOR"
+        },
+        "selectedRelationships": [
+          "matched"
+        ],
         "flowFileExpiration": "0 sec",
         "backPressureDataSizeThreshold": "1 GB",
         "backPressureObjectThreshold": 10000
@@ -158,9 +210,17 @@
       {
         "identifier": "conn-range-to-query",
         "name": "success",
-        "source": { "id": "update-attribute-range", "type": "PROCESSOR" },
-        "destination": { "id": "query-database-table-record", "type": "PROCESSOR" },
-        "selectedRelationships": ["success"],
+        "source": {
+          "id": "update-attribute-range",
+          "type": "PROCESSOR"
+        },
+        "destination": {
+          "id": "query-database-table-record",
+          "type": "PROCESSOR"
+        },
+        "selectedRelationships": [
+          "success"
+        ],
         "flowFileExpiration": "0 sec",
         "backPressureDataSizeThreshold": "1 GB",
         "backPressureObjectThreshold": 10000
@@ -168,9 +228,17 @@
       {
         "identifier": "conn-query-to-es",
         "name": "success",
-        "source": { "id": "query-database-table-record", "type": "PROCESSOR" },
-        "destination": { "id": "put-elasticsearch-record", "type": "PROCESSOR" },
-        "selectedRelationships": ["success"],
+        "source": {
+          "id": "query-database-table-record",
+          "type": "PROCESSOR"
+        },
+        "destination": {
+          "id": "put-elasticsearch-record",
+          "type": "PROCESSOR"
+        },
+        "selectedRelationships": [
+          "success"
+        ],
         "flowFileExpiration": "0 sec",
         "backPressureDataSizeThreshold": "1 GB",
         "backPressureObjectThreshold": 10000
@@ -244,7 +312,11 @@
           "oracle.cdc.my_table.5m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
           "oracle.cdc.my_table.15m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
           "oracle.cdc.my_table.30m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
-          "oracle.cdc.my_table.60m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT"
+          "oracle.cdc.my_table.60m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+          "oracle.cdc.orders.5m": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT",
+          "oracle.cdc.orders.15m": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT",
+          "oracle.cdc.orders.30m": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT",
+          "oracle.cdc.orders.60m": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT"
         }
       },
       {

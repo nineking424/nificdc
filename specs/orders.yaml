@@ -1,0 +1,70 @@
+# ORDERS CDC Specification
+
+table:
+  name: ORDERS
+  schema: CDC_TEST
+  primary_key: ORDER_ID
+  cdc_key: MODIFIED_AT
+  description: "Order transaction table"
+
+columns:
+  - name: ORDER_ID
+    type: NUMBER
+    nullable: false
+  - name: CUSTOMER_ID
+    type: NUMBER
+    nullable: false
+  - name: PRODUCT_ID
+    type: NUMBER
+    nullable: false
+  - name: QUANTITY
+    type: NUMBER
+    nullable: false
+  - name: TOTAL_AMOUNT
+    type: NUMBER(10,2)
+    nullable: false
+  - name: STATUS
+    type: VARCHAR2(20)
+    nullable: false
+  - name: CREATED_AT
+    type: TIMESTAMP
+    nullable: false
+  - name: MODIFIED_AT
+    type: TIMESTAMP
+    nullable: false
+
+elasticsearch:
+  index: orders
+  id_field: ORDER_ID
+  mapping:
+    dynamic: strict
+    properties:
+      ORDER_ID:
+        type: long
+      CUSTOMER_ID:
+        type: long
+      PRODUCT_ID:
+        type: long
+      QUANTITY:
+        type: integer
+      TOTAL_AMOUNT:
+        type: double
+      STATUS:
+        type: keyword
+      CREATED_AT:
+        type: date
+      MODIFIED_AT:
+        type: date
+
+range:
+  default: 5m
+  options:
+    - 5m
+    - 15m
+    - 30m
+    - 60m
+
+cdc:
+  mode: timestamp
+  delete_handling: ignore
+  update_handling: upsert

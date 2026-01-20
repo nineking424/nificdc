@@ -30,12 +30,25 @@ describe('CDC Restart Regression Tests', () => {
       expect(queryProcessor.properties['Maximum-value Columns'].length).toBeGreaterThan(0);
     });
 
-    test('max_value_column should match spec cdc_key', () => {
-      const spec = global.testHelpers.loadSpec('my_table');
-      const cdcKey = spec.table.cdc_key;
+    test('max_value_column should match spec cdc_key for each table', () => {
+      // Get all spec files and verify each table's entries
+      const fs = require('fs');
+      const yaml = require('js-yaml');
+      const specsDir = path.join(__dirname, '../../specs');
+      const specFiles = fs.readdirSync(specsDir).filter(f => f.endsWith('.yaml'));
 
-      Object.values(sqlRegistry).forEach(entry => {
-        expect(entry.max_value_column).toBe(cdcKey);
+      specFiles.forEach(file => {
+        const tableName = file.replace('.yaml', '');
+        const spec = global.testHelpers.loadSpec(tableName);
+        const cdcKey = spec.table.cdc_key;
+        const tableUpper = spec.table.name.toUpperCase();
+
+        // Filter registry entries for this table
+        Object.entries(sqlRegistry)
+          .filter(([sqlId]) => sqlId.includes(tableName))
+          .forEach(([sqlId, entry]) => {
+            expect(entry.max_value_column).toBe(cdcKey);
+          });
       });
     });
   });
@@ -118,11 +131,16 @@ describe('CDC Restart Regression Tests', () => {
       });
     });
 
-    test('registry table should match spec table', () => {
-      const spec = global.testHelpers.loadSpec('my_table');
+    test('registry table should match spec table for each entry', () => {
+      // Each registry entry should match its corresponding spec
+      Object.entries(sqlRegistry).forEach(([sqlId, entry]) => {
+        // Extract table name from sql_id (oracle.cdc.<table>.<range>)
+        const parts = sqlId.split('.');
+        const tableName = parts[2];
 
-      Object.values(sqlRegistry).forEach(entry => {
-        expect(entry.table).toBe(spec.table.name);
+        // Load corresponding spec and verify
+        const spec = global.testHelpers.loadSpec(tableName);
+        expect(entry.table.toUpperCase()).toBe(spec.table.name.toUpperCase());
       });
     });
   });

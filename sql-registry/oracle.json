@@ -1,12 +1,4 @@
 {
-  "oracle.cdc.my_table.5m": {
-    "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
-    "table": "MY_TABLE",
-    "schema": "CDC_TEST",
-    "range": "5m",
-    "max_value_column": "UPDATED_AT",
-    "description": "5분 간격 CDC 쿼리"
-  },
   "oracle.cdc.my_table.15m": {
     "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
     "table": "MY_TABLE",
@@ -23,6 +15,14 @@
     "max_value_column": "UPDATED_AT",
     "description": "30분 간격 CDC 쿼리"
   },
+  "oracle.cdc.my_table.5m": {
+    "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+    "table": "MY_TABLE",
+    "schema": "CDC_TEST",
+    "range": "5m",
+    "max_value_column": "UPDATED_AT",
+    "description": "5분 간격 CDC 쿼리"
+  },
   "oracle.cdc.my_table.60m": {
     "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
     "table": "MY_TABLE",
@@ -30,5 +30,37 @@
     "range": "60m",
     "max_value_column": "UPDATED_AT",
     "description": "60분 간격 CDC 쿼리"
+  },
+  "oracle.cdc.orders.15m": {
+    "sql": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT",
+    "table": "ORDERS",
+    "schema": "CDC_TEST",
+    "range": "15m",
+    "max_value_column": "MODIFIED_AT",
+    "description": "15m interval CDC query for ORDERS"
+  },
+  "oracle.cdc.orders.30m": {
+    "sql": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT",
+    "table": "ORDERS",
+    "schema": "CDC_TEST",
+    "range": "30m",
+    "max_value_column": "MODIFIED_AT",
+    "description": "30m interval CDC query for ORDERS"
+  },
+  "oracle.cdc.orders.5m": {
+    "sql": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT",
+    "table": "ORDERS",
+    "schema": "CDC_TEST",
+    "range": "5m",
+    "max_value_column": "MODIFIED_AT",
+    "description": "5m interval CDC query for ORDERS"
+  },
+  "oracle.cdc.orders.60m": {
+    "sql": "SELECT ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, TOTAL_AMOUNT, STATUS, CREATED_AT, MODIFIED_AT FROM CDC_TEST.ORDERS WHERE MODIFIED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND MODIFIED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY MODIFIED_AT",
+    "table": "ORDERS",
+    "schema": "CDC_TEST",
+    "range": "60m",
+    "max_value_column": "MODIFIED_AT",
+    "description": "60m interval CDC query for ORDERS"
   }
 }

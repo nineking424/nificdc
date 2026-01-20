@@ -13,7 +13,10 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down -v",
     "docker:logs": "docker-compose logs -f",
-    "lint:sql": "node scripts/validate-sql-registry.js"
+    "lint:sql": "node scripts/validate-sql-registry.js",
+    "generate": "node scripts/generate-from-spec.js",
+    "generate:all": "node scripts/generate-from-spec.js --all",
+    "generate:new": "node scripts/generate-from-spec.js --new"
   },
   "keywords": [
     "cdc",
