@@ -1,23 +1,6 @@
 -- CDC Test Schema and Table Creation
--- Oracle 12c EE 초기화 스크립트
-
--- CDC 사용자 생성
-CREATE USER cdc_user IDENTIFIED BY cdc_password;
-GRANT CONNECT, RESOURCE TO cdc_user;
-GRANT CREATE SESSION TO cdc_user;
-GRANT UNLIMITED TABLESPACE TO cdc_user;
-
--- CDC_TEST 스키마 생성
-CREATE USER CDC_TEST IDENTIFIED BY cdc_test_password;
-GRANT CONNECT, RESOURCE TO CDC_TEST;
-GRANT CREATE SESSION TO CDC_TEST;
-GRANT UNLIMITED TABLESPACE TO CDC_TEST;
-
--- cdc_user에게 CDC_TEST 스키마 접근 권한 부여
-GRANT SELECT ON CDC_TEST.MY_TABLE TO cdc_user;
-
--- Connect as CDC_TEST to create table
-ALTER SESSION SET CURRENT_SCHEMA = CDC_TEST;
+-- gvenzl/oracle-xe:21-slim 초기화 스크립트
+-- APP_USER (cdc_user)로 실행됨
 
 -- MY_TABLE 생성
 CREATE TABLE MY_TABLE (
@@ -41,6 +24,3 @@ INSERT INTO MY_TABLE (ID, NAME, VALUE, UPDATED_AT)
 VALUES (3, 'Record 3', 300.00, CURRENT_TIMESTAMP);
 
 COMMIT;
-
--- cdc_user에게 최종 권한 부여
-GRANT SELECT ON CDC_TEST.MY_TABLE TO cdc_user;

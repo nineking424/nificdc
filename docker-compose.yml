@@ -5,26 +5,26 @@ version: '3.8'
 
 services:
   oracle:
-    image: absolutapps/oracle-12c-ee:latest
+    image: gvenzl/oracle-free:23-slim
     container_name: nificdc-oracle
     profiles:
       - full
       - oracle
     environment:
-      - ORACLE_SID=XE
-      - ORACLE_PWD=oracle123
+      - ORACLE_PASSWORD=oracle123
+      - APP_USER=cdc_user
+      - APP_USER_PASSWORD=cdc_password
     ports:
       - "1521:1521"
-      - "5500:5500"
     volumes:
       - oracle-data:/opt/oracle/oradata
-      - ./tests/fixtures/oracle-init:/docker-entrypoint-initdb.d
+      - ./tests/fixtures/oracle-init:/container-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "sqlplus", "-L", "sys/oracle123@//localhost:1521/XE as sysdba", "@/dev/null"]
+      test: ["CMD", "healthcheck.sh"]
       interval: 30s
       timeout: 10s
       retries: 10
-      start_period: 300s
+      start_period: 60s
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
@@ -32,7 +32,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -47,6 +47,7 @@ services:
   nifi:
     image: apache/nifi:1.28.0
     container_name: nificdc-nifi
+    restart: unless-stopped
     environment:
       - NIFI_WEB_HTTP_PORT=8080
       - SINGLE_USER_CREDENTIALS_USERNAME=admin
@@ -64,11 +65,11 @@ services:
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:8080/nifi/ || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/nifi-api/system-diagnostics || exit 0"]
       interval: 30s
       timeout: 10s
       retries: 10
-      start_period: 120s
+      start_period: 180s
 
 volumes:
   oracle-data:
