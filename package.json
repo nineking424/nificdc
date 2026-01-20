@@ -9,6 +9,8 @@
     "test:contract": "jest tests/contract",
     "test:integration": "jest tests/integration --runInBand",
     "test:regression": "jest tests/regression --runInBand",
+    "test:e2e": "./scripts/run-e2e-test.sh",
+    "test:e2e:run": "jest tests/e2e --runInBand --testTimeout=120000",
     "test:coverage": "jest --coverage",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down -v",
