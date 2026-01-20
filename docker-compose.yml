@@ -1,0 +1,82 @@
+# Docker Compose for nificdc CDC Pipeline Testing
+# Oracle, NiFi, Elasticsearch 테스트 환경 구성
+
+version: '3.8'
+
+services:
+  oracle:
+    image: absolutapps/oracle-12c-ee:latest
+    container_name: nificdc-oracle
+    environment:
+      - ORACLE_SID=XE
+      - ORACLE_PWD=oracle123
+    ports:
+      - "1521:1521"
+      - "5500:5500"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./tests/fixtures/oracle-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "sqlplus", "-L", "sys/oracle123@//localhost:1521/XE as sysdba", "@/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: nificdc-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  nifi:
+    image: apache/nifi:1.28.1
+    container_name: nificdc-nifi
+    environment:
+      - NIFI_WEB_HTTP_PORT=8080
+      - SINGLE_USER_CREDENTIALS_USERNAME=admin
+      - SINGLE_USER_CREDENTIALS_PASSWORD=adminadminadmin
+    ports:
+      - "8080:8080"
+    volumes:
+      - nifi-state:/opt/nifi/nifi-current/state
+      - nifi-content:/opt/nifi/nifi-current/content_repository
+      - nifi-provenance:/opt/nifi/nifi-current/provenance_repository
+      - ./sql-registry:/opt/nifi/sql-registry:ro
+      - ./flows:/opt/nifi/flows:ro
+      - nifi-drivers:/opt/nifi/drivers
+    depends_on:
+      oracle:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8080/nifi/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+volumes:
+  oracle-data:
+  es-data:
+  nifi-state:
+  nifi-content:
+  nifi-provenance:
+  nifi-drivers:
+
+networks:
+  default:
+    name: nificdc-network

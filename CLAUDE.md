@@ -51,6 +51,22 @@ nificdc/
 | NiFi | `apache/nifi:1.28.1` |
 | Elasticsearch | 로컬 Docker |
 
+## TDD 규칙
+
+**테스트 레벨**:
+| 레벨 | 검증 대상 |
+|------|----------|
+| Unit | SQL Registry 검증 |
+| Contract | SQL ↔ Flow 매핑 |
+| Integration | Oracle → NiFi → ES 전체 흐름 |
+| Regression | CDC 재실행 시 데이터 정합성 |
+
+**실패 조건**:
+- `ORDER BY` 누락 시 실패
+- NiFi State 또는 `${max.value.column}` 미사용 시 실패
+- 동일 데이터 중복 적재 시 실패
+- NiFi 재기동 후 데이터 누락 시 실패
+
 ## 산출물 생성 원칙
 
 - NiFi Flow는 JSON으로 직접 생성 (UI 수동 생성 금지)

@@ -1,0 +1,279 @@
+{
+  "flowContents": {
+    "identifier": "oracle-cdc-flow",
+    "name": "Oracle CDC Pipeline",
+    "comments": "Oracle to Elasticsearch CDC Pipeline using timestamp-based incremental sync",
+    "position": { "x": 0, "y": 0 },
+    "processGroups": [],
+    "remoteProcessGroups": [],
+    "processors": [
+      {
+        "identifier": "generate-flowfile",
+        "name": "GenerateFlowFile - CDC Trigger",
+        "type": "org.apache.nifi.processors.standard.GenerateFlowFile",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-standard-nar",
+          "version": "1.28.1"
+        },
+        "position": { "x": 0, "y": 0 },
+        "properties": {
+          "generate-ff-custom-text": "",
+          "Batch Size": "1",
+          "Data Format": "Text",
+          "Unique FlowFiles": "false"
+        },
+        "schedulingStrategy": "TIMER_DRIVEN",
+        "schedulingPeriod": "5 min",
+        "runDurationMillis": 0,
+        "concurrentlySchedulableTaskCount": 1,
+        "autoTerminatedRelationships": []
+      },
+      {
+        "identifier": "update-attribute-init",
+        "name": "UpdateAttribute - Initialize CDC Params",
+        "type": "org.apache.nifi.processors.attributes.UpdateAttribute",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-update-attribute-nar",
+          "version": "1.28.1"
+        },
+        "position": { "x": 0, "y": 150 },
+        "properties": {
+          "sql_id": "oracle.cdc.my_table.5m",
+          "table_name": "MY_TABLE",
+          "es_index": "my_table",
+          "es_id_field": "ID"
+        },
+        "autoTerminatedRelationships": []
+      },
+      {
+        "identifier": "lookup-attribute",
+        "name": "LookupAttribute - Get SQL from Registry",
+        "type": "org.apache.nifi.processors.standard.LookupAttribute",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-standard-nar",
+          "version": "1.28.1"
+        },
+        "position": { "x": 0, "y": 300 },
+        "properties": {
+          "Lookup Service": "sql-lookup-service",
+          "lookup.sql": "${sql_id}"
+        },
+        "autoTerminatedRelationships": ["unmatched"]
+      },
+      {
+        "identifier": "update-attribute-range",
+        "name": "UpdateAttribute - Calculate Time Range",
+        "type": "org.apache.nifi.processors.attributes.UpdateAttribute",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-update-attribute-nar",
+          "version": "1.28.1"
+        },
+        "position": { "x": 0, "y": 450 },
+        "properties": {
+          "range_to": "${now():format('yyyy-MM-dd HH:mm:ss.SSS')}",
+          "range_from": "${now():toNumber():minus(300000):format('yyyy-MM-dd HH:mm:ss.SSS')}"
+        },
+        "autoTerminatedRelationships": []
+      },
+      {
+        "identifier": "query-database-table-record",
+        "name": "QueryDatabaseTableRecord - Execute CDC Query",
+        "type": "org.apache.nifi.processors.standard.QueryDatabaseTableRecord",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-standard-nar",
+          "version": "1.28.1"
+        },
+        "position": { "x": 0, "y": 600 },
+        "properties": {
+          "Database Connection Pooling Service": "oracle-dbcp",
+          "db-fetch-db-type": "Oracle",
+          "Table Name": "${table_name}",
+          "Columns to Return": "*",
+          "Maximum-value Columns": "UPDATED_AT",
+          "Max Wait Time": "0 seconds",
+          "Fetch Size": "1000",
+          "Max Rows Per Flow File": "10000",
+          "Output Batch Size": "0",
+          "Record Writer": "json-record-writer"
+        },
+        "autoTerminatedRelationships": []
+      },
+      {
+        "identifier": "put-elasticsearch-record",
+        "name": "PutElasticsearchRecord - Upsert to ES",
+        "type": "org.apache.nifi.processors.elasticsearch.PutElasticsearchRecord",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-elasticsearch-restapi-nar",
+          "version": "1.28.1"
+        },
+        "position": { "x": 0, "y": 750 },
+        "properties": {
+          "Client Service": "elasticsearch-client",
+          "Index": "${es_index}",
+          "Type": "_doc",
+          "Index Operation": "upsert",
+          "ID Record Path": "/${es_id_field}",
+          "Record Reader": "json-record-reader"
+        },
+        "autoTerminatedRelationships": ["success", "errors", "failure", "retry"]
+      }
+    ],
+    "connections": [
+      {
+        "identifier": "conn-generate-to-init",
+        "name": "success",
+        "source": { "id": "generate-flowfile", "type": "PROCESSOR" },
+        "destination": { "id": "update-attribute-init", "type": "PROCESSOR" },
+        "selectedRelationships": ["success"],
+        "flowFileExpiration": "0 sec",
+        "backPressureDataSizeThreshold": "1 GB",
+        "backPressureObjectThreshold": 10000
+      },
+      {
+        "identifier": "conn-init-to-lookup",
+        "name": "success",
+        "source": { "id": "update-attribute-init", "type": "PROCESSOR" },
+        "destination": { "id": "lookup-attribute", "type": "PROCESSOR" },
+        "selectedRelationships": ["success"],
+        "flowFileExpiration": "0 sec",
+        "backPressureDataSizeThreshold": "1 GB",
+        "backPressureObjectThreshold": 10000
+      },
+      {
+        "identifier": "conn-lookup-to-range",
+        "name": "matched",
+        "source": { "id": "lookup-attribute", "type": "PROCESSOR" },
+        "destination": { "id": "update-attribute-range", "type": "PROCESSOR" },
+        "selectedRelationships": ["matched"],
+        "flowFileExpiration": "0 sec",
+        "backPressureDataSizeThreshold": "1 GB",
+        "backPressureObjectThreshold": 10000
+      },
+      {
+        "identifier": "conn-range-to-query",
+        "name": "success",
+        "source": { "id": "update-attribute-range", "type": "PROCESSOR" },
+        "destination": { "id": "query-database-table-record", "type": "PROCESSOR" },
+        "selectedRelationships": ["success"],
+        "flowFileExpiration": "0 sec",
+        "backPressureDataSizeThreshold": "1 GB",
+        "backPressureObjectThreshold": 10000
+      },
+      {
+        "identifier": "conn-query-to-es",
+        "name": "success",
+        "source": { "id": "query-database-table-record", "type": "PROCESSOR" },
+        "destination": { "id": "put-elasticsearch-record", "type": "PROCESSOR" },
+        "selectedRelationships": ["success"],
+        "flowFileExpiration": "0 sec",
+        "backPressureDataSizeThreshold": "1 GB",
+        "backPressureObjectThreshold": 10000
+      }
+    ],
+    "controllerServices": [
+      {
+        "identifier": "oracle-dbcp",
+        "name": "Oracle DBCP Connection Pool",
+        "type": "org.apache.nifi.dbcp.DBCPConnectionPool",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-dbcp-service-nar",
+          "version": "1.28.1"
+        },
+        "properties": {
+          "Database Connection URL": "jdbc:oracle:thin:@oracle:1521:XE",
+          "Database Driver Class Name": "oracle.jdbc.OracleDriver",
+          "database-driver-locations": "/opt/nifi/drivers/ojdbc8.jar",
+          "Database User": "${oracle.username}",
+          "Password": "${oracle.password}",
+          "Max Wait Time": "500 millis",
+          "Max Total Connections": "8",
+          "Validation query": "SELECT 1 FROM DUAL"
+        }
+      },
+      {
+        "identifier": "json-record-writer",
+        "name": "JsonRecordSetWriter",
+        "type": "org.apache.nifi.json.JsonRecordSetWriter",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-record-serialization-services-nar",
+          "version": "1.28.1"
+        },
+        "properties": {
+          "Schema Write Strategy": "Do Not Write Schema",
+          "output-grouping": "output-array",
+          "Pretty Print JSON": "false",
+          "Suppress Null Values": "Never Suppress",
+          "Date Format": "yyyy-MM-dd",
+          "Time Format": "HH:mm:ss",
+          "Timestamp Format": "yyyy-MM-dd HH:mm:ss.SSS"
+        }
+      },
+      {
+        "identifier": "json-record-reader",
+        "name": "JsonTreeReader",
+        "type": "org.apache.nifi.json.JsonTreeReader",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-record-serialization-services-nar",
+          "version": "1.28.1"
+        },
+        "properties": {
+          "Date Format": "yyyy-MM-dd",
+          "Time Format": "HH:mm:ss",
+          "Timestamp Format": "yyyy-MM-dd HH:mm:ss.SSS"
+        }
+      },
+      {
+        "identifier": "sql-lookup-service",
+        "name": "SQL Registry Lookup Service",
+        "type": "org.apache.nifi.lookup.SimpleKeyValueLookupService",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-lookup-services-nar",
+          "version": "1.28.1"
+        },
+        "properties": {
+          "oracle.cdc.my_table.5m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+          "oracle.cdc.my_table.15m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+          "oracle.cdc.my_table.30m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+          "oracle.cdc.my_table.60m": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT"
+        }
+      },
+      {
+        "identifier": "elasticsearch-client",
+        "name": "ElasticSearchClientServiceImpl",
+        "type": "org.apache.nifi.elasticsearch.ElasticSearchClientServiceImpl",
+        "bundle": {
+          "group": "org.apache.nifi",
+          "artifact": "nifi-elasticsearch-client-service-nar",
+          "version": "1.28.1"
+        },
+        "properties": {
+          "HTTP Hosts": "http://elasticsearch:9200",
+          "Connect timeout": "5 secs",
+          "Socket timeout": "30 secs"
+        }
+      }
+    ],
+    "inputPorts": [],
+    "outputPorts": [],
+    "funnels": [],
+    "labels": [],
+    "variables": {}
+  },
+  "snapshotMetadata": {
+    "bucketIdentifier": "nificdc-bucket",
+    "flowIdentifier": "oracle-cdc-flow",
+    "version": 1,
+    "timestamp": 1737331200000,
+    "comments": "Initial CDC pipeline version"
+  }
+}

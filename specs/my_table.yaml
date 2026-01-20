@@ -1,0 +1,51 @@
+# MY_TABLE CDC Specification
+# 이 파일은 테이블별 CDC 설정의 기준 정의입니다.
+
+table:
+  name: MY_TABLE
+  schema: CDC_TEST
+  primary_key: ID
+  cdc_key: UPDATED_AT
+  description: "CDC 테스트용 샘플 테이블"
+
+columns:
+  - name: ID
+    type: NUMBER
+    nullable: false
+  - name: NAME
+    type: VARCHAR2(100)
+    nullable: true
+  - name: VALUE
+    type: NUMBER
+    nullable: true
+  - name: UPDATED_AT
+    type: TIMESTAMP
+    nullable: false
+
+elasticsearch:
+  index: my_table
+  id_field: ID
+  mapping:
+    dynamic: strict
+    properties:
+      ID:
+        type: long
+      NAME:
+        type: keyword
+      VALUE:
+        type: double
+      UPDATED_AT:
+        type: date
+
+range:
+  default: 5m
+  options:
+    - 5m
+    - 15m
+    - 30m
+    - 60m
+
+cdc:
+  mode: timestamp
+  delete_handling: ignore  # DELETE는 무시
+  update_handling: upsert  # UPDATE는 upsert

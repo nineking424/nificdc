@@ -1,0 +1,33 @@
+{
+  "name": "nificdc",
+  "version": "1.0.0",
+  "description": "Oracle to NiFi to Elasticsearch CDC Pipeline",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:contract": "jest tests/contract",
+    "test:integration": "jest tests/integration --runInBand",
+    "test:regression": "jest tests/regression --runInBand",
+    "test:coverage": "jest --coverage",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down -v",
+    "docker:logs": "docker-compose logs -f",
+    "lint:sql": "node scripts/validate-sql-registry.js"
+  },
+  "keywords": [
+    "cdc",
+    "nifi",
+    "oracle",
+    "elasticsearch",
+    "data-pipeline"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@elastic/elasticsearch": "^8.11.0",
+    "jest": "^29.7.0",
+    "js-yaml": "^4.1.0",
+    "oracledb": "^6.3.0"
+  }
+}

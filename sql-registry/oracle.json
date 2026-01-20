@@ -1,0 +1,34 @@
+{
+  "oracle.cdc.my_table.5m": {
+    "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+    "table": "MY_TABLE",
+    "schema": "CDC_TEST",
+    "range": "5m",
+    "max_value_column": "UPDATED_AT",
+    "description": "5분 간격 CDC 쿼리"
+  },
+  "oracle.cdc.my_table.15m": {
+    "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+    "table": "MY_TABLE",
+    "schema": "CDC_TEST",
+    "range": "15m",
+    "max_value_column": "UPDATED_AT",
+    "description": "15분 간격 CDC 쿼리"
+  },
+  "oracle.cdc.my_table.30m": {
+    "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+    "table": "MY_TABLE",
+    "schema": "CDC_TEST",
+    "range": "30m",
+    "max_value_column": "UPDATED_AT",
+    "description": "30분 간격 CDC 쿼리"
+  },
+  "oracle.cdc.my_table.60m": {
+    "sql": "SELECT ID, NAME, VALUE, UPDATED_AT FROM CDC_TEST.MY_TABLE WHERE UPDATED_AT > TO_TIMESTAMP(${range_from}, 'YYYY-MM-DD HH24:MI:SS.FF') AND UPDATED_AT <= TO_TIMESTAMP(${range_to}, 'YYYY-MM-DD HH24:MI:SS.FF') ORDER BY UPDATED_AT",
+    "table": "MY_TABLE",
+    "schema": "CDC_TEST",
+    "range": "60m",
+    "max_value_column": "UPDATED_AT",
+    "description": "60분 간격 CDC 쿼리"
+  }
+}
