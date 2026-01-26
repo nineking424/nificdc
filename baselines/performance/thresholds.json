@@ -1,0 +1,59 @@
+{
+  "version": "1.0",
+  "description": "Performance test pass/fail thresholds",
+  "latency": {
+    "p50": {
+      "max": 10000,
+      "unit": "ms",
+      "description": "50th percentile latency",
+      "regressionPercent": 20
+    },
+    "p95": {
+      "max": 30000,
+      "unit": "ms",
+      "description": "95th percentile latency",
+      "regressionPercent": 20
+    },
+    "p99": {
+      "max": 60000,
+      "unit": "ms",
+      "description": "99th percentile latency",
+      "regressionPercent": 25
+    }
+  },
+  "throughput": {
+    "min": {
+      "value": 5000,
+      "unit": "records/min",
+      "description": "Minimum sustained throughput",
+      "regressionPercent": 20
+    },
+    "target": {
+      "value": 10000,
+      "unit": "records/min",
+      "description": "Target throughput"
+    }
+  },
+  "query": {
+    "5m": {
+      "max": 500,
+      "unit": "ms",
+      "description": "5-minute window query execution"
+    },
+    "1h": {
+      "max": 2000,
+      "unit": "ms",
+      "description": "1-hour window query execution"
+    },
+    "24h": {
+      "max": 10000,
+      "unit": "ms",
+      "description": "24-hour window query execution"
+    }
+  },
+  "errorRate": {
+    "max": 0.001,
+    "description": "Maximum acceptable error rate (0.1%)",
+    "regressionPercent": 50
+  }
+}

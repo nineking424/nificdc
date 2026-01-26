@@ -4,6 +4,9 @@ node_modules/
 # Test coverage
 coverage/
 
+# Performance test reports
+tests/performance/reports/
+
 # IDE
 .idea/
 .vscode/

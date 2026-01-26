@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "description": "Baseline performance metrics (initial placeholder)",
+  "note": "This file will be updated with actual metrics after running baseline tests with SAVE_BASELINE=true",
+  "savedAt": null,
+  "latency": {
+    "p50": null,
+    "p95": null,
+    "p99": null,
+    "avg": null
+  },
+  "throughput": {
+    "avgPerMinute": null,
+    "avgPerSecond": null,
+    "peak": null
+  },
+  "queries": {},
+  "errorRate": null
+}
