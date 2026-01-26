@@ -1,8 +1,6 @@
 # Docker Compose for nificdc CDC Pipeline Testing
 # Oracle, NiFi, Elasticsearch 테스트 환경 구성
 
-version: '3.8'
-
 services:
   oracle:
     image: gvenzl/oracle-free:23-slim
@@ -14,11 +12,13 @@ services:
       - ORACLE_PASSWORD=oracle123
       - APP_USER=cdc_user
       - APP_USER_PASSWORD=cdc_password
+      - TZ=Asia/Seoul
     ports:
       - "1521:1521"
     volumes:
       - oracle-data:/opt/oracle/oradata
       - ./tests/fixtures/oracle-init:/container-entrypoint-initdb.d
+      - /var/db/timezone/zoneinfo/Asia/Seoul:/etc/localtime:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh"]
       interval: 30s
@@ -32,12 +32,14 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m -Duser.timezone=Asia/Seoul"
+      - TZ=Asia/Seoul
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - es-data:/usr/share/elasticsearch/data
+      - /var/db/timezone/zoneinfo/Asia/Seoul:/etc/localtime:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
       interval: 10s
@@ -52,6 +54,7 @@ services:
       - NIFI_WEB_HTTP_PORT=8080
       - SINGLE_USER_CREDENTIALS_USERNAME=admin
       - SINGLE_USER_CREDENTIALS_PASSWORD=adminadminadmin
+      - TZ=Asia/Seoul
     ports:
       - "8080:8080"
     volumes:
@@ -61,6 +64,7 @@ services:
       - ./sql-registry:/opt/nifi/sql-registry:ro
       - ./flows:/opt/nifi/flows:ro
       - ./drivers:/opt/nifi/drivers:ro
+      - /var/db/timezone/zoneinfo/Asia/Seoul:/etc/localtime:ro
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -71,12 +75,38 @@ services:
       retries: 10
       start_period: 180s
 
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: nificdc-kibana
+    profiles:
+      - full
+      - kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+      - TZ=Asia/Seoul
+    ports:
+      - "5601:5601"
+    volumes:
+      - kibana-data:/usr/share/kibana/data
+      - /var/db/timezone/zoneinfo/Asia/Seoul:/etc/localtime:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q 'available'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
 volumes:
   oracle-data:
   es-data:
   nifi-state:
   nifi-content:
   nifi-provenance:
+  kibana-data:
 
 networks:
   default:
